@@ -94,9 +94,17 @@ for example [`ovdb.yaml` of Chinook](https://github.com/datatug/chinookdb/blob/b
 declares the canonical `url`, the `deployment` (`url`, `engine`, `discovery` on
 the canonical origin, and an optional `recordset_page` template with `{name}`),
 the `model` files (the ModelSpec JSON and, optionally, the human-readable
-source), the `meaning` file and its graph (`id` and `address`), the publisher,
-the `licences` (`data`, `model`, `meaning`) and the `recordsets`. Every path is a
-regular file tracked at the pinned commit; symbolic links are refused.
+source `hcl`), the `meaning` file and its graph (`id` and `address`), the
+publisher, the `licences` (`data`, `model`, `meaning`) and the `recordsets`.
+Every path is relative to the repository root and must be a regular file tracked
+at the pinned commit: no `..`, leading `/`, `.` or empty segment, no glob, and
+symbolic links are refused. Every URL a manifest publishes (`url`,
+`deployment.url`, `deployment.discovery`, `deployment.recordset_page`,
+`publisher.url`) is public https: no credentials, query or fragment, no IP
+address (in any spelling), `localhost`, single-label name, or local or internal
+name (`.local`, `.internal`, `.lan`, …). The canonical `url` also has `ovdb` as a
+complete path segment or as a subdomain, as the Directory's convention asks
+(`https://acme.com/ovdb/sales`, `https://ovdb.acme.com/sales`).
 
 ## `index.json`
 
@@ -131,15 +139,20 @@ address pins, resolved through the MeaningGraph registry.
 }
 ```
 
-- `checksum` is `sha256:` and the hex SHA-256 of `JSON.stringify(index.databases)`
-  (compact JSON), the same definition as the MeaningGraph registry's, so a
-  consumer can check that it read the whole file. Databases are sorted by `id`,
-  recordsets by name; fields keep the ModelSpec's order; meanings are sorted by
-  concept and role.
+- `checksum` is `sha256:` and the hex SHA-256 of the compact `JSON.stringify` of
+  `index.databases`, the same definition as the MeaningGraph registry's. It is a
+  change token: compare it as a string (two fetches with the same checksum are
+  the same data). To verify a file, parse it and hash the compact `JSON.stringify`
+  of the parsed `databases` array; the file itself is indented, so the hash is
+  not of its bytes, and a serialiser that orders keys differently or escapes
+  differently (`&`, `<`, `>`) gives a different hash. Databases are sorted by
+  `id`, recordsets by name; fields keep the ModelSpec's order; meanings are
+  sorted by concept and role.
 - `licence` is the manifest's `licences.data`: the licence of the database's data.
-- `model.name` is the ModelSpec module name; `model.path` is the manifest's
-  human-readable model file (`model.hcl`), or the ModelSpec JSON when the
-  manifest has none.
+- `model.name` is the ModelSpec module name. `model.path` is the meaning file's
+  `models:` entry for that module, made relative to the repository root: a
+  regular file tracked at the pinned commit. When the manifest has `model.hcl`
+  it must be that same file.
 - `recordsets` are the ModelSpec entities, and their names are the collection
   names the deployment serves. A recordset's `url` is the manifest's
   `deployment.recordset_page` template with `{name}` filled in, and is absent
@@ -151,18 +164,36 @@ address pins, resolved through the MeaningGraph registry.
   other `meaning/draft-1` binding role):
 
   ```json
-  { "graph": "chinook", "concept": "customer-country", "label": "Customer country", "role": "value",
+  {
+    "graph": "chinook",
+    "concept": "customer-country",
+    "label": "Customer country",
+    "role": "value",
     "address": "meaning://github.com/datatug/chinookdb/customer-country?ref=<40 hex>",
-    "extends": [{ "graph": "core", "concept": "customer", "label": "Customer", "address": "meaning://github.com/meaninggraph/core/customer?ref=<40 hex>" }],
-    "values_of": { "graph": "core", "concept": "country", "label": "Country", "address": "meaning://github.com/meaninggraph/core/country?ref=<40 hex>" } }
+    "extends": [],
+    "values_of": {
+      "graph": "core",
+      "concept": "country",
+      "label": "Country",
+      "address": "meaning://github.com/meaninggraph/core/country?ref=<40 hex>",
+      "extends": []
+    }
+  }
   ```
 
-  `extends` is the full "is a kind of" chain, nearest first, resolved at the
-  pinned commits; it is `[]` when the concept extends nothing. `values_of` is
-  the concept's own `values-of` only, never inherited through `extends`; it is
-  absent when the concept sets none. `label` is the concept's English label.
+  This is `Customer.Country` as it stands in `index.json`: Chinook's
+  `customer-country` is an attribute of customer whose values are countries, so it
+  extends nothing and takes its values from core `country`. `extends` is the full
+  "is a kind of" chain, nearest first, resolved at the pinned commits; it is `[]`
+  when the concept extends nothing (a recordset's entity concept, such as
+  Chinook's `customer`, extends core `customer`). `values_of` is the concept's own
+  `values-of` only, never inherited through `extends`, and it is absent when the
+  concept sets none. Each `values_of` entry carries its own `extends` chain, so a
+  page for a broader concept still finds the field: `Employee.ReportsTo` takes its
+  values from Chinook's `employee`, which extends core `employee` and core
+  `person`, so core `person` finds it. `label` is the concept's English label.
   A concept page's "In OVDB databases" section lists every `M` whose concept,
-  `extends` chain or `values_of` names that concept.
+  `extends` chain, `values_of` or `values_of.extends` chain names that concept.
 
 ## How to register a database
 
@@ -217,17 +248,31 @@ Two layers run in CI ([`.github/workflows/check.yml`](.github/workflows/check.ym
    - the publisher's root `OVDB.md` has `ovdb: 1` and lists the manifest by
      explicit path; every file read is a regular file at the commit;
    - the manifest has its required fields; its `url`, `id`, meaning graph and
-     publisher repository equal the record's; its discovery document is on the
-     canonical origin; `licences.meaning` is what the meaning file declares;
+     publisher repository equal the record's; every URL it publishes is public
+     https (no IP address, local or internal host, credentials, query or
+     fragment) and the canonical `url` has `ovdb` as a path segment or
+     subdomain; its discovery document is on the canonical origin;
+     `licences.meaning` is what the meaning file declares;
    - `meaning_graph` is registered in the MeaningGraph registry
      (`https://raw.githubusercontent.com/meaninggraph/registry/main/index.json`,
      read with its checksum verified), for the same repository, with the same
      address, and lists the manifest's meaning file;
    - `recordsets` are exactly the ModelSpec entities;
    - every meaning binding names an entity and a property that exist in the
-     ModelSpec, and every `extends` and `values-of` resolves at its pinned
-     commit through the MeaningGraph registry;
+     ModelSpec; concept ids are well formed and present; every `extends` and
+     `values-of` resolves at its pinned commit through the MeaningGraph registry,
+     and an `extends` chain longer than 50 concepts is a problem, never cut;
+   - the model's source file (`model.path`) is a tracked regular file at the
+     commit;
    - `index.json` is what `npm run index` writes.
+
+The git cache is the user's, not the checkout's: `$XDG_CACHE_HOME/ovdb-directory`
+(or `~/.cache/ovdb-directory`), created private and refused if it is a link, owned
+by another user or writable by others; a cache inside the checkout is refused. A
+cached repository is used only after its configuration, alternates and objects
+have been verified (and is fetched again otherwise), and git runs with hooks and
+fsmonitor switched off, so nothing a pull request commits can run code in CI or on
+a maintainer's machine.
 
 `npm test` proves each check fails on a broken entry, offline, with local
 repositories standing in for the publisher and for the core meaning graph (a
@@ -236,7 +281,12 @@ copy of Chinook's manifest, ModelSpec and meaning file is in
 branch has, a missing or unlisted `OVDB.md`, a manifest that disagrees with the
 record, recordsets that are not the ModelSpec entities, a binding to a missing
 entity or property, an unregistered graph, an address without or with a bad
-`?ref=`, an `extends` cycle, a stale `index.json`, repository values of every
+`?ref=`, an `extends` cycle or a chain over the limit, a bad or missing concept id,
+a model path that is missing, a link or leaves the repository, a manifest URL
+that is http, has credentials, a query, a fragment, names an IP address in any
+spelling, `localhost` or an internal host, a canonical `url` without `ovdb`, a
+planted hook or configuration in a cached repository, a damaged cache, a stale
+`index.json`, repository values of every
 refused shape (`.git`, other hosts, `http`, `ssh`, `..`, option-like or
 shell-like text), git's environment and protocol restrictions, and that
 nothing is interpreted by a shell. `npm run test:ingitdb` (with `INGITDB_CLI`
@@ -246,18 +296,34 @@ definitions.
 ### Journey test
 
 `npm run test:journey` runs a Playwright test that walks the journey between the
-two sites by clicking links only: search "country" on meaninggraph.io, the core
-Country concept, "In OVDB databases", `Customer.Country` on the Directory's
-Chinook page with that field in view, a concept link back, and both catalogues.
-It takes the two sites' base URLs and follows names read from `index.json`:
+two sites by clicking links only: search "country" on meaninggraph.io (the
+concept must not be on the page before the search, and the result must be marked
+registered), the core Country concept, "In OVDB databases", `Customer.Country` on
+the Directory's Chinook page with that field in view, a concept link back, and
+both catalogues. It takes the two sites' base URLs and follows names read from
+`index.json`; every step asserts the exact target of the link it follows, and the
+`#recordset-<Name>` and `#field-<Recordset>-<Field>` anchors of every recordset and
+field:
 
 ```
 MEANINGGRAPH_BASE_URL=http://localhost:4321 OVDB_DIRECTORY_BASE_URL=http://localhost:4322 npm run test:journey
 ```
 
+Build both sites with the same two variables: step 3 expects the link on
+meaninggraph.io to land on `OVDB_DIRECTORY_BASE_URL`, and the Directory's concept
+links to land on `MEANINGGRAPH_BASE_URL`.
+
 Without both variables every test is skipped, not failed. `OVDB_DIRECTORY_INDEX_URL`
 reads the index from a URL instead of this checkout; `PLAYWRIGHT_CHANNEL=chrome`
 runs the installed Chrome (otherwise `npx playwright install chromium` once).
+
+`npm run test:journey:selftest` shows the journey cannot go green while a step is
+broken: it runs the spec against mock sites ([`tests/journey/fixtures`](tests/journey/fixtures))
+and expects it to pass on the good pair and to fail on each pair with one
+deliberate defect (a search that returns nothing, a result that is not
+registered, a missing Customer recordset, a wrong field anchor, a concept page
+that omits the recordset, and others). It needs no real sites, only a browser, and
+runs in CI.
 
 ## Licence
 

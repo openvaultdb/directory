@@ -11,7 +11,8 @@ name: Check the Directory data
 # `npm run index` writes. scripts/test.mjs proves each check fails on a broken
 # entry (offline, with local fixture repositories); scripts/test-ingitdb.mjs
 # proves inGitDB rejects each broken constraint. The journey test needs two
-# running sites and is skipped here (see tests/journey).
+# running sites and is skipped here; its self-test runs against mock sites
+# (see tests/journey).
 
 on:
   push:
@@ -67,7 +68,13 @@ jobs:
         env:
           INGITDB_CLI: ${{ runner.temp }}/ingitdb
         run: npm run test:ingitdb
-      # Skipped, not failed, without MEANINGGRAPH_BASE_URL and
-      # OVDB_DIRECTORY_BASE_URL: no browser is installed here.
+      # The journey test needs two running sites: it is skipped, not failed,
+      # without MEANINGGRAPH_BASE_URL and OVDB_DIRECTORY_BASE_URL. Its
+      # self-test needs no real sites: it runs the journey against mock sites
+      # and expects it to fail on each deliberate defect.
+      - name: Install the browser for the journey self-test
+        run: npx playwright install --with-deps chromium
       - name: Journey test (skipped without site URLs)
         run: npm run test:journey
+      - name: Journey self-test (the journey fails on each broken mock)
+        run: npm run test:journey:selftest

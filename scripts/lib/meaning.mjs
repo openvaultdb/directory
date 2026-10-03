@@ -15,6 +15,7 @@ export const meaningRegistryUrl = 'https://raw.githubusercontent.com/meaninggrap
 export const meaningRegistryFormat = 'meaning-registry/draft-1';
 
 const conceptId = '[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*';
+export const conceptIdPattern = new RegExp(`^${conceptId}$`);
 const bareRefPattern = new RegExp(`^${conceptId}$`);
 const conceptRefPattern = new RegExp(`^meaning://([A-Za-z0-9.-]+(?:/[A-Za-z0-9._-]+)+)/(${conceptId})(?:\\?ref=([A-Za-z0-9._/-]+))?$`);
 
@@ -89,7 +90,10 @@ export function createMeaningResolver({ own, registry, urlFor = (url) => url, ca
       if (files.status(path) !== 'file') return { error: `${ref0}: ${path} is not a regular file at ${ref}` };
       let doc;
       try { doc = parseYaml(files.read(path)); } catch (error) { return { error: `${ref0}: ${path} is not YAML: ${error.message.split('\n')[0]}` }; }
-      for (const concept of doc?.concepts ?? []) {
+      if (doc?.concepts !== undefined && !Array.isArray(doc.concepts)) return { error: `${ref0}: ${path}: concepts must be a list` };
+      for (const [position, concept] of (doc?.concepts ?? []).entries()) {
+        if (concept === null || typeof concept !== 'object' || typeof concept.id !== 'string') return { error: `${ref0}: ${path}: concept #${position + 1} has no id` };
+        if (!conceptIdPattern.test(concept.id)) return { error: `${ref0}: ${path}: concept id ${JSON.stringify(concept.id)} must be lower-case words joined by single hyphens` };
         if (concepts.has(concept.id)) return { error: `${ref0}: concept ${concept.id} is declared twice` };
         concepts.set(concept.id, concept);
       }
@@ -120,30 +124,45 @@ export function createMeaningResolver({ own, registry, urlFor = (url) => url, ca
     return concept ? { concept, node: target } : { error: `${ref} names concept ${parsed.id}, which ${target.id} does not have at ${target.ref}` };
   };
 
-  // The `extends` chain of a concept, nearest first, and the concept its values
-  // are those of: its own `values-of` only. A concept that extends one with a
-  // `values-of` does not carry it; consumers who want it follow `extends`.
-  const chains = (concept, node) => {
+  // The concepts a concept is a kind of, nearest first (not the concept itself),
+  // as entries. A chain that loops or is longer than maxChain is a problem, never
+  // silently cut.
+  const lineage = (concept, node) => {
     const problems = [];
     const chain = [];
     const seen = new Set();
-    for (let current = { concept, node }; current && chain.length < maxChain;) {
+    for (let current = { concept, node }; current;) {
       const id = `${current.node.address}@${current.node.ref}/${current.concept.id}`;
       if (seen.has(id)) { problems.push(`extends returns to ${current.concept.id}`); break; }
       seen.add(id);
       chain.push(current);
       if (current.concept.extends === undefined) break;
+      if (chain.length > maxChain) { problems.push(`extends chain is longer than ${maxChain} concepts`); break; }
       const next = resolveConcept(current.concept.extends, current.node);
       if (next.error) { problems.push(`extends: ${next.error}`); break; }
       current = next;
     }
+    return { entries: chain.slice(1).map((entry) => entryOf(entry.node, entry.concept)), problems };
+  };
+
+  // The `extends` chain of a concept, nearest first, and the concept its values
+  // are those of: its own `values-of` only (a concept that extends one with a
+  // `values-of` does not carry it). The values_of entry carries its own `extends`
+  // chain, so a page for a broader concept still finds the field.
+  const chains = (concept, node) => {
+    const own = lineage(concept, node);
+    const problems = [...own.problems];
     let valuesOf;
     if (concept['values-of'] !== undefined) {
       const target = resolveConcept(concept['values-of'], node);
       if (target.error) problems.push(`values-of: ${target.error}`);
-      else valuesOf = entryOf(target.node, target.concept);
+      else {
+        const targetChain = lineage(target.concept, target.node);
+        problems.push(...targetChain.problems.map((problem) => `values-of ${target.concept.id}: ${problem}`));
+        valuesOf = { ...entryOf(target.node, target.concept), extends: targetChain.entries };
+      }
     }
-    return { extends: chain.slice(1).map((entry) => entryOf(entry.node, entry.concept)), valuesOf, problems };
+    return { extends: own.entries, valuesOf, problems };
   };
 
   return { chains, resolveConcept };

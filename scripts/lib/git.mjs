@@ -15,14 +15,19 @@
 // - The user's and the system's git configuration are not read, and every
 //   inherited GIT_* variable is dropped, so a local insteadOf rewrite, hook
 //   setting or GIT_DIR cannot change what is fetched or run.
+// - Hooks and file-system monitors never run (-c core.hooksPath, core.fsmonitor),
+//   and a cached repository is used only after its configuration, alternates and
+//   objects have been verified; the cache lives outside the checkout, in a
+//   per-user directory (defaultCacheDir), so nothing a pull request commits can
+//   plant a repository there.
 // - A commit only counts when it is in the history of the repository's default
 //   branch: GitHub serves a fork's commits through the parent's URL, so "can be
 //   fetched" alone would let a fork's commit be registered under the parent.
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync } from 'node:fs';
-import { devNull } from 'node:os';
-import { join } from 'node:path';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, renameSync, rmSync } from 'node:fs';
+import { devNull, homedir } from 'node:os';
+import { isAbsolute, join } from 'node:path';
 
 export const commitPattern = /^[0-9a-f]{40}$/;
 // The hosts a repository may live on, each with the number of path segments
@@ -32,7 +37,7 @@ const segmentPattern = /^[A-Za-z0-9_.-]+$/;
 // A branch or tag name: no leading "-", ".", "/", no "..".
 export const refNamePattern = /^(?![-.\/])(?!.*\.\.)[A-Za-z0-9._\/-]+$/;
 // A path inside a repository: relative, no "..", no glob characters.
-const filePathPattern = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))(?!.*(?:^|\/)\.(?:\/|$))[A-Za-z0-9_.\/-]+$/;
+const filePathPattern = /^(?!\/)(?!.*\/\/)(?!.*(?:^|\/)\.\.(?:\/|$))(?!.*(?:^|\/)\.(?:\/|$))[A-Za-z0-9_.\/-]+$/;
 export const isRepositoryPath = (path) => typeof path === 'string' && filePathPattern.test(path) && !path.endsWith('/');
 
 let allowedProtocols = 'https';
@@ -42,8 +47,53 @@ export const gitEnv = () => ({
   ...Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_') || keptGitVariables.has(name))),
   GIT_TERMINAL_PROMPT: '0', GIT_ALLOW_PROTOCOL: allowedProtocols, GIT_CONFIG_GLOBAL: devNull, GIT_CONFIG_NOSYSTEM: '1',
 });
-export const git = (args, options = {}) => execFileSync('git', args, { stdio: 'pipe', env: gitEnv(), maxBuffer: 256 * 1024 * 1024, ...options }).toString();
+// Hooks are pointed at a path with no hooks in it, and fsmonitor is off, so a
+// repository in the cache cannot run code of its own however it got there.
+const safeGitConfig = ['-c', `core.hooksPath=${devNull}`, '-c', 'core.fsmonitor=false'];
+export const git = (args, options = {}) => execFileSync('git', [...safeGitConfig, ...args], { stdio: 'pipe', env: gitEnv(), maxBuffer: 256 * 1024 * 1024, ...options }).toString();
 export const lastLine = (error) => String(error.stderr ?? error.message).trim().split('\n').filter(Boolean).pop() ?? 'failed';
+
+// The per-user directory the git caches live in: $XDG_CACHE_HOME or ~/.cache,
+// then ovdb-directory. Never inside a checkout. Created 0700; refused unless it
+// is a real directory (not a symbolic link) owned by the current user and not
+// writable by anyone else.
+export function defaultCacheDir() {
+  const base = process.env.XDG_CACHE_HOME && isAbsolute(process.env.XDG_CACHE_HOME) ? process.env.XDG_CACHE_HOME : join(homedir(), '.cache');
+  const dir = join(base, 'ovdb-directory');
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const stat = lstatSync(dir);
+  if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error(`${dir} is not a directory; the git cache must be a real per-user directory`);
+  if (process.getuid && stat.uid !== process.getuid()) throw new Error(`${dir} is owned by another user; the git cache must be yours`);
+  if ((stat.mode & 0o022) !== 0) throw new Error(`${dir} is writable by others; the git cache must be private (chmod 700)`);
+  return dir;
+}
+
+// The configuration a repository this module made can have. Anything else in a
+// cached repository's config (hooksPath, fsmonitor, insteadOf, an include,
+// an alias, a credential or protocol setting) means it was not made here.
+const safeConfigKeys = [
+  /^core\.(repositoryformatversion|filemode|bare|logallrefupdates|ignorecase|precomposeunicode|symlinks)$/,
+  /^remote\.origin\.(url|fetch|promisor|partialclonefilter)$/,
+  /^extensions\.(partialclone|objectformat)$/,
+  /^branch\.[^.]+\.(remote|merge)$/,
+];
+
+// Whether a cached bare repository is what this module made: only safe
+// configuration, no alternates, and every object it holds hashes to its name
+// (git fsck). A repository that fails is thrown away and fetched again.
+export function cacheRepoSound(dir) {
+  try {
+    if (existsSync(join(dir, 'objects', 'info', 'alternates')) || existsSync(join(dir, 'commondir'))) return false;
+    const keys = git(['config', '--file', join(dir, 'config'), '--list', '--name-only']).split('\n').filter(Boolean);
+    if (!keys.every((key) => safeConfigKeys.some((pattern) => pattern.test(key)))) return false;
+    git(['-C', dir, 'fsck', '--no-dangling', '--no-progress']);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export const historyPath = (cacheDir, url, branch) => join(cacheDir, createHash('sha256').update(`${url}#${branch}`).digest('hex').slice(0, 32));
 
 // The canonical https form of a repository, or null. One spelling per
 // repository: an allow-listed host (no www., no IP literal, no port, no user),
@@ -75,15 +125,15 @@ export function defaultBranch(url) {
 // not have is not in that history either.
 export function onBranch(url, branch, commit, cacheDir, fetched = new Set()) {
   if (!commitPattern.test(commit) || !refNamePattern.test(branch)) return false;
-  const dir = join(cacheDir, createHash('sha256').update(`${url}#${branch}`).digest('hex').slice(0, 32));
+  const dir = historyPath(cacheDir, url, branch);
   const ref = `refs/heads/${branch}`;
   if (!fetched.has(dir)) {
     try {
-      if (existsSync(join(dir, 'HEAD'))) git(['-C', dir, 'fetch', '-q', '--force', '--end-of-options', url, `+${ref}:${ref}`]);
+      if (existsSync(join(dir, 'HEAD')) && cacheRepoSound(dir)) git(['-C', dir, 'fetch', '-q', '--force', '--end-of-options', url, `+${ref}:${ref}`]);
       else {
         rmSync(dir, { recursive: true, force: true });
         mkdirSync(cacheDir, { recursive: true });
-        git(['clone', '-q', '--bare', '--filter=tree:0', '--single-branch', '--branch', branch, '--end-of-options', url, dir]);
+        git(['clone', '-q', '--bare', '--template=', '--filter=tree:0', '--single-branch', '--branch', branch, '--end-of-options', url, dir]);
       }
     } catch (error) {
       throw new Error(`cannot read the history of ${branch} in ${url}: ${lastLine(error)}`);
@@ -111,12 +161,12 @@ export function openCommit(url, commit, cacheDir) {
   const ready = () => {
     try { git(['-C', dir, 'cat-file', '-e', `${commit}^{commit}`]); return true; } catch { return false; }
   };
-  if (!(existsSync(join(dir, 'HEAD')) && ready())) {
+  if (!(existsSync(join(dir, 'HEAD')) && cacheRepoSound(dir) && ready())) {
     rmSync(dir, { recursive: true, force: true });
     mkdirSync(cacheDir, { recursive: true });
     const work = mkdtempSync(join(cacheDir, '.fetch-'));
     try {
-      git(['init', '-q', '--bare', work]);
+      git(['init', '-q', '--bare', '--template=', work]);
       git(['-C', work, 'fetch', '-q', '--depth', '1', '--end-of-options', url, commit]);
       if (git(['-C', work, 'rev-parse', 'FETCH_HEAD']).trim() !== commit) throw new Error('did not fetch that commit');
       renameSync(work, dir);

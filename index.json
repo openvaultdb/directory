@@ -1,6 +1,6 @@
 {
   "format": "ovdb-directory/draft-1",
-  "checksum": "sha256:97f349a59e8c80f52de170b588ca6c17ea5b30155465d7742fe05f4e09281aca",
+  "checksum": "sha256:4fb9c10d3f05c1949c11d59d22efa2339309e5ca2b20d2f324c2cdd337126946",
   "databases": [
     {
       "id": "chinook",
@@ -190,7 +190,8 @@
                     "graph": "core",
                     "concept": "country",
                     "label": "Country",
-                    "address": "meaning://github.com/meaninggraph/core/country?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    "address": "meaning://github.com/meaninggraph/core/country?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7",
+                    "extends": []
                   }
                 }
               ]
@@ -231,7 +232,21 @@
                     "graph": "chinook",
                     "concept": "employee",
                     "label": "Employee",
-                    "address": "meaning://github.com/datatug/chinookdb/employee?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f"
+                    "address": "meaning://github.com/datatug/chinookdb/employee?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                    "extends": [
+                      {
+                        "graph": "core",
+                        "concept": "employee",
+                        "label": "Employee",
+                        "address": "meaning://github.com/meaninggraph/core/employee?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      },
+                      {
+                        "graph": "core",
+                        "concept": "person",
+                        "label": "Person",
+                        "address": "meaning://github.com/meaninggraph/core/person?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      }
+                    ]
                   }
                 }
               ]
@@ -308,7 +323,21 @@
                     "graph": "chinook",
                     "concept": "employee",
                     "label": "Employee",
-                    "address": "meaning://github.com/datatug/chinookdb/employee?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f"
+                    "address": "meaning://github.com/datatug/chinookdb/employee?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                    "extends": [
+                      {
+                        "graph": "core",
+                        "concept": "employee",
+                        "label": "Employee",
+                        "address": "meaning://github.com/meaninggraph/core/employee?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      },
+                      {
+                        "graph": "core",
+                        "concept": "person",
+                        "label": "Person",
+                        "address": "meaning://github.com/meaninggraph/core/person?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      }
+                    ]
                   }
                 }
               ]
@@ -499,7 +528,8 @@
                     "graph": "core",
                     "concept": "country",
                     "label": "Country",
-                    "address": "meaning://github.com/meaninggraph/core/country?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    "address": "meaning://github.com/meaninggraph/core/country?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7",
+                    "extends": []
                   }
                 }
               ]

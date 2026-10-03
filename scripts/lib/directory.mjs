@@ -9,11 +9,12 @@
 // builds its index.json entry, so what is checked is what is published.
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join, posix } from 'node:path';
+import { isAbsolute, join, posix, relative, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import { addressOf, commitPattern, defaultBranch, isRepositoryPath, onBranch, openCommit, repositoryKey, repositoryHosts } from './git.mjs';
-import { createMeaningResolver, entryOf, loadMeaningRegistry, parseConceptRef, labelOf } from './meaning.mjs';
+import { addressOf, commitPattern, defaultBranch, defaultCacheDir, isRepositoryPath, onBranch, openCommit, repositoryKey, repositoryHosts } from './git.mjs';
+import { conceptIdPattern, createMeaningResolver, entryOf, loadMeaningRegistry, parseConceptRef, labelOf } from './meaning.mjs';
 import { parseModelSpec, parseModelRef } from './modelspec.mjs';
+import { hasOvdbMarker, publicHttpsProblem } from './urls.mjs';
 
 export { repositoryHosts };
 export const directoryFormat = 'ovdb-directory/draft-1';
@@ -47,18 +48,17 @@ export function readDirectory(root) {
   return { databases: databases.records, maintainers: maintainers.records, problems: [...databases.problems, ...maintainers.problems] };
 }
 
-// A canonical https URL: no user, query or fragment, and spelled the way URL
-// would write it (so https://chinookdb.com/x and https://CHINOOKDB.com/x are
-// not two identities).
-export function canonicalUrl(value) {
-  if (typeof value !== 'string') return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash && url.href === value && !value.endsWith('/');
-  } catch {
-    return false;
-  }
+// A problem with `value` as a database's canonical url, or null: a public https
+// URL (urls.mjs) without a trailing slash, with `ovdb` as a complete path segment
+// or as a subdomain (brief, section 5).
+export function urlProblem(value) {
+  const problem = publicHttpsProblem(value);
+  if (problem) return problem;
+  if (value.endsWith('/')) return 'must not have a trailing slash';
+  if (!hasOvdbMarker(value)) return 'must have ovdb as a complete path segment or as a subdomain (https://acme.com/ovdb/sales or https://ovdb.acme.com/sales)';
+  return null;
 }
+export const canonicalUrl = (value) => urlProblem(value) === null;
 
 // A database record whose repository, commit and manifest path are well
 // formed: the only kind whose values are ever handed to git.
@@ -77,7 +77,7 @@ export function recordProblems({ databases, maintainers }) {
     if (!statuses.includes(data.status)) problems.push(`${file}: status must be one of ${statuses.join(', ')}`);
     if (!commitPattern.test(data.commit ?? '')) problems.push(`${file}: commit must be a full 40-character lower-case commit id`);
     if (!repositoryKey(data.repository)) problems.push(`${file}: repository must be an https URL of a repository on ${[...repositoryHosts.keys()].join(', ')}, such as https://github.com/{org}/{repo} (no trailing slash, .git, "." or ".." segments)`);
-    if (!canonicalUrl(data.url)) problems.push(`${file}: url must be a canonical https URL without credentials, query, fragment or trailing slash`);
+    if (urlProblem(data.url)) problems.push(`${file}: url ${urlProblem(data.url)}`);
     else urls.set(data.url.toLowerCase(), [...(urls.get(data.url.toLowerCase()) ?? []), { key, file, value: data.url }]);
     if (!isRepositoryPath(data.manifest)) problems.push(`${file}: manifest must be a relative path inside the repository (no "..", no glob)`);
     if (typeof data.meaning_graph !== 'string' || !idPattern.test(data.meaning_graph)) problems.push(`${file}: meaning_graph must be a MeaningGraph registry id`);
@@ -106,7 +106,6 @@ export function parseFrontmatter(text) {
 }
 
 const isText = (value) => typeof value === 'string' && value.trim() !== '';
-const isHttps = (value) => { try { return new URL(value).protocol === 'https:'; } catch { return false; } };
 
 // The manifest's required fields (format ovdb-manifest/draft-1).
 export function manifestProblems(manifest) {
@@ -115,23 +114,28 @@ export function manifestProblems(manifest) {
   if (manifest.format !== manifestFormat) problems.push(`format must be ${manifestFormat}, got ${JSON.stringify(manifest.format)}`);
   for (const field of ['id', 'title', 'description']) if (!isText(manifest[field])) problems.push(`${field} is required`);
   const need = (object, field, label, check = isText) => { if (!check(object?.[field])) problems.push(`${label} is required`); };
-  need(manifest, 'url', 'url', isHttps);
-  need(manifest.deployment, 'url', 'deployment.url', isHttps);
+  // A URL the manifest publishes: public https only (brief, section 15).
+  const needUrl = (value, label, check = publicHttpsProblem, options) => {
+    if (value === undefined || value === null || value === '') problems.push(`${label} is required`);
+    else { const problem = check(value, options); if (problem) problems.push(`${label} ${problem}`); }
+  };
+  needUrl(manifest.url, 'url', urlProblem);
+  needUrl(manifest.deployment?.url, 'deployment.url');
   need(manifest.deployment, 'engine', 'deployment.engine');
-  need(manifest.deployment, 'discovery', 'deployment.discovery', isHttps);
+  needUrl(manifest.deployment?.discovery, 'deployment.discovery');
   // The discovery document is the canonical host's: same origin as the canonical url.
-  if (isHttps(manifest.deployment?.discovery) && isHttps(manifest.url) && new URL(manifest.deployment.discovery).origin !== new URL(manifest.url).origin) {
+  if (!urlProblem(manifest.url) && !publicHttpsProblem(manifest.deployment?.discovery) && new URL(manifest.deployment.discovery).origin !== new URL(manifest.url).origin) {
     problems.push(`deployment.discovery must be on the same origin as url (${new URL(manifest.url).origin}), not ${new URL(manifest.deployment.discovery).origin}`);
   }
   // Optional: where a recordset is browsed, with {name} for the recordset name.
-  const page = manifest.deployment?.recordset_page;
-  if (page !== undefined && !(isHttps(page) && page.split('{name}').length === 2)) problems.push('deployment.recordset_page must be an https URL template with {name} once');
+  if (manifest.deployment?.recordset_page !== undefined) needUrl(manifest.deployment.recordset_page, 'deployment.recordset_page', publicHttpsProblem, { template: true });
   need(manifest.model, 'modelspec', 'model.modelspec', isRepositoryPath);
+  if (manifest.model?.hcl !== undefined && !isRepositoryPath(manifest.model.hcl)) problems.push('model.hcl must be a relative path inside the repository (no "..", no leading /, no "." or empty segments, no glob)');
   need(manifest.meaning, 'file', 'meaning.file', isRepositoryPath);
   need(manifest.meaning?.graph, 'id', 'meaning.graph.id');
   need(manifest.meaning?.graph, 'address', 'meaning.graph.address', (value) => isText(value) && value.startsWith('meaning://'));
   need(manifest.publisher, 'name', 'publisher.name');
-  need(manifest.publisher, 'url', 'publisher.url', isHttps);
+  needUrl(manifest.publisher?.url, 'publisher.url');
   need(manifest.licences, 'data', 'licences.data');
   need(manifest.licences, 'model', 'licences.model');
   need(manifest.licences, 'meaning', 'licences.meaning');
@@ -208,7 +212,7 @@ export function analyseDatabase(record, context) {
   if (manifest.url !== data.url) bad(`${data.manifest}: url is ${manifest.url}, but the record's url is ${data.url}; the manifest and the record name one canonical identity`);
   if (manifest.id !== key) bad(`${data.manifest}: id is ${manifest.id}, but the record is ${key}`);
   if (manifest.meaning.graph.id !== data.meaning_graph) bad(`${data.manifest}: meaning.graph.id is ${manifest.meaning.graph.id}, but the record's meaning_graph is ${data.meaning_graph}`);
-  if (manifest.publisher.repository !== undefined && repositoryKey(manifest.publisher.repository) !== repositoryKey(data.repository)) {
+  if (manifest.publisher.repository !== undefined && lowerKey(repositoryKey(manifest.publisher.repository) ?? '') !== lowerKey(repositoryKey(data.repository))) {
     bad(`${data.manifest}: publisher.repository is ${manifest.publisher.repository}, but the record's repository is ${data.repository}`);
   }
 
@@ -219,6 +223,7 @@ export function analyseDatabase(record, context) {
     if (repositoryKey(graph.repository) === null || lowerKey(repositoryKey(graph.repository)) !== lowerKey(repositoryKey(data.repository))) {
       bad(`meaning_graph ${data.meaning_graph} is registered for ${graph.repository}, not for ${data.repository}`);
     }
+    if (addressOf(graph.repository) !== graph.address) bad(`the MeaningGraph registry's record for ${graph.id} is not well formed (its repository ${graph.repository} must be the https URL whose meaning:// form is its address ${graph.address})`);
     if (manifest.meaning.graph.address !== graph.address) bad(`${data.manifest}: meaning.graph.address is ${manifest.meaning.graph.address}, but the MeaningGraph registry registers ${graph.id} as ${graph.address}`);
     const listed = (graph.meaning_files ?? []).some((pattern) => files.match(pattern).includes(manifest.meaning.file));
     if (!listed) bad(`${data.manifest}: meaning.file ${manifest.meaning.file} is not one of the meaning files the MeaningGraph registry lists for ${graph.id} (${(graph.meaning_files ?? []).join(', ')})`);
@@ -245,17 +250,28 @@ export function analyseDatabase(record, context) {
   if (doc === null || typeof doc !== 'object' || !Array.isArray(doc.concepts)) { bad(`${manifest.meaning.file}: has no concepts list`); return stop(); }
   if (typeof doc.license === 'string' && doc.license !== manifest.licences.meaning) bad(`${data.manifest}: licences.meaning is ${manifest.licences.meaning}, but ${manifest.meaning.file} declares ${doc.license}`);
   if (manifest.model.name !== undefined && manifest.model.name !== model.module) bad(`${data.manifest}: model.name is ${manifest.model.name}, but the ModelSpec at ${manifest.model.modelspec} is module ${model.module}`);
-  if (manifest.model.hcl !== undefined) {
-    const declared = doc.models?.[model.module];
-    if (typeof declared !== 'string') bad(`${manifest.meaning.file}: models does not name the ModelSpec module ${model.module}`);
-    else if (posix.join(posix.dirname(manifest.meaning.file), declared) !== manifest.model.hcl) bad(`${manifest.meaning.file}: the ${model.module} model is ${posix.join(posix.dirname(manifest.meaning.file), declared)}, but ${data.manifest} says model.hcl is ${manifest.model.hcl}`);
+  // The model's source file is the meaning file's `models:` entry for the module, relative to
+  // the meaning file; it must be a tracked regular file of the repository at the pinned commit.
+  let modelPath;
+  const declared = doc.models?.[model.module];
+  if (typeof declared !== 'string' || !isRepositoryPath(declared)) bad(`${manifest.meaning.file}: models must name the ModelSpec module ${model.module} with a relative path inside the repository (no "..", no leading /, no "." or empty segments, no glob), got ${JSON.stringify(declared)}`);
+  else {
+    const joined = posix.join(posix.dirname(manifest.meaning.file), declared);
+    const status = isRepositoryPath(joined) ? files.status(joined) : 'missing';
+    if (status === 'file') modelPath = joined;
+    else bad(`${manifest.meaning.file}: the ${model.module} model ${joined} ${status === 'link' ? 'is not a regular file' : 'does not exist'} at commit ${data.commit}`);
   }
+  if (manifest.model.hcl !== undefined && modelPath !== undefined && manifest.model.hcl !== modelPath) bad(`${manifest.meaning.file}: the ${model.module} model is ${modelPath}, but ${data.manifest} says model.hcl is ${manifest.model.hcl}`);
   if (!graph) return stop();
 
-  const own = { id: graph.id, address: repositoryKey(data.repository), ref: data.commit, concepts: new Map() };
-  for (const concept of doc.concepts) {
-    if (own.concepts.has(concept?.id)) bad(`${manifest.meaning.file}: concept ${concept.id} is declared twice`);
-    else if (isText(concept?.id)) own.concepts.set(concept.id, concept);
+  // Addresses are spelled the way the MeaningGraph registry registers the graph (checked above
+  // to be the canonical form of the same repository), whatever case the record uses.
+  const own = { id: graph.id, address: graph.address.slice('meaning://'.length), ref: data.commit, concepts: new Map() };
+  for (const [position, concept] of doc.concepts.entries()) {
+    if (concept === null || typeof concept !== 'object' || typeof concept.id !== 'string') bad(`${manifest.meaning.file}: concept #${position + 1} has no id`);
+    else if (!conceptIdPattern.test(concept.id)) bad(`${manifest.meaning.file}: concept id ${JSON.stringify(concept.id)} must be lower-case words joined by single hyphens`);
+    else if (own.concepts.has(concept.id)) bad(`${manifest.meaning.file}: concept ${concept.id} is declared twice`);
+    else own.concepts.set(concept.id, concept);
   }
   const resolver = createMeaningResolver({ own, registry: context.meaningRegistry, urlFor, cacheDir, historyDir, fetched, branches });
 
@@ -316,7 +332,7 @@ export function analyseDatabase(record, context) {
     commit: data.commit,
     manifest: data.manifest,
     licence: manifest.licences.data,
-    model: { name: manifest.model.name ?? model.module, path: manifest.model.hcl ?? manifest.model.modelspec },
+    model: { name: model.module, path: modelPath },
     meaning_graph: { id: graph.id, address: graph.address },
     recordsets: [...recordsets.values()].sort(byName).map((recordset) => ({
       name: recordset.name,
@@ -347,10 +363,17 @@ function sharedContext({ urlFor, cacheDir, meaningRegistry, fetched = new Set(),
 
 // Reads the MeaningGraph registry (a fetched index, or `meaningRegistry` as
 // given) and analyses every database. { problems, entries }.
-export async function analyseDirectory({ root, urlFor, cacheDir = join(root, '.cache'), meaningRegistry, loadRegistry = loadMeaningRegistry, ...rest } = {}) {
+export async function analyseDirectory({ root, urlFor, cacheDir, meaningRegistry, loadRegistry = loadMeaningRegistry, ...rest } = {}) {
   const directory = readDirectory(root);
   const problems = [...directory.problems, ...recordProblems(directory)];
   const entries = [];
+  // The git cache is the user's, outside the checkout: nothing a pull request commits is ever read as cache.
+  cacheDir ??= defaultCacheDir();
+  const inside = relative(resolve(root), resolve(cacheDir));
+  if (inside === '' || (!inside.startsWith('..') && !isAbsolute(inside))) {
+    problems.push(`the git cache ${cacheDir} is inside the checkout ${root}; it must live outside it (default: $XDG_CACHE_HOME/ovdb-directory)`);
+    return { problems, entries, directory };
+  }
   let registryIndex = meaningRegistry;
   try { registryIndex ??= await loadRegistry(); } catch (error) {
     problems.push(`MeaningGraph registry: ${error.message}`);
