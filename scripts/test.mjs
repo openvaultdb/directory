@@ -7,13 +7,13 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { execFile, execFileSync } from 'node:child_process';
-import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { devNull, tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, test } from 'node:test';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import { addressOf, cacheRepoSound, defaultBranch, defaultCacheDir, git, gitEnv, historyPath, onBranch, openCommit, repositoryKey, setGitProtocols } from './lib/git.mjs';
+import { addressOf, cacheRepoSound, defaultBranch, defaultCacheDir, git, gitEnv, historyPath, identity, install, onBranch, openCommit, repositoryKey, setGitProtocols } from './lib/git.mjs';
 import { runCheck, runIndex } from './lib/cli.mjs';
 import { hasOvdbMarker, publicHttpsProblem } from './lib/urls.mjs';
 import { buildIndex, checkDirectory, addressClaims, claimProblems, indexText, readDirectory, recordProblems, urlProblem } from './lib/directory.mjs';
@@ -1882,6 +1882,239 @@ test('a cached repository directory that is itself a symbolic link is never used
   assert.equal(onBranch(url, 'main', w.publisher.commit, history, new Set()), true);
   assert.equal(lstatSync(clone).isSymbolicLink(), false);
   assert.equal(existsSync(join(copy, 'HEAD')), true);
+});
+
+// ---- a history clone that cannot be fetched into ----
+
+// A publisher whose big file changes a little with every commit, on a server that honours the partial-clone filter
+// (uploadpack.allowFilter, as GitHub does). A commits-only clone of it that is several commits behind is the real
+// failure of the issue: asked for no filter, the server sends a thin pack whose deltas are made against trees and
+// blobs that the clone does not have, and git, which must not fetch them itself, stops with "unresolved deltas".
+const bigFile = (version) => Array.from({ length: 4000 }, (_, line) => `line ${line} of the file, some text that compresses well${line % 500 === version ? ' (changed)' : ''}\n`).join('');
+function behindPublisher({ commitsBehind = 3 } = {}) {
+  const source = origin(new Map([['big.txt', bigFile(-1)], ['sub/other.txt', 'x\n']]), { name: 'behind' });
+  gitIn(source.dir, 'config', 'uploadpack.allowFilter', 'true');
+  const history = join(fresh('history'), 'history');
+  const url = source.url;
+  const first = onBranch(url, 'main', source.commit, history, new Set());
+  assert.equal(first, true);
+  const dir = historyPath(history, url, 'main');
+  writeFileSync(join(dir, 'stale-marker'), 'the entry that was there before\n');
+  // A fetch that names the URL and asks for the filter registers `[remote "<url>"]` with it, after which git applies the
+  // filter to every later fetch of that URL. The entry of the issue was made before that, so it has no such section.
+  try { git(['config', '--file', join(dir, 'config'), '--remove-section', `remote.${url}`]); } catch { /* the first clone has none */ }
+  let head = source.commit;
+  for (let n = 0; n < commitsBehind; n += 1) head = source.more([['big.txt', bigFile(n)]]);
+  const fetchWithoutFilter = (target) => git(['-C', target, 'fetch', '-q', '--force', '--end-of-options', url, '+refs/heads/main:refs/heads/main']);
+  return { source, history, url, dir, head, fetchWithoutFilter };
+}
+const unpackFailure = (error) => /unresolved deltas|unpack-objects failed/.test(String(error.stderr ?? error.message));
+const tempEntries = (history) => readdirSync(history).filter((name) => name.startsWith('.'));
+
+// Runs `work` with a `git` in front of PATH that records every call the module makes (arguments and GIT_* variables)
+// and then runs the real git, and with hostile inherited GIT_* variables the module must drop.
+function recordedGit(work) {
+  const shim = fresh('shim');
+  const log = join(shim, 'calls.log');
+  const real = execFileSync('which', ['git'], { env: process.env }).toString().trim();
+  writeFileSync(join(shim, 'git'), `#!/bin/sh
+{ printf 'CALL'; for a in "$@"; do printf '\\t%s' "$a"; done; printf '\\n'; env | grep '^GIT_' | sort | sed 's/^/ENV\\t/'; echo END; } >> '${log}'
+exec '${real}' "$@"
+`, { mode: 0o755 });
+  const hostile = { GIT_DIR: join(shim, 'nowhere'), GIT_WORK_TREE: shim, GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'core.hooksPath', GIT_CONFIG_VALUE_0: join(shim, 'evil-hooks'), GIT_CONFIG_PARAMETERS: "'core.hooksPath=/tmp/evil'" };
+  const saved = { PATH: process.env.PATH, ...Object.fromEntries(Object.keys(hostile).map((name) => [name, process.env[name]])) };
+  Object.assign(process.env, hostile, { PATH: `${shim}:${process.env.PATH}` });
+  let outcome;
+  try { outcome = { value: work() }; } catch (error) { outcome = { error }; } finally {
+    for (const [name, value] of Object.entries(saved)) { if (value === undefined) delete process.env[name]; else process.env[name] = value; }
+  }
+  const calls = existsSync(log) ? readFileSync(log, 'utf8').split('END\n').filter(Boolean).map((block) => {
+    const lines = block.split('\n').filter(Boolean);
+    return { args: lines[0].split('\t').slice(1), env: Object.fromEntries(lines.slice(1).map((line) => line.replace(/^ENV\t/, '').split(/=(.*)/s).slice(0, 2))) };
+  }) : [];
+  if (outcome.error) { outcome.error.calls = calls; throw outcome.error; }
+  return { value: outcome.value, calls };
+}
+const hardenedArgs = ['-c', `core.hooksPath=${devNull}`, '-c', 'core.fsmonitor=false', '-c', 'core.useReplaceRefs=false'];
+// What every git call the module makes must have, whatever it does.
+const assertHardened = (calls) => {
+  assert.ok(calls.length > 0, 'the module ran git');
+  for (const { args, env } of calls) {
+    assert.deepEqual(args.slice(0, hardenedArgs.length), hardenedArgs, args.join(' '));
+    assert.equal(env.GIT_NO_LAZY_FETCH, '1', args.join(' '));
+    assert.equal(env.GIT_NO_REPLACE_OBJECTS, '1', args.join(' '));
+    assert.equal(env.GIT_CONFIG_GLOBAL, devNull, args.join(' '));
+    assert.equal(env.GIT_CONFIG_NOSYSTEM, '1', args.join(' '));
+    assert.equal(env.GIT_TERMINAL_PROMPT, '0', args.join(' '));
+    assert.equal(env.GIT_ALLOW_PROTOCOL, 'https:file', args.join(' '));
+    for (const name of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_CONFIG_COUNT', 'GIT_CONFIG_KEY_0', 'GIT_CONFIG_VALUE_0', 'GIT_CONFIG_PARAMETERS']) assert.equal(name in env, false, `${name} reached git: ${args.join(' ')}`);
+    // A url or a branch from a record only ever comes after --end-of-options.
+    if (['clone', 'fetch', 'ls-remote'].includes(args[hardenedArgs.length] === '-C' ? args[hardenedArgs.length + 2] : args[hardenedArgs.length])) assert.ok(args.includes('--end-of-options'), args.join(' '));
+  }
+};
+const cloneCall = (calls) => calls.filter(({ args }) => args[hardenedArgs.length] === 'clone');
+
+test('an incremental fetch into a history clone that is several commits behind works with the checker\'s git environment: it asks for the clone\'s own filter, so the clone stays commits-only and is kept', async () => {
+  const p = behindPublisher();
+  // Positive control: the stand-in is the failure of the issue. The same fetch without the filter dies on a copy of the clone.
+  const copy = join(fresh('copy'), 'clone');
+  cpSync(p.dir, copy, { recursive: true });
+  assert.throws(() => p.fetchWithoutFilter(copy), unpackFailure);
+  const tree = gitIn(p.source.dir, 'rev-parse', `${p.head}^{tree}`);
+  const { calls } = recordedGit(() => assert.equal(onBranch(p.url, 'main', p.head, p.history, new Set()), true));
+  assert.equal(existsSync(join(p.dir, 'stale-marker')), true, 'the cached clone was fetched into, not replaced');
+  assert.equal(cloneCall(calls).length, 0, 'no fresh clone was needed');
+  assert.ok(calls.some(({ args }) => args.includes('fetch') && args.includes('--filter=tree:0')));
+  assertHardened(calls);
+  assert.throws(() => git(['-C', p.dir, 'cat-file', '-e', tree]), /./, 'the filter held: the new commit\'s tree was not downloaded');
+  assert.equal(cacheRepoSound(p.dir, { url: p.url }), true, 'still a clone this module made, so the next run reuses it');
+  const inode = identity(p.dir);
+  assert.equal(onBranch(p.url, 'main', p.head, p.history, new Set()), true);
+  assert.equal(identity(p.dir), inode, 'and it does');
+  assert.deepEqual(tempEntries(p.history), []);
+});
+
+test('a history clone that cannot be fetched into is replaced by a fresh clone made with the same hardening as a first clone; the run succeeds and the unusable entry is gone', async () => {
+  const p = behindPublisher();
+  // The server stops honouring the filter, as a mirror or a changed hoster could: the fetch is the issue's failure again,
+  // now in spite of the filter, so the fallback is what makes the run work.
+  gitIn(p.source.dir, 'config', 'uploadpack.allowFilter', 'false');
+  const copy = join(fresh('copy'), 'clone');
+  cpSync(p.dir, copy, { recursive: true });
+  assert.throws(() => git(['-C', copy, 'fetch', '-q', '--force', '--filter=tree:0', '--end-of-options', p.url, '+refs/heads/main:refs/heads/main']), unpackFailure);
+  const before = identity(p.dir);
+  const { calls } = recordedGit(() => assert.equal(onBranch(p.url, 'main', p.head, p.history, new Set()), true));
+  assert.notEqual(identity(p.dir), before, 'the entry was replaced');
+  assert.equal(existsSync(join(p.dir, 'stale-marker')), false, 'the unusable entry is gone, not reused');
+  assert.deepEqual(tempEntries(p.history), [], 'nothing of the old entry or of the clone is left in the cache');
+  assert.equal(cacheRepoSound(p.dir, { url: p.url }), true);
+  assert.equal(git(['-C', p.dir, 'rev-parse', 'refs/heads/main']).trim(), p.head);
+  // The fresh clone is the same kind of repository as a first clone: bare, from the verified URL, no hooks, no index, no checkout.
+  assert.equal(git(['-C', p.dir, 'rev-parse', '--is-bare-repository']).trim(), 'true');
+  assert.equal(git(['-C', p.dir, 'config', '--get-all', 'remote.origin.url']).trim(), p.url);
+  assert.equal(git(['-C', p.dir, 'config', '--get', 'remote.origin.partialclonefilter']).trim(), 'tree:0');
+  assert.equal(existsSync(join(p.dir, 'hooks')), false, 'cloned with --template=');
+  assert.equal(existsSync(join(p.dir, 'index')), false);
+  assert.equal(existsSync(join(p.dir, 'shallow')), false);
+  // Every call, the fresh clone's included, had the cleaned GIT_* environment and every hardening; it was made once, like a first clone.
+  assertHardened(calls);
+  const fallback = cloneCall(calls);
+  assert.equal(fallback.length, 1, 'one fresh clone, no loop');
+  const firstClone = recordedGit(() => onBranch(p.url, 'main', p.head, join(fresh('history'), 'history'), new Set()));
+  const normalised = ({ args, env }) => ({ args: [...args.slice(0, -1), 'DESTINATION'], env });
+  assert.deepEqual(normalised(fallback[0]), normalised(cloneCall(firstClone.calls)[0]), 'the same arguments and environment as a first clone');
+  assert.ok(fallback[0].args.includes('--template=') && fallback[0].args.includes('--filter=tree:0') && fallback[0].args.includes('--single-branch'));
+  assert.ok(fallback[0].args.indexOf('--end-of-options') < fallback[0].args.indexOf(p.url));
+});
+
+test('a remote that fails for the fetch and for the fresh clone gives one clear error from the remote, tries one clone, and leaves the cache as it was', async () => {
+  const p = behindPublisher();
+  const gone = `${p.source.dir}-moved`;
+  renameSync(p.source.dir, gone);
+  const before = identity(p.dir);
+  let error;
+  try { recordedGit(() => onBranch(p.url, 'main', p.head, p.history, new Set())); } catch (thrown) { error = thrown; }
+  assert.ok(error, 'the run failed');
+  const { calls } = error;
+  assert.match(error.message, new RegExp(`^cannot read the history of main in ${p.url.replace(/[.+?^${}()|[\]\\]/g, '\\$&')}: '[^']*' does not appear to be a git repository$`));
+  assert.equal(error.message.split('\n').length, 1, 'one line');
+  assert.equal(cloneCall(calls).length, 1, 'one fresh clone, no loop');
+  assertHardened(calls);
+  assert.equal(identity(p.dir), before, 'the entry is still the one that was there: a remote that is down does not cost the cache');
+  assert.equal(existsSync(join(p.dir, 'stale-marker')), true);
+  assert.deepEqual(tempEntries(p.history), [], 'no half-made clone');
+  // The remote comes back: the same entry is fetched into, not replaced.
+  renameSync(gone, p.source.dir);
+  assert.equal(onBranch(p.url, 'main', p.head, p.history, new Set()), true);
+  assert.equal(identity(p.dir), before);
+  // A clone that cannot be made, with nothing cached, leaves nothing either.
+  const empty = join(fresh('history'), 'history');
+  renameSync(p.source.dir, gone);
+  assert.throws(() => onBranch(p.url, 'main', p.head, empty, new Set()), /cannot read the history of main/);
+  assert.deepEqual(readdirSync(empty), []);
+  renameSync(gone, p.source.dir);
+});
+
+test('only the entry that was found unusable is replaced: a replacement that another run moved in first is kept, and the loser leaves no trace', async () => {
+  const slot = fresh('slot');
+  const scratchDir = fresh('scratch');
+  const repository = (marker) => {
+    const dir = join(fresh('repository'), 'repo');
+    mkdirSync(dir);
+    gitIn(dir, 'init', '-q', '--bare');
+    writeFileSync(join(dir, marker), marker);
+    return dir;
+  };
+  const entry = join(slot, 'entry');
+  renameSync(repository('stale'), entry);
+  const unusable = identity(entry);
+  assert.ok(unusable);
+  // Another run replaced the unusable entry before this one got to it: it is kept, this run's clone is dropped.
+  rmSync(entry, { recursive: true });
+  renameSync(repository('from-the-other-run'), entry);
+  const mine = repository('mine');
+  install(mine, entry, () => cacheRepoSound(entry), scratchDir, unusable);
+  assert.equal(existsSync(join(entry, 'from-the-other-run')), true, 'the other run\'s fresh clone was not deleted');
+  assert.equal(existsSync(mine), false);
+  assert.deepEqual(readdirSync(scratchDir), []);
+  // The entry still there is the unusable one although it looks sound: it is replaced, moved aside first and then removed.
+  const stillThere = identity(entry);
+  const second = repository('second');
+  install(second, entry, () => cacheRepoSound(entry), scratchDir, stillThere);
+  assert.equal(existsSync(join(entry, 'second')), true);
+  assert.equal(existsSync(join(entry, 'from-the-other-run')), false);
+  assert.deepEqual(readdirSync(scratchDir), []);
+  // Another run swaps the entry in the moment this one has looked at it: the replacement is not moved aside.
+  let swapped = false;
+  const replaced = identity(entry);
+  const third = repository('third');
+  install(third, entry, () => {
+    if (!swapped) { swapped = true; rmSync(entry, { recursive: true }); renameSync(repository('swapped-in'), entry); return false; }
+    return cacheRepoSound(entry);
+  }, scratchDir, undefined);
+  assert.notEqual(identity(entry), replaced);
+  assert.equal(existsSync(join(entry, 'swapped-in')), true, 'the swapped-in clone survived');
+  assert.deepEqual(readdirSync(scratchDir), []);
+});
+
+test('several runs that start on the same unusable history clone all succeed and leave one sound entry', async () => {
+  const p = behindPublisher();
+  gitIn(p.source.dir, 'config', 'uploadpack.allowFilter', 'false');
+  const script = `import { setGitProtocols, onBranch } from ${JSON.stringify(new URL('./lib/git.mjs', import.meta.url).href)};
+    setGitProtocols('https:file');
+    const [url, commit, history] = process.argv.slice(1);
+    if (!onBranch(url, 'main', commit, history)) throw new Error('not on the branch');`;
+  for (let round = 0; round < 3; round += 1) {
+    const history = join(fresh('history'), 'history');
+    mkdirSync(history, { recursive: true });
+    const entry = historyPath(history, p.url, 'main');
+    cpSync(p.dir, entry, { recursive: true });
+    const results = await Promise.all(Array.from({ length: 4 }, () => new Promise((resolve) => {
+      execFile(process.execPath, ['--input-type=module', '-e', script, p.url, p.head, history], (error, stdout, stderr) => resolve({ error, stderr }));
+    })));
+    for (const { error, stderr } of results) assert.equal(error, null, stderr);
+    assert.equal(existsSync(join(entry, 'stale-marker')), false, 'replaced');
+    assert.equal(cacheRepoSound(entry, { url: p.url }), true);
+    assert.equal(git(['-C', entry, 'rev-parse', 'refs/heads/main']).trim(), p.head);
+    assert.deepEqual(tempEntries(history), []);
+  }
+});
+
+test('a promisor remote that a filtered fetch registers under the URL is part of what a history clone may hold, for that URL only', async () => {
+  const p = behindPublisher();
+  assert.equal(onBranch(p.url, 'main', p.head, p.history, new Set()), true);
+  const keys = git(['config', '--file', join(p.dir, 'config'), '--list', '--name-only']).split('\n');
+  assert.ok(keys.includes(`remote.${p.url}.promisor`) && keys.includes(`remote.${p.url}.partialclonefilter`), keys.join(', '));
+  assert.equal(cacheRepoSound(p.dir, { url: p.url }), true);
+  assert.equal(cacheRepoSound(p.dir, { url: `${p.url}-other` }), false, 'another url');
+  assert.equal(cacheRepoSound(p.dir), false, 'no url to hold it against');
+  // Nothing else in that section is allowed: not a url, a proxy or a helper.
+  for (const key of ['url', 'proxy', 'uploadpack', 'pushurl', 'vcs']) {
+    const probe = join(fresh('probe'), 'clone');
+    cpSync(p.dir, probe, { recursive: true });
+    git(['config', '--file', join(probe, 'config'), `remote.${p.url}.${key}`, 'x']);
+    assert.equal(cacheRepoSound(probe, { url: p.url }), false, key);
+  }
 });
 
 const gitAtLeast = (major, minor) => {

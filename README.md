@@ -509,7 +509,13 @@ pull request commits can run code in CI or on a maintainer's machine. The cache 
 bare repositories only: there is no checkout, no index to trust and no work-tree
 `.gitattributes`, and files are read from the object store byte for byte. Each repository is
 made in a temporary directory and renamed into place, so two runs that start on an
-empty cache at the same time both work.
+empty cache at the same time both work. A history clone is brought up to date by a
+fetch that asks for the clone's own `tree:0` filter (without it the server may send
+deltas against trees the commits-only clone lacks, which git must not fetch itself).
+If that fetch cannot be made into the cached clone anyway, the clone is not trusted:
+a fresh one is made once, with the same hardening as a first clone, and replaces it
+(two runs on the same unusable clone both work). Only a remote that fails the fresh
+clone too is an error, with the remote's own message, and the cache is left as it was.
 
 `npm test` proves, offline, that each check fails on a broken entry. Local
 repositories stand in for the publisher and for the core meaning graph (a copy of
