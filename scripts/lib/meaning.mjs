@@ -28,6 +28,14 @@ export function parseConceptRef(ref) {
   return match ? { repo: match[1], id: match[2], ref: match[3] } : null;
 }
 
+// meaning://{host}/{org}/{repo}, with ?ref={40 hex} for a graph read at a pin (a manifest that
+// names its graph by address). Returns { repository: 'host/org/repo', ref? } or null.
+const graphAddressPattern = /^meaning:\/\/([A-Za-z0-9.-]+\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+)(?:\?ref=([0-9a-f]{40}))?$/;
+export function parseGraphAddress(address) {
+  const match = typeof address === 'string' ? graphAddressPattern.exec(address) : null;
+  return match ? { repository: match[1], ref: match[2] } : null;
+}
+
 // The English label, else the first label, else the id. (validateConcept has
 // already refused labels that are not short plain strings.)
 export const labelOf = (concept) => concept.labels?.en ?? Object.values(concept.labels ?? {})[0] ?? concept.id;

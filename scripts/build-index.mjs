@@ -11,7 +11,7 @@ import { buildIndex } from './lib/directory.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 try {
-  writeFileSync(join(root, 'index.json'), await buildIndex({ root }));
+  writeFileSync(join(root, 'index.json'), await buildIndex({ root, onWarning: (warning) => console.error(`warning: ${warning}`) }));
 } catch (error) {
   console.error(`error: ${error.message}`);
   process.exit(1);
