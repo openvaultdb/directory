@@ -1475,10 +1475,27 @@ test('two databases cannot claim one address, in the same field or in different 
   for (const template of [page, `${page}/`, page.replace('/collections/', '/COLLECTIONS/')]) {
     expectProblem(await claimsOf(sharedWorld(edit((manifest) => { manifest.deployment.url = 'https://cloud.acme.com/ovdb/dbs/chinook'; manifest.deployment.recordset_page = template; }))), claimed(page, 'chinook-acme as deployment.recordset_page; chinook as deployment.recordset_page'));
   }
-  // A template that differs after {name} is another template; a template under another path is another one.
-  for (const template of [`${page}/rows`, page.replace('/chinook/', '/chinook2/')]) {
+  // A template under another path (chinook2 is not under chinook) is another one.
+  expectProblem(await claimsOf(sharedWorld(edit((manifest) => { manifest.deployment.url = 'https://cloud.acme.com/ovdb/dbs/chinook'; manifest.deployment.recordset_page = `${page}/rows`; }))), /deployment\.recordset_page .*\/chinook\/collections\/\{name\}\/rows sits under .*\/ovdb\/dbs\/chinook, the deployment\.url of chinook/);
+  for (const template of [page.replace('/chinook/', '/chinook2/')]) {
     assert.deepEqual(await claimsOf(sharedWorld(edit((manifest) => { manifest.deployment.url = 'https://cloud.acme.com/ovdb/dbs/chinook'; manifest.deployment.recordset_page = template; }))), [], template);
   }
+  // Under another record's url or deployment.url, at a path-segment boundary, in any of the three fields.
+  const albumPage = `${deployment}/collections/Album`;
+  const underProblem = async (change) => claimsOf(sharedWorld(edit(change)));
+  expectProblem(await underProblem((manifest) => { manifest.deployment.url = albumPage; manifest.deployment.recordset_page = `${canonical}/collections/{name}`; }), /ovdb\.yaml: deployment\.url https:\/\/cloud\.openvaultdb\.com\/ovdb\/dbs\/chinook\/collections\/album sits under https:\/\/cloud\.openvaultdb\.com\/ovdb\/dbs\/chinook, the deployment\.url of chinook;/);
+  expectProblem(await underProblem((manifest) => { manifest.deployment.url = albumPage; manifest.deployment.recordset_page = `${canonical}/collections/{name}`; }), /ovdb\.yaml: deployment\.recordset_page https:\/\/chinookdb\.com\/ovdb\/dbs\/chinook\/collections\/\{name\} sits under https:\/\/chinookdb\.com\/ovdb\/dbs\/chinook, the url of chinook;/);
+  // The same template with the hoster's own deployment url: still under Chinook's canonical url.
+  expectProblem(await underProblem((manifest) => { manifest.deployment.url = 'https://cloud.acme.com/ovdb/dbs/chinook'; manifest.deployment.recordset_page = `${canonical}/collections/{name}`; }), /deployment\.recordset_page .* sits under https:\/\/chinookdb\.com\/ovdb\/dbs\/chinook, the url of chinook/);
+  // The hoster's deployment under Chinook's url (not only under its deployment url), in another case, with a trailing slash.
+  expectProblem(await underProblem((manifest) => { manifest.deployment.url = `${canonical}/x/`.replace('/dbs/chinook', '/dbs/Chinook'); }), /deployment\.url https:\/\/chinookdb\.com\/ovdb\/dbs\/chinook\/x sits under https:\/\/chinookdb\.com\/ovdb\/dbs\/chinook, the url of chinook/);
+  // The reverse: the hoster claims a parent of Chinook's addresses, so Chinook's url sits under the hoster's deployment url.
+  expectProblem(await underProblem((manifest) => { manifest.deployment.url = 'https://chinookdb.com/ovdb/dbs'; }), /^databases\/\$records\/chinook\.yaml: ovdb\.yaml: url https:\/\/chinookdb\.com\/ovdb\/dbs\/chinook sits under https:\/\/chinookdb\.com\/ovdb\/dbs, the deployment\.url of chinook-acme;/);
+  expectProblem(await underProblem((manifest) => { manifest.deployment.url = 'https://cloud.openvaultdb.com/ovdb/dbs'; }), /deployment\.url https:\/\/cloud\.openvaultdb\.com\/ovdb\/dbs\/chinook sits under https:\/\/cloud\.openvaultdb\.com\/ovdb\/dbs, the deployment\.url of chinook-acme/);
+  // A path-segment boundary: /chinook2 is not under /chinook, and a sibling is not either. Chinook's own template under its own urls passes.
+  assert.deepEqual(await underProblem((manifest) => { manifest.deployment.url = `${deployment}2`; manifest.deployment.recordset_page = `${deployment}2/collections/{name}`; }), []);
+  assert.deepEqual(await underProblem((manifest) => { manifest.deployment.url = 'https://cloud.openvaultdb.com/ovdb/dbs/other'; manifest.deployment.recordset_page = 'https://chinookdb.com/ovdb/dbs/other/{name}'; }), []);
+  assert.deepEqual(await problemsOf(world()), [], 'the real Chinook record: its template is under its own deployment url');
   // The bypasses of the URL itself: a port, a percent escape, and now any character that is not plain, are refused as a URL.
   const spellings = [
     ['https://cloud.openvaultdb.com:8443/ovdb/dbs/chinook', /deployment\.url must not name a port/],
@@ -1495,9 +1512,10 @@ test('two databases cannot claim one address, in the same field or in different 
   ]) {
     expectProblem(await claimsOf(sharedWorld(edit((manifest) => { manifest.deployment.url = 'https://cloud.acme.com/ovdb/dbs/chinook'; manifest.deployment.recordset_page = template; }))), pattern);
   }
-  // Both at once is two problems, and the index is not written.
+  // Both at once is several problems, and the index is not written.
   const both = sharedWorld(edit((manifest) => { manifest.deployment.url = deployment; manifest.deployment.recordset_page = page; }));
-  assert.equal((await claimsOf(both)).length, 2);
+  // Two equal addresses, and each record's template sits under the other's deployment url.
+  assert.equal((await claimsOf(both)).length, 4);
   await assert.rejects(() => buildIndex(sharedOptions(both)), /cannot build index\.json[\s\S]*is claimed by[\s\S]*is claimed by/);
   // A different deployment, and a recordset page under a different path, is a different database: the ordinary hoster passes.
   assert.deepEqual(await claimsOf(sharedWorld()), []);
@@ -1534,6 +1552,30 @@ test('claims are compared as whole addresses, in any field, ignoring case: hones
     assert.match(problems[0], pattern);
     assert.match(problems[0], /^databases\/\$records\/b\.yaml: ovdb\.yaml: /, 'reported on the last record');
   }
+  // Under another database's url or deployment.url: the same host and its path followed by "/", in any field, in both directions.
+  const under = (mine, other_) => claimProblems([mine, other_]);
+  assert.deepEqual(under(claim('a', `${host}/dbs/a`, `${host}/dbs/a-d`), claim('b', `${host}/dbs/b`, `${host}/dbs/b-d`)), [], 'siblings');
+  assert.deepEqual(under(claim('a', `${host}/dbs/chinook2`, `${host}/dbs/chinook2/d`), claim('b', `${host}/dbs/chinook`, `${host}/dbs/chinook-d`)), [], 'a segment boundary: chinook2 is not under chinook');
+  assert.deepEqual(under(claim('a', `${host}/dbs/a`, `${host}/dbs/a/d`, `${host}/dbs/a/d/{name}`), claim('b', `${host}/dbs/b`, `${host}/dbs/b/d`)), [], 'one database\'s own template under its own addresses');
+  assert.deepEqual(under(claim('a', 'https://other.example.org/dbs/chinook/x', 'https://other.example.org/dbs/chinook/d'), claim('b', `${host}/dbs/chinook`, `${host}/dbs/chinook-d`)), [], 'the same path on another host');
+  for (const [mine, pattern] of [
+    [claim('a', `${host}/dbs/a`, `${host}/dbs/b/x`), /deployment\.url https:\/\/browse\.example\.org\/dbs\/b\/x sits under https:\/\/browse\.example\.org\/dbs\/b, the url of b/],
+    [claim('a', `${host}/dbs/b/sub`, `${host}/dbs/a`), /url https:\/\/browse\.example\.org\/dbs\/b\/sub sits under https:\/\/browse\.example\.org\/dbs\/b, the url of b/],
+    [claim('a', `${host}/dbs/a`, `${host}/dbs/a`, `${host}/DBS/B-d/Sub/{name}`), /deployment\.recordset_page https:\/\/browse\.example\.org\/dbs\/b-d\/sub\/\{name\} sits under https:\/\/browse\.example\.org\/dbs\/b-d, the deployment\.url of b/],
+  ]) {
+    const problems = under(mine, claim('b', `${host}/dbs/b`, `${host}/dbs/b-d`));
+    assert.equal(problems.length, 1, JSON.stringify(problems));
+    assert.match(problems[0], pattern);
+    assert.match(problems[0], /^databases\/\$records\/a\.yaml: /, 'on the database that claims the longer address');
+  }
+  // An equal address is the first rule's, reported once, not as "under".
+  assert.equal(under(claim('a', `${host}/dbs/a`, `${host}/dbs/b-d/`), claim('b', `${host}/dbs/b`, `${host}/dbs/b-d`)).length, 1);
+  // The other direction: a database whose url is a prefix of the other's claims.
+  const prefix = under(claim('a', `${host}/dbs`, `${host}/x`), claim('b', `${host}/dbs/b`, `${host}/dbs/b-d`));
+  assert.equal(prefix.length, 2);
+  assert.match(prefix[0], /^databases\/\$records\/b\.yaml: ovdb\.yaml: url https:\/\/browse\.example\.org\/dbs\/b sits under https:\/\/browse\.example\.org\/dbs, the url of a/);
+  // A template of another database is not an address to sit under (only url and deployment.url are).
+  assert.deepEqual(under(claim('a', `${host}/dbs/a`, `${host}/dbs/a-d`, `${host}/t/{name}`), claim('b', `${host}/dbs/b`, `${host}/dbs/b-d`, `${host}/t/{name}/x`)), []);
   // Two databases that claim only the same canonical url are reported by recordProblems, not twice.
   assert.deepEqual(claimProblems([claim('a', `${host}/ovdb/same`, `${host}/a`), claim('b', `${host}/ovdb/same`, `${host}/b`)]), []);
   // One database using one value in two of its own fields is fine, whatever the other databases do.
@@ -1706,16 +1748,16 @@ test('MODELSPEC_REGISTRY_INDEX_URL, and any index URL, must be https', async () 
   }
   assert.equal(fetched, 0, 'nothing is fetched for a URL that is refused');
   // Only raw.githubusercontent.com and github.com, on the default port and without credentials.
-  for (const url of ['https://example.test/index.json', 'https://raw.githubusercontent.com.evil.example/x/index.json', 'https://evil.example/raw.githubusercontent.com/index.json', 'https://raw.githubusercontent.com@evil.example/index.json', 'https://evil.example@raw.githubusercontent.com/index.json', 'https://raw.githubusercontent.com:8443/x/index.json', 'https://gist.github.com/x/index.json', 'https://api.github.com/x', 'https://127.0.0.1/index.json', 'https://localhost/index.json']) {
-    await assert.rejects(() => loadModelRegistry({ url, fetchImpl }), /(must be read from raw\.githubusercontent\.com or github\.com|must not contain credentials|must use the default https port)/, url);
-    await assert.rejects(() => loadMeaningRegistry({ url, fetchImpl }), /(must be read from raw\.githubusercontent\.com or github\.com|must not contain credentials|must use the default https port)/, url);
+  for (const url of ['https://example.test/index.json', 'https://raw.githubusercontent.com.evil.example/x/index.json', 'https://evil.example/raw.githubusercontent.com/index.json', 'https://raw.githubusercontent.com@evil.example/index.json', 'https://evil.example@raw.githubusercontent.com/index.json', 'https://raw.githubusercontent.com:8443/x/index.json', 'https://gist.github.com/x/index.json', 'https://github.com/example/models/raw/main/index.json', 'https://github.com/meaninggraph/registry/raw/main/index.json', 'https://api.github.com/x', 'https://127.0.0.1/index.json', 'https://localhost/index.json']) {
+    await assert.rejects(() => loadModelRegistry({ url, fetchImpl }), /(must be read from raw\.githubusercontent\.com;|must not contain credentials|must use the default https port)/, url);
+    await assert.rejects(() => loadMeaningRegistry({ url, fetchImpl }), /(must be read from raw\.githubusercontent\.com;|must not contain credentials|must use the default https port)/, url);
   }
   // The check is in the reader, not in a loader: neither registry loader can be handed a data:, file: or http: URL.
   for (const url of ['data:application/json,{}', 'file:///etc/passwd', 'http://raw.githubusercontent.com/x/index.json']) {
     await assert.rejects(() => loadMeaningRegistry({ url, fetchImpl }), /must be read over https/, url);
   }
   assert.equal(fetched, 0, 'nothing is fetched for a URL that is refused');
-  for (const url of ['https://raw.githubusercontent.com/example/models/main/index.json', 'https://github.com/example/models/raw/main/index.json']) await loadModelRegistry({ url, fetchImpl });
+  await loadModelRegistry({ url: 'https://raw.githubusercontent.com/example/models/main/index.json', fetchImpl });
   fetched = 0;
   assert.equal((await loadModelRegistry({ url: 'https://raw.githubusercontent.com/example/meaning/main/index.json', fetchImpl })).byAddress.size, 0);
   assert.equal(fetched, 1);
@@ -2057,6 +2099,13 @@ test('registry reads time out and are tried twice, and say which registry failed
   await assert.rejects(() => loadMeaningRegistry({ url, fetchImpl: async () => { calls += 1; throw new Error('down'); }, timeoutMs: 50, retryDelayMs: 10_000 }), /no answer within 50 ms \(the last attempt failed with down\)$/);
   assert.equal(calls, 1);
   assert.ok(Date.now() - start < 2000, 'a long retry delay does not outlast the deadline');
+  // A certificate failure will not pass on a second try; a 304 is not a redirect.
+  calls = 0;
+  await assert.rejects(() => loadModelRegistry({ url, fetchImpl: async () => { calls += 1; throw Object.assign(new TypeError('fetch failed'), { cause: Object.assign(new Error('unable to verify the first certificate'), { code: 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' }) }); }, retryDelayMs: 0 }), /: fetch failed \(UNABLE_TO_VERIFY_LEAF_SIGNATURE\)$/);
+  assert.equal(calls, 1);
+  calls = 0;
+  await assert.rejects(() => loadMeaningRegistry({ url, fetchImpl: async () => { calls += 1; return { ok: false, status: 304 }; }, retryDelayMs: 0 }), /: HTTP 304$/);
+  assert.equal(calls, 1);
   // A redirect is final: reported, never retried, never followed.
   calls = 0;
   await assert.rejects(() => loadModelRegistry({ url, fetchImpl: async () => { calls += 1; return { ok: false, status: 307 }; }, retryDelayMs: 0 }), /: HTTP 307, a redirect \(a redirect is never followed\)$/);
@@ -2182,4 +2231,24 @@ test('publicHttpsProblem accepts only plain characters: every character U+0000 t
   assert.equal(publicHttpsProblem('https://a-b.c0.openvaultdb.com/A/b_c~d.e/f-g'), null);
   // No dot segment, no empty segment, no escape, no port.
   for (const url of ['https://e.openvaultdb.com/a/./b', 'https://e.openvaultdb.com/a/../b', 'https://e.openvaultdb.com/a//b', 'https://e.openvaultdb.com/a%2fb', 'https://e.openvaultdb.com:8443/a', 'https://e.openvaultdb.com:443/a']) assert.notEqual(publicHttpsProblem(url), null, url);
+});
+
+test('a graph id from the MeaningGraph registry is held to the id pattern before it is used or published', async () => {
+  const bad = 'core"><x';
+  const w = world({ registry: (graphs) => { graphs[1].id = bad; } });
+  const problems = await problemsOf(w);
+  expectProblem(problems, /the MeaningGraph registry's record for "core\\"><x" is not well formed \(its id must be lower-case letters and digits in words joined by single hyphens\), so it is not read/);
+  await assert.rejects(() => buildIndex(options(w)), /cannot build index\.json/);
+  // Never published, whichever way it is reached.
+  for (const id of ['Core', 'core_x', 'core x', '-core', 'core-', 'core--x', '', 'co"re', "co're", 'a&b', 5, null]) {
+    const attempt = world({ registry: (graphs) => { graphs[1].id = id; } });
+    expectProblem(await problemsOf(attempt), /is not well formed \(its id must be/);
+  }
+  // The graph a record names: the same check, in both forms.
+  expectProblem(await sharedProblems(sharedWorld({ chinook: { registry: (graphs) => { graphs[0].id = 'Chinook'; } } })), /the MeaningGraph registry's record for "Chinook" is not well formed \(its id must be/);
+  expectProblem(await problemsOf(world({ registry: (graphs) => { graphs[0].id = 'chinook"x'; } })), /not registered in the MeaningGraph registry|is not well formed \(its id must be/);
+  // A good id passes, and the index carries it as written.
+  const [chinook] = (await index(world())).databases;
+  assert.equal(chinook.meaning_graph.id, 'chinook');
+  assert.equal(field(chinook, 'Customer', 'Country').meanings[0].values_of.graph, 'core');
 });

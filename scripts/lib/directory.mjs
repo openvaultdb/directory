@@ -12,14 +12,13 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync } from '
 import { isAbsolute, join, posix, relative } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { addressOf, commitPattern, defaultBranch, defaultCacheDir, ensurePlainDirectory, isRepositoryPath, onBranch, openCommit, repositoryKey, repositoryHosts } from './git.mjs';
-import { createMeaningResolver, entryOf, graphsAtAddress, loadMeaningRegistry, meaningFilesOf, parseConceptRef, parseGraphAddress, labelOf, validateConcept } from './meaning.mjs';
+import { createMeaningResolver, entryOf, graphIdProblem, graphsAtAddress, loadMeaningRegistry, meaningFilesOf, registryIdPattern, parseConceptRef, parseGraphAddress, labelOf, validateConcept } from './meaning.mjs';
 import { addressMatchesRecord, loadModelRegistry, modelsAtAddress, normalisedModelAddress, parseModelSpec, parseModelRef, parseModelAddress } from './modelspec.mjs';
 import { hasOvdbMarker, homepageProblem, publicHttpsProblem } from './urls.mjs';
 
 export { repositoryHosts };
 export const directoryFormat = 'ovdb-directory/draft-1';
 export const manifestFormat = 'ovdb-manifest/draft-1';
-const idPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const statuses = ['draft', 'published', 'deprecated'];
 const lowerKey = (value) => value.toLowerCase();
 // A registry's value in a message: a commit as it is, anything else (an object, a number, odd text) as JSON.
@@ -74,7 +73,7 @@ export function recordProblems({ databases, maintainers }) {
   const urls = new Map();
   const handles = new Set(maintainers.map((maintainer) => maintainer.key));
   for (const { key, file, data } of databases) {
-    if (!idPattern.test(key) || key.length > 80) problems.push(`${file}: id "${key}" must be lower-case letters, digits and single hyphens, at most 80 characters`);
+    if (!registryIdPattern.test(key) || key.length > 80) problems.push(`${file}: id "${key}" must be lower-case letters, digits and single hyphens, at most 80 characters`);
     if (data.format !== directoryFormat) problems.push(`${file}: format must be ${directoryFormat}`);
     if (!statuses.includes(data.status)) problems.push(`${file}: status must be one of ${statuses.join(', ')}`);
     if (!commitPattern.test(data.commit ?? '')) problems.push(`${file}: commit must be a full 40-character lower-case commit id`);
@@ -82,7 +81,7 @@ export function recordProblems({ databases, maintainers }) {
     if (urlProblem(data.url)) problems.push(`${file}: url ${urlProblem(data.url)}`);
     else urls.set(data.url.toLowerCase(), [...(urls.get(data.url.toLowerCase()) ?? []), { key, file, value: data.url }]);
     if (!isRepositoryPath(data.manifest)) problems.push(`${file}: manifest must be a relative path inside the repository (no "..", no glob)`);
-    if (typeof data.meaning_graph !== 'string' || !idPattern.test(data.meaning_graph)) problems.push(`${file}: meaning_graph must be a MeaningGraph registry id`);
+    if (typeof data.meaning_graph !== 'string' || !registryIdPattern.test(data.meaning_graph)) problems.push(`${file}: meaning_graph must be a MeaningGraph registry id`);
     for (const handle of data.maintainers ?? []) {
       if (!handles.has(handle)) problems.push(`${file}: maintainer ${handle} has no record in maintainers/`);
     }
@@ -101,7 +100,10 @@ export function recordProblems({ databases, maintainers }) {
 // may not claim, in any of the three, an address that another database claims in any of them: two
 // databases on one deployment are not two hosters, and a hoster could otherwise list another publisher's live
 // deployment as its own, by its deployment url, its recordset pages or even its canonical url (which
-// redirects there).
+// redirects there). An address may also not sit under another database's `url` or `deployment.url`: the
+// same host and that address's path followed by "/" (a path-segment boundary, so /dbs/chinook2 is not under
+// /dbs/chinook), in any of the three fields, the template included: every page of a deployment is
+// that deployment's. A database's own recordset_page under its own url is fine; so are sibling paths.
 const claimedForm = (address) => address.toLowerCase().replace(/\/+$/, '');
 export const addressClaims = (manifest) => [
   { field: 'url', value: claimedForm(manifest.url) },
@@ -112,7 +114,9 @@ export const addressClaims = (manifest) => [
 // Problems across records, from what analyseDatabase reports as `claims` ({ key, file, manifest, addresses }):
 // an address claimed, in any field, by more than one database. A database that uses one value in two of its own
 // fields is fine. Reported once per address, on the last record (by file name) that claims it, naming every
-// database and field. Two canonical `url`s alone are reported by recordProblems already.
+// database and field. Two canonical `url`s alone are reported by recordProblems already. Then an address that
+// sits under another database's url or deployment.url, reported on the database that claims the longer
+// address (which covers both directions: a new database under an old one's address, or over it).
 export function claimProblems(claimed) {
   const problems = [];
   const owners = new Map();
@@ -129,6 +133,17 @@ export function claimProblems(claimed) {
     if (list.every(({ fields }) => fields.length === 1 && fields[0] === 'url')) continue;
     const last = list.at(-1).claim;
     problems.push(`${last.file}: ${last.manifest}: ${value} is claimed by ${list.length} databases (${list.map(({ claim, fields }) => `${claim.key} as ${fields.join(' and ')}`).join('; ')}; compared ignoring case and a trailing slash); a deployment is listed once, because a second listing of the same deployment is not a second hoster`);
+  }
+  for (const mine of claimed) {
+    for (const other of claimed) {
+      if (other.key === mine.key) continue;
+      for (const { field, value } of mine.addresses) {
+        for (const { field: otherField, value: otherValue } of other.addresses) {
+          if (otherField === 'deployment.recordset_page' || value === otherValue || !value.startsWith(`${otherValue}/`)) continue;
+          problems.push(`${mine.file}: ${mine.manifest}: ${field} ${value} sits under ${otherValue}, the ${otherField} of ${other.key}; every page of a deployment is that deployment's, so a database may not claim an address under another database's url or deployment.url (a path of its own, beside it, is fine)`);
+        }
+      }
+    }
   }
   return problems;
 }
@@ -360,6 +375,7 @@ export async function analyseDatabase(record, context) {
     graph = context.meaningRegistry.byId.get(data.meaning_graph);
     if (!graph) bad(`meaning_graph ${data.meaning_graph} is not registered in the MeaningGraph registry (${context.meaningRegistry.source})`);
     else {
+      if (graphIdProblem(graph)) bad(graphIdProblem(graph));
       if (repositoryKey(graph.repository) === null || lowerKey(repositoryKey(graph.repository)) !== ownKey) {
         bad(`meaning_graph ${data.meaning_graph} is registered for ${graph.repository}, not for ${data.repository}`);
       }
@@ -480,6 +496,7 @@ export async function analyseDatabase(record, context) {
     if (graphMatches.length > 1) bad(`${data.manifest}: meaning.address meaning://${graphPin.repository} matches ${graphMatches.length} records of the MeaningGraph registry (${graphMatches.map((match) => match.id).join(', ')}), which differ only in case; the registry must list a repository once`);
     else if (!graph) bad(`${data.manifest}: meaning.address meaning://${graphPin.repository} is not registered in the MeaningGraph registry (${context.meaningRegistry.source}); register the graph there first`);
     else {
+      if (graphIdProblem(graph)) bad(graphIdProblem(graph));
       if (graph.id !== data.meaning_graph) bad(`${data.manifest}: meaning.address names ${graph.address}, which the MeaningGraph registry registers as ${graph.id}, but the record's meaning_graph is ${data.meaning_graph}`);
       if (addressOf(graph.repository) !== graph.address) bad(`the MeaningGraph registry's record for ${graph.id} is not well formed (its repository ${graph.repository} must be the https URL whose meaning:// form is its address ${graph.address})`);
       if (manifest.meaning.graph.address !== undefined && manifest.meaning.graph.address !== graph.address) bad(`${data.manifest}: meaning.graph.address is ${manifest.meaning.graph.address}, but meaning.address names ${graph.address}; leave meaning.graph.address out or make it the unpinned address as the registry spells it`);

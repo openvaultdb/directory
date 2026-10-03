@@ -15,6 +15,14 @@ import { readRegistryText } from './registry-fetch.mjs';
 export const meaningRegistryUrl = 'https://raw.githubusercontent.com/meaninggraph/registry/main/index.json';
 export const meaningRegistryFormat = 'meaning-registry/draft-1';
 
+// The shape of every id this repository publishes for a graph or a database: lower-case letters and digits in words
+// joined by single hyphens. A graph id that comes from the MeaningGraph registry's index is held to it before it is
+// used or published (it reaches index.json as `graph` in each meaning).
+export const registryIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const graphIdProblem = (graph) => (typeof graph?.id === 'string' && registryIdPattern.test(graph.id)
+  ? null
+  : `the MeaningGraph registry's record for ${JSON.stringify(graph?.id)} is not well formed (its id must be lower-case letters and digits in words joined by single hyphens)`);
+
 const conceptId = '[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*';
 export const conceptIdPattern = new RegExp(`^${conceptId}$`);
 const bareRefPattern = new RegExp(`^${conceptId}$`);
@@ -123,6 +131,8 @@ export function createMeaningResolver({ own, registry, urlFor = (url) => url, ca
 
   const loadNode = (graph, ref) => {
     const ref0 = `${graph.address}?ref=${ref}`;
+    const idProblem = graphIdProblem(graph);
+    if (idProblem) return { error: `${ref0}: ${idProblem}, so it is not read` };
     if (addressOf(graph.repository) !== graph.address) return { error: `${ref0}: the MeaningGraph registry's record for ${graph.id} is not well formed (its repository must be the https URL whose meaning:// form is its address), so it is not read` };
     let files;
     try {

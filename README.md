@@ -167,9 +167,10 @@ listed:
    with its `?ref=` removed, must be registered in the ModelSpec registry
    (`https://raw.githubusercontent.com/modelspec-org/registry/main/index.json`,
    format `modelspec-registry/draft-1`, checksum verified; `MODELSPEC_REGISTRY_INDEX_URL`
-   reads another index, which must be an https URL on `raw.githubusercontent.com` or
-   `github.com`, on the default port and without credentials: a `data:`, `file:` or
-   `http:` URL, a plain path or another host is refused). It is read only when a
+   reads another index, which must be an https URL on `raw.githubusercontent.com` (the
+   only host; a `github.com/.../raw/...` link always answers with a redirect, which is
+   final, so it could not be read), on the default port and without credentials: a
+   `data:`, `file:` or `http:` URL, a plain path or another host is refused). It is read only when a
    database names its model by address. Both registry indexes are read with one
    20-second deadline for the whole read and one retry of a failure that may pass (no
    connection, no answer, a 5xx or 429); a redirect or any other answer is final and
@@ -220,19 +221,25 @@ The publisher repository's `OVDB.md`, the manifest's `url`, `id`, `publisher` an
 
 One deployment is listed once. A database may not claim, in any of its `url`,
 `deployment.url` and `deployment.recordset_page` template, an address that another
-database claims in any of them: a hoster could otherwise list another publisher's live
-deployment as its own, by its deployment url, by its recordset pages or by the other
-database's canonical `url` (which can redirect to the deployment). A database may use one
-value in two of its own fields. Databases that share a model are different databases on
-different deployments. The rule compares text, after the normalisations that the URL rules
-below already force (one spelling of the host, no port, no percent escape, only plain
-characters), and all three fields are compared the same way: ignoring case and a trailing
-slash. That is conservative (a path may be case-sensitive, but two listings that differ only
-in case are refused anyway). The whole `recordset_page` template is compared, so two honest
-databases on one host whose templates differ after `{name}` are both listed. What the rule
-cannot see is two different host names that serve one database, or a proxy in front of
-another publisher's deployment: that is the reviewer's question when a registration pull
-request is opened.
+database claims in any of them, nor an address that sits under another database's `url` or
+`deployment.url`: a hoster could otherwise list another publisher's live deployment as its
+own, by its deployment url, by its recordset pages, by a page of the deployment
+(`.../collections/Album`) or by the other database's canonical `url` (which can redirect to
+the deployment). "Under" means the same host and the other address's path followed by `/`,
+so `/dbs/chinook/collections/Album` is under `/dbs/chinook` and `/dbs/chinook2` is not. It
+works in both directions: a database whose `url` is a parent of another's addresses (`/dbs`
+over `/dbs/chinook`) is refused too, reported on the database with the longer address. A
+database may use one value in two of its own fields, and its own `recordset_page` may be
+under its own `url` or `deployment.url`, as Chinook's is. Databases with sibling paths
+(`/dbs/a` and `/dbs/b`) are different databases. The rule compares text, after the
+normalisations that the URL rules below already force (one spelling of the host, no port, no
+percent escape, only plain characters), and every field is compared the same way: ignoring
+case and a trailing slash. That is conservative (a path may be case-sensitive, but two
+listings that differ only in case are refused anyway). The whole `recordset_page` template is
+compared, so two honest databases on one host whose templates differ after `{name}` are both
+listed. What the rule cannot see is two different host names that serve one database, or a
+proxy in front of another publisher's deployment: that is the reviewer's question when a
+registration pull request is opened.
 
 The canonical `url` is on an origin that the publisher is expected to control, and
 the check cannot prove it. The only rule is that `deployment.discovery` is on the
@@ -528,11 +535,12 @@ from a fixture, like the MeaningGraph registry's. It covers:
   repository that does not say which model it binds, a relative `models:` path
   when the two pins are different commits, a registry path that does not exist at a
   pin other than the registry's, a model or graph the registry registers with capitals,
+  a graph id from the registry that is not a plain id (lower-case words joined by hyphens),
   an index URL that is not https, and registry reads that time out, are tried twice and
   name the registry when they fail.
 - **Across records:** two databases with the same `url`, `deployment.url` or
-  `recordset_page` template, and a port or percent escape that would make a second
-  spelling of one; an own model that is not the registered one, or has its
+  `recordset_page` template, an address under another database's `url` or `deployment.url`,
+  and a port or percent escape that would make a second spelling of one; an own model that is not the registered one, or has its
   properties in another order.
 - **URLs and names:** a manifest URL that is http, has credentials, a query or a
   fragment, names an IP address in any spelling, `localhost` or an internal host,

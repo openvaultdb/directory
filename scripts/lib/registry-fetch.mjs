@@ -5,9 +5,13 @@
 
 export const registryTimeoutMs = 20_000;
 export const registryRetryDelayMs = 1_000;
-// Where a registry index may be read from: the hosts of raw file and repository links on GitHub.
-export const registryHosts = ['raw.githubusercontent.com', 'github.com'];
+// Where a registry index may be read from: GitHub's raw file host only. (A github.com/.../raw/... link always answers
+// with a redirect, which is final here, so it could never be read.)
+export const registryHosts = ['raw.githubusercontent.com'];
 
+const redirects = new Set([301, 302, 303, 307, 308]);
+// A certificate or TLS failure will not pass on a second try.
+const permanentCauses = /^(ERR_TLS_|ERR_SSL_|CERT_|UNABLE_TO_|SELF_SIGNED_CERT|DEPTH_ZERO_SELF_SIGNED|HOSTNAME_MISMATCH|ERR_TLS)/;
 const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
 // Why a fetch failed, for a message: the error's message and, when the runtime wraps it ("fetch failed"), its cause's
@@ -49,7 +53,7 @@ async function attempt(url, fetchImpl, signal) {
 
 // Fetches `url` for the registry called `name` (for messages): the text of the response. `url` must pass
 // registryUrlProblem. The deadline is `timeoutMs` for everything; a failure to connect, a timeout of one attempt,
-// a 5xx and a 429 are tried once more (while time remains); a redirect, a 404, a 403 and every other answer are
+// a 5xx and a 429 are tried once more (while time remains); a redirect, a certificate failure, a 404, a 403 and every other answer are
 // final. Throws "cannot read the <name> (<url>): <reason>".
 export async function readRegistryText({ name, url, envName, fetchImpl = fetch, timeoutMs = registryTimeoutMs, retryDelayMs = registryRetryDelayMs }) {
   const problem = registryUrlProblem(url, envName);
@@ -64,11 +68,12 @@ export async function readRegistryText({ name, url, envName, fetchImpl = fetch, 
         const result = await attempt(url, fetchImpl, signal);
         if (result.text !== undefined) return result.text;
         reason = `HTTP ${result.status}`;
-        if (result.status >= 300 && result.status < 400) { reason += ', a redirect (a redirect is never followed)'; break; }
+        if (redirects.has(result.status)) { reason += ', a redirect (a redirect is never followed)'; break; }
         if (result.status < 500 && result.status !== 429) break;
       } catch (error) {
         if (signal.aborted) break;
         reason = causeOf(error);
+        if (permanentCauses.test(error?.cause?.code ?? '')) break;
       }
       if (tries === 1 && !signal.aborted) await Promise.race([wait(retryDelayMs), new Promise((resolve) => { signal.addEventListener('abort', resolve, { once: true }); })]);
     }
