@@ -9,13 +9,16 @@
 // agree with the record and with meaninggraph/registry, the recordsets are the
 // ModelSpec entities, every meaning binding names a real entity and property,
 // every meaning address resolves at its pinned commit, and index.json is what
-// `npm run index` writes.
+// `npm run index` writes. A manifest that names its model and meaning graph by
+// pinned address (a shared model) is resolved through the ModelSpec and
+// MeaningGraph registries; a pin that differs from a registry's own is a warning.
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkDirectory } from './lib/directory.mjs';
 
 const root = process.argv[2] ?? dirname(dirname(fileURLToPath(import.meta.url)));
-const { problems, databases } = await checkDirectory({ root });
+const { problems, warnings, databases } = await checkDirectory({ root });
+for (const warning of warnings) console.error(`warning: ${warning}`);
 if (problems.length > 0) {
   for (const problem of problems) console.error(`error: ${problem}`);
   console.error(`${problems.length} problem${problems.length === 1 ? '' : 's'} in ${databases} database${databases === 1 ? '' : 's'}`);

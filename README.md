@@ -93,16 +93,89 @@ relative to the repository root, never a glob. The manifest (`ovdb-manifest/draf
 for example [`ovdb.yaml` of Chinook](https://github.com/datatug/chinookdb/blob/8c9e62ed6641c0a00faa3867167d928af4c44b06/ovdb.yaml))
 declares the canonical `url`, the `deployment` (`url`, `engine`, `discovery` on
 the canonical origin, and an optional `recordset_page` template with `{name}`),
-the `model` files (the ModelSpec JSON and, optionally, the human-readable
-source `hcl`), the `meaning` file and its graph (`id` and `address`), the
-publisher, the `licences` (`data`, `model`, `meaning`) and the `recordsets`.
-Every path is relative to the repository root and must be a regular file tracked
+the `model` (its files, or its address when it is published elsewhere; see
+[Two forms](#two-forms-own-model-or-shared-model)), the `meaning` file and its
+graph, the publisher, the `licences` (`data`, `model`, `meaning`) and the
+`recordsets`. Every path is relative to the repository root and must be a regular file tracked
 at the pinned commit: no `..`, leading `/`, `.` or empty segment, no glob, and
 symbolic links are refused. The model's source (`model.hcl`) ends in
-`.modelspec.hcl`; it may also be named by `model.address`, the model's address
-in the ModelSpec registry, `modelspec://github.com/{org}/{repo}/{module}` in lower
-case, which for a manifest with its own model files is its own repository and the
-ModelSpec's module name, without `?ref=`.
+`.modelspec.hcl`.
+
+#### Two forms: own model or shared model
+
+A manifest names its model one of two ways, and the Directory tells them apart by
+whether the manifest has local model files (`model.modelspec` or `model.hcl`).
+The forms do not mix.
+
+**Own model.** The model and the meaning file are in the publisher's repository:
+`model.modelspec` (the ModelSpec JSON), optionally `model.hcl` (its source),
+`meaning.file`, `meaning.graph.id` and `meaning.graph.address`, and the three
+`licences`. `model.address` is optional; when given it is the ModelSpec registry's
+address of the model, `modelspec://github.com/{org}/{repo}/{module}`, which for a
+manifest with its own model files is its own repository and the ModelSpec's
+module name, without `?ref=`. The host, organisation and repository are written
+in lower case; the module name is case-sensitive. A foreign address next to local
+model files is refused, as are `meaning.address` and `recordsets_partial`.
+
+**Shared model.** The model and the meaning graph are published in other
+repositories, and this manifest points at them instead of copying them, so that
+every hoster of the same model is a database of that model. There are no local
+model files and no local meaning file, and both pins are required:
+
+```yaml
+model:
+  address: modelspec://github.com/datatug/chinookdb/chinook?ref=<40 hex>
+meaning:
+  address: meaning://github.com/datatug/chinookdb?ref=<40 hex>
+  file: model/chinook.meaning.yaml    # the graph's file, in the graph's repository, that binds the model
+  graph:
+    id: chinook                       # the MeaningGraph registry id; equals the record's meaning_graph
+licences:
+  data: ODbL-1.0                      # the hoster's; the model's and meaning's licences are the registries'
+recordsets: [Album, Artist, …]        # every entity of the model
+```
+
+Resolution, in order; each step that fails is a problem and the database is not
+listed:
+
+1. `model.address`, with its `?ref=` removed and the host, organisation and
+   repository lower-cased (the module is not), must be registered in the ModelSpec
+   registry (`https://raw.githubusercontent.com/modelspec-org/registry/main/index.json`,
+   format `modelspec-registry/draft-1`, checksum verified; set
+   `MODELSPEC_REGISTRY_INDEX_URL` to read another index). It is read only when a
+   database names its model by address. `meaning.address`, without its pin, must be
+   registered in the MeaningGraph registry, under the record's `meaning_graph`.
+   Neither address may name the publisher's own repository (that is the own-model
+   form).
+2. Each pinned commit must be in the history of the default branch of the model's
+   (respectively the graph's) repository. The pins need not be the registries' own;
+   when they differ the check prints a warning and reads the pinned commit.
+3. The ModelSpec JSON (`files.json` of the registry's record) and the model's source
+   (`files.source`, a tracked regular file) are read at the model's pin, and
+   `meaning.file` (which must be one of the registry's `meaning_files` for the graph,
+   so it is always named) at the graph's pin, with the same hardened git and cache
+   as everywhere else. The JSON's module is the registered one.
+4. The meaning file's `models:` entry for the module says which model it binds. A
+   relative path is the model's source in the meaning graph's own repository, so it
+   is accepted only when the graph and the model live in the same repository and the
+   path is the registry's `files.source`. When they live in different repositories a
+   relative path cannot say which model is meant and is refused; the entry must be
+   the model's address instead (`chinook: modelspec://github.com/datatug/chinookdb/chinook`,
+   with `?ref=` only if it is the manifest's pin). Bindings are written
+   `modelspec:///{module}.{Entity}`, or with the shared model's own address (and pin)
+   spelled out; a binding to any other model is refused.
+5. `recordsets` equals the model's entities. To publish a subset the manifest lists
+   it explicitly and sets `recordsets_partial: true`; the list must be a strict
+   subset and must contain every entity a listed entity references. Bindings to
+   entities left out are ignored. `deployment.recordset_page` works as in the own
+   form.
+6. `licences.data` is the hoster's and is required. `licences.model` and
+   `licences.meaning` are optional; when given they must equal the `licence` of the
+   ModelSpec registry's record and the `meaning_licence` of the MeaningGraph
+   registry's record, which are where those licences come from.
+
+The publisher repository's `OVDB.md`, the manifest's `url`, `id`, `publisher` and
+`deployment` rules are the same in both forms.
 
 Every URL a manifest publishes (`url`, `deployment.url`, `deployment.discovery`,
 `deployment.recordset_page`, `publisher.url`) is public https: no credentials,
@@ -130,10 +203,11 @@ plain strings, binding roles are `meaning/draft-1` roles, licences are SPDX-shap
 ## `index.json`
 
 Generated by `npm run index`; CI fails when the committed file differs from what
-the script writes. Everything in it is read at pinned commits: the ModelSpec and
-the meaning file at the record's `commit`, and every concept the meaning file
-reaches through a `meaning://…?ref=<commit>` address at the commit that
-address pins, resolved through the MeaningGraph registry.
+the script writes. Everything in it is read at pinned commits: for an own model
+the ModelSpec and the meaning file at the record's `commit`; for a shared model the
+ModelSpec at `model.address`'s pin and the meaning file at `meaning.address`'s pin;
+and every concept the meaning file reaches through a `meaning://…?ref=<commit>`
+address at the commit that address pins, resolved through the MeaningGraph registry.
 
 ```json
 {
@@ -148,7 +222,7 @@ address pins, resolved through the MeaningGraph registry.
     "commit": "<40 hex>",
     "manifest": "ovdb.yaml",
     "licence": "MIT",
-    "model": { "name": "chinook", "path": "model/chinook.modelspec.hcl" },
+    "model": { "name": "chinook", "path": "model/chinook.modelspec.hcl", "address": "modelspec://github.com/datatug/chinookdb/chinook" },
     "meaning_graph": { "id": "chinook", "address": "meaning://github.com/datatug/chinookdb" },
     "recordsets": [{
       "name": "Customer",
@@ -170,13 +244,24 @@ address pins, resolved through the MeaningGraph registry.
   `id`, recordsets by name; fields keep the ModelSpec's order; meanings are
   sorted by concept and role.
 - `licence` is the manifest's `licences.data`: the licence of the database's data.
-- `model.name` is the ModelSpec module name. `model.path` is the meaning file's
-  `models:` entry for that module, joined to the meaning file's directory (so
-  `../x.modelspec.hcl` from `model/sub/` is fine, leaving the repository is not):
-  a `.modelspec.hcl` file tracked at the pinned commit. When the manifest has
-  `model.hcl` it must be that same file. `model.address` is the manifest's
-  `model.address`, validated, and absent when the manifest has none; databases that
-  share a `model.address` are databases of the same model.
+- A meaning's `address` carries the pinned commit of the meaning graph's repository:
+  the record's `commit` for an own model, `meaning.address`'s pin for a shared one.
+- `model.name` is the ModelSpec module name. `model.path` is the model's source, a
+  `.modelspec.hcl` file tracked at the pinned commit, in the model's repository.
+  For an own model it is the meaning file's `models:` entry for that module, joined
+  to the meaning file's directory (so `../x.modelspec.hcl` from `model/sub/` is
+  fine, leaving the repository is not); when the manifest has `model.hcl` it must be
+  that same file. For a shared model it is the `files.source` of the ModelSpec
+  registry's record. `model.address` is the model's address in the ModelSpec
+  registry without a pin, host, organisation and repository in lower case, the
+  module as written; it is always present for a shared model and present for an own
+  model when the manifest gives one (validated against its own repository, never
+  against the registry). Databases that share a `model.address` are databases of the
+  same model, whoever hosts them. A model that lives in another repository than the
+  database's also has `model.repository` (its https URL, as the registry records it)
+  and `model.commit` (the manifest's pin); both are absent when the model is in the
+  database's own repository, so a link to the model's file for a shared-model
+  database is `{model.repository}/blob/{model.commit}/{model.path}`.
 - `recordsets` are the ModelSpec entities, and their names are the collection
   names the deployment serves. A recordset's `url` is the manifest's
   `deployment.recordset_page` template with `{name}` filled in, and is absent
@@ -222,7 +307,10 @@ address pins, resolved through the MeaningGraph registry.
 ## How to register a database
 
 1. The publisher adds a root `OVDB.md` and a manifest to its repository and
-   merges them to the default branch.
+   merges them to the default branch. A hoster of a model that is already
+   published (and registered in the ModelSpec and MeaningGraph registries) writes
+   the shared-model form of the manifest and copies neither the model nor the
+   meaning file.
 2. Open a pull request here that adds `databases/$records/<id>.yaml` pinning a
    commit of the publisher repository that contains both, and
    `maintainers/$records/<handle>.yaml` if a maintainer is new here.
@@ -281,7 +369,14 @@ Two layers run in CI ([`.github/workflows/check.yml`](.github/workflows/check.ym
      (`https://raw.githubusercontent.com/meaninggraph/registry/main/index.json`,
      read with its checksum verified), for the same repository, with the same
      address, and lists the manifest's meaning file;
-   - `recordsets` are exactly the ModelSpec entities;
+   - `recordsets` are exactly the ModelSpec entities (a shared model's manifest
+     may list a subset, explicitly, with `recordsets_partial: true`);
+   - a shared model resolves as described under
+     [Two forms](#two-forms-own-model-or-shared-model): its address is registered in
+     the ModelSpec registry, its meaning graph in the MeaningGraph registry, both
+     pins are on the default branches of their repositories, the model and the
+     meaning file are read at those pins, the meaning file says which model it
+     binds, and a pin that differs from a registry's own is a warning;
    - every meaning binding names an entity and a property that exist in the
      ModelSpec; concept ids are well formed and present; every `extends` and
      `values-of` resolves at its pinned commit through the MeaningGraph registry,
@@ -309,7 +404,14 @@ record, recordsets that are not the ModelSpec entities, a binding to a missing
 entity or property, an unregistered graph, an address without or with a bad
 `?ref=`, an `extends` cycle or a chain over the limit, a bad or missing concept id,
 a model path that is missing, a link, not a `.modelspec.hcl` file or leaves the
-repository, a manifest URL that is http, has credentials, a query, a fragment,
+repository, a second hoster of the Chinook model that is listed under the same
+model address as Chinook itself with the same fields and meanings, and, for a
+shared model, an unregistered model or meaning graph address, a missing pin, a
+pin that is not on the default branch, local model files next to a foreign
+address, a module or recordset that is not the model's, a recordset list that is
+not the model's entities (or a bad partial list), and a meaning graph in another
+repository that does not say which model it binds (the ModelSpec registry index
+comes from a fixture, like the MeaningGraph registry's), a manifest URL that is http, has credentials, a query, a fragment,
 names an IP address in any spelling, `localhost` or an internal host, has
 `{name}` in the host, or is written in a second spelling, a canonical `url`
 without `ovdb`, names and values that are not identifiers or plain strings,

@@ -1,5 +1,11 @@
 // Reads a ModelSpec JSON file (CC0-1.0): the entities and properties that
-// recordsets and fields are named after.
+// recordsets and fields are named after, and the ModelSpec registry's index, which
+// says where a model that lives in another repository is published.
+import { createHash } from 'node:crypto';
+import { repositoryKey } from './git.mjs';
+
+export const modelRegistryDefaultUrl = 'https://raw.githubusercontent.com/modelspec-org/registry/main/index.json';
+export const modelRegistryFormat = 'modelspec-registry/draft-1';
 
 // modelspec:///{module}.{Entity} (this repository's own model), or
 // modelspec://{host}/{org}/{repo}/{module}.{Entity} (another repository's, with `repo` set).
@@ -16,14 +22,53 @@ export const identifierPattern = /^[A-Za-z_][A-Za-z0-9_]*$/;
 // A property type: a word, optionally a list (`string`, `int`, `decimal`, `datetime[]`).
 const typePattern = /^[A-Za-z][A-Za-z0-9_]*(?:\[\])?$/;
 
-// modelspec://{host}/{org}/{repo}/{module}, with ?ref={40 hex} only for a model in
-// another repository. Returns { repository: 'host/org/repo', module, ref? } or null;
-// the host must be one the Directory reads (see repositoryKey in git.mjs).
+// modelspec://{host}/{org}/{repo}/{module}, with ?ref={40 hex} for a model in another
+// repository (a shared model: the pin says which commit of it is read). Returns
+// { repository: 'host/org/repo', module, ref? } or null; whether the host is one the
+// Directory reads (see repositoryKey in git.mjs) is the caller's check.
 const modelAddressPattern = /^modelspec:\/\/([A-Za-z0-9.-]+\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+)\/([A-Za-z_][A-Za-z0-9_]*)(?:\?ref=([0-9a-f]{40}))?$/;
 export function parseModelAddress(address) {
   const match = typeof address === 'string' ? modelAddressPattern.exec(address) : null;
   return match ? { repository: match[1], module: match[2], ref: match[3] } : null;
 }
+
+// The model's address without its pin, as the ModelSpec registry spells it: the host,
+// organisation and repository in lower case (GitHub does not tell them apart by case),
+// the module as written (a module name is case-sensitive).
+export const normalisedModelAddress = ({ repository, module }) => `modelspec://${repository.toLowerCase()}/${module}`;
+
+// Validates a ModelSpec registry index (its format and its checksum, the sha256 of the
+// `models` array as compact JSON, the same definition as the MeaningGraph registry's)
+// and indexes it by normalised address. A repeated address is refused: which record is
+// the model's would be a guess.
+export function indexModelRegistry(index, source = 'the ModelSpec registry') {
+  if (index?.format !== modelRegistryFormat) throw new Error(`${source} has format ${JSON.stringify(index?.format)}, expected ${modelRegistryFormat}`);
+  if (!Array.isArray(index.models)) throw new Error(`${source} has no models list`);
+  const checksum = `sha256:${createHash('sha256').update(JSON.stringify(index.models)).digest('hex')}`;
+  if (index.checksum !== checksum) throw new Error(`${source} does not match its own checksum (${index.checksum} is not ${checksum}); the fetch is incomplete or the file was edited`);
+  const byAddress = new Map();
+  for (const model of index.models) {
+    if (typeof model?.address !== 'string') continue;
+    if (byAddress.has(model.address)) throw new Error(`${source} registers ${model.address} twice`);
+    byAddress.set(model.address, model);
+  }
+  return { source, byAddress };
+}
+
+// Fetches and indexes the ModelSpec registry's index.json: MODELSPEC_REGISTRY_INDEX_URL, else
+// the default branch of modelspec-org/registry. Fails loudly: a build never falls back to stale
+// or hand-written data.
+export async function loadModelRegistry({ url = process.env.MODELSPEC_REGISTRY_INDEX_URL || modelRegistryDefaultUrl, fetchImpl = fetch } = {}) {
+  let response;
+  try { response = await fetchImpl(url, { redirect: 'error' }); } catch (error) { throw new Error(`cannot read ${url}: ${error.message}`); }
+  if (!response.ok) throw new Error(`cannot read ${url}: HTTP ${response.status}`);
+  let index;
+  try { index = JSON.parse(await response.text()); } catch (error) { throw new Error(`${url} is not JSON: ${error.message}`); }
+  return indexModelRegistry(index, url);
+}
+
+// The address a registry record must have: its repository and module.
+export const registeredModelAddress = (record) => (repositoryKey(record?.repository) && typeof record.module === 'string' ? normalisedModelAddress({ repository: repositoryKey(record.repository), module: record.module }) : null);
 
 // { module, entities: Map(name -> { properties: [{ name, type, references? }] }), problems }.
 // A property is either a scalar (`type`) or a reference to another entity
