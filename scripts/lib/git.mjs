@@ -26,7 +26,9 @@
 //   store. The cache lives outside the checkout, in a per-user directory
 //   (defaultCacheDir), so nothing a pull request commits can plant a repository
 //   there. Two runs that start on an empty cache are safe: each repository is made
-//   in a temporary directory and renamed into place.
+//   in a temporary directory and renamed into place. A history clone that cannot be
+//   fetched into is not trusted either: a fresh one is made, once, with the same
+//   hardening as a first clone, and replaces it (onBranch).
 // - A commit only counts when it is in the history of the repository's default
 //   branch: GitHub serves a fork's commits through the parent's URL, so "can be
 //   fetched" alone would let a fork's commit be registered under the parent.
@@ -64,6 +66,9 @@ export const gitEnv = () => ({
 const safeGitConfig = ['-c', `core.hooksPath=${devNull}`, '-c', 'core.fsmonitor=false', '-c', 'core.useReplaceRefs=false'];
 export const git = (args, options = {}) => execFileSync('git', [...safeGitConfig, ...args], { stdio: 'pipe', env: gitEnv(), maxBuffer: 256 * 1024 * 1024, ...options }).toString();
 export const lastLine = (error) => String(error.stderr ?? error.message).trim().split('\n').filter(Boolean).pop() ?? 'failed';
+// What git said went wrong: its first `fatal:` or `error:` line (the last line of a failed fetch or clone can be
+// advice such as "and the repository exists."), or the last line when it has none.
+const reasonOf = (error) => String(error.stderr ?? error.message).split('\n').find((line) => /^(fatal|error): /.test(line))?.replace(/^(fatal|error): /, '') ?? lastLine(error);
 
 // Creates `dir` (private) if it is missing, and refuses it unless it is a real
 // directory: a symbolic link there could point the cache anywhere.
@@ -127,7 +132,9 @@ export function cacheRepoSound(dir, { commit, url } = {}) {
     if (commit === undefined ? exists(shallow) : (exists(shallow) && readFileSync(shallow, 'utf8').trim() !== commit)) return false;
     const config = join(dir, 'config');
     const keys = git(['config', '--file', config, '--list', '--name-only']).split('\n').filter(Boolean);
-    if (!keys.every((key) => safeConfigKeys.some((pattern) => pattern.test(key)))) return false;
+    // A fetch that names the URL and asks for the clone's filter registers the URL as a promisor remote of its own
+    // (`[remote "<url>"]` with the two settings below); only the verified URL qualifies.
+    if (!keys.every((key) => safeConfigKeys.some((pattern) => pattern.test(key)) || (url !== undefined && (key === `remote.${url}.promisor` || key === `remote.${url}.partialclonefilter`)))) return false;
     if (commit !== undefined && keys.some((key) => key.startsWith('remote.') || key.startsWith('extensions.partialclone'))) return false;
     if (url !== undefined && keys.includes('remote.origin.url')) {
       const remotes = git(['config', '--file', config, '--get-all', 'remote.origin.url']).split('\n').filter(Boolean);
@@ -165,56 +172,87 @@ export function defaultBranch(url) {
   return match[1];
 }
 
-// Only a commit in the history of the branch counts: this keeps a bare,
-// commits-only (tree:0) clone of the branch per URL in cacheDir, fetches it
-// again once per run (`fetched` remembers), and asks git whether the commit is
-// an ancestor of the branch (or the branch itself). A commit the clone does
-// not have is not in that history either.
+// An entry's identity (device and inode): lets a run tell the entry it judged unusable
+// from a replacement that another run moved into the same place.
+export const identity = (path) => {
+  try { const { dev, ino } = lstatSync(path); return `${dev}:${ino}`; } catch { return null; }
+};
+
 // Moves a freshly made repository `work` into place as `dir`. An existing `dir`
 // that `good()` accepts (another run made it first) is kept and `work` dropped; one
 // that is not good is renamed away first, never deleted in place, so that two runs
-// never remove a directory the other is moving in.
-function install(work, dir, good, scratch) {
+// never remove a directory the other is moving in. `unusable` is the identity of an
+// entry its owner has found unusable although `good()` would accept it (a history clone
+// that cannot be fetched into): only that entry is replaced, so a run that finds a
+// replacement another run has already moved in keeps it. The entry is moved aside only
+// if it is still the one that was judged, checked just before the rename.
+export function install(work, dir, good, scratch, unusable) {
+  const usable = () => identity(dir) !== unusable && good();
   try { renameSync(work, dir); return; } catch (error) { if (!exists(dir)) throw error; }
-  if (good()) { rmSync(work, { recursive: true, force: true }); return; }
+  const seen = identity(dir);
+  if (seen !== unusable && good()) { rmSync(work, { recursive: true, force: true }); return; }
   const aside = mkdtempSync(join(scratch, '.old-'));
-  try { renameSync(dir, join(aside, 'old')); } catch { /* another run moved it already */ }
+  try { if (identity(dir) === seen) renameSync(dir, join(aside, 'old')); } catch { /* another run moved it already */ }
   rmSync(aside, { recursive: true, force: true });
   try { renameSync(work, dir); } catch (error) {
-    if (!good()) throw error;
+    if (!usable()) throw error;
     rmSync(work, { recursive: true, force: true });
   }
 }
 
 // Brings the branch of a cached history clone up to date. Two runs may do this to
 // the same clone at once; git locks the ref, so a lost race is simply retried.
+//
+// The fetch names the URL (never a remote the configuration names) and asks for the
+// clone's own filter, tree:0. Without it the server answers with a full pack, whose
+// deltas can be made against trees and blobs that a commits-only clone does not have;
+// git cannot fetch such a base itself (GIT_NO_LAZY_FETCH) and fails with `unresolved
+// deltas left after unpacking`. The filter is only applied automatically to a fetch
+// that names the remote.
 function fetchBranch(dir, url, ref) {
   for (let attempt = 1; ; attempt += 1) {
-    try { git(['-C', dir, 'fetch', '-q', '--force', '--end-of-options', url, `+${ref}:${ref}`]); return; } catch (error) { if (attempt === 4) throw error; }
+    try { git(['-C', dir, 'fetch', '-q', '--force', '--filter=tree:0', '--end-of-options', url, `+${ref}:${ref}`]); return; } catch (error) { if (attempt === 4) throw error; }
   }
 }
 
+// Makes the history clone of `branch` in `dir` current: fetches into the cached one, or
+// clones afresh when there is none, it is not sound, or the fetch cannot be made into it
+// (a cached clone is only a cache: whatever is wrong with it, the remote has the history).
+// The fresh clone is tried once, in a private temporary directory, with the hardening of any
+// first clone, and renamed into place only when it is complete, so a remote that fails
+// leaves the cache as it was and the error is the remote's own. Two runs that start on a
+// cold cache, or on the same unusable entry, are safe (install): each makes its own clone,
+// and the one that loses the rename uses the winner's.
+function refreshHistory(dir, url, branch, cacheDir) {
+  const ref = `refs/heads/${branch}`;
+  let unusable;
+  if (exists(join(dir, 'HEAD')) && cacheRepoSound(dir, { url })) {
+    const entry = identity(dir);
+    try { fetchBranch(dir, url, ref); return; } catch { unusable = entry; }
+  }
+  mkdirSync(cacheDir, { recursive: true, mode: 0o700 });
+  const work = mkdtempSync(join(cacheDir, '.clone-'));
+  try {
+    git(['clone', '-q', '--bare', '--template=', '--filter=tree:0', '--single-branch', '--branch', branch, '--end-of-options', url, join(work, 'repo')]);
+    install(join(work, 'repo'), dir, () => exists(join(dir, 'HEAD')) && cacheRepoSound(dir, { url }), cacheDir, unusable);
+  } finally { rmSync(work, { recursive: true, force: true }); }
+  fetchBranch(dir, url, ref);
+}
+
+// Only a commit in the history of the branch counts: this keeps a bare,
+// commits-only (tree:0) clone of the branch per URL in cacheDir, fetches it
+// again once per run (`fetched` remembers), and asks git whether the commit is
+// an ancestor of the branch (or the branch itself). A commit the clone does
+// not have is not in that history either.
 export function onBranch(url, branch, commit, cacheDir, fetched = new Set()) {
   if (!commitPattern.test(commit) || !refNamePattern.test(branch)) return false;
   const dir = historyPath(cacheDir, url, branch);
   const ref = `refs/heads/${branch}`;
   if (!fetched.has(dir)) {
     try {
-      if (exists(join(dir, 'HEAD')) && cacheRepoSound(dir, { url })) fetchBranch(dir, url, ref);
-      else {
-        // Clone into a private temporary directory and rename it into place, so that
-        // two runs that start on a cold cache never see a half-made repository; the
-        // one that loses the rename uses the winner's.
-        mkdirSync(cacheDir, { recursive: true, mode: 0o700 });
-        const work = mkdtempSync(join(cacheDir, '.clone-'));
-        try {
-          git(['clone', '-q', '--bare', '--template=', '--filter=tree:0', '--single-branch', '--branch', branch, '--end-of-options', url, join(work, 'repo')]);
-          install(join(work, 'repo'), dir, () => exists(join(dir, 'HEAD')) && cacheRepoSound(dir, { url }), cacheDir);
-        } finally { rmSync(work, { recursive: true, force: true }); }
-        fetchBranch(dir, url, ref);
-      }
+      refreshHistory(dir, url, branch, cacheDir);
     } catch (error) {
-      throw new Error(`cannot read the history of ${branch} in ${url}: ${lastLine(error)}`);
+      throw new Error(`cannot read the history of ${branch} in ${url}: ${reasonOf(error)}`);
     }
     fetched.add(dir);
   }
