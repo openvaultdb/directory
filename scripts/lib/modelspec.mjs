@@ -3,6 +3,7 @@
 // says where a model that lives in another repository is published.
 import { createHash } from 'node:crypto';
 import { repositoryKey } from './git.mjs';
+import { readRegistryText } from './registry-fetch.mjs';
 
 export const modelRegistryDefaultUrl = 'https://raw.githubusercontent.com/modelspec-org/registry/main/index.json';
 export const modelRegistryFormat = 'modelspec-registry/draft-1';
@@ -59,18 +60,29 @@ export function indexModelRegistry(index, source = 'the ModelSpec registry') {
 // the default branch of modelspec-org/registry. The URL must be https (like every other source
 // here): `fetch` would also read a data: or file: URL. Tests that must not touch the network pass
 // `fetchImpl`, which stands in for the fetch of an https URL. Fails loudly: a build never falls back
-// to stale or hand-written data.
-export async function loadModelRegistry({ url = process.env.MODELSPEC_REGISTRY_INDEX_URL || modelRegistryDefaultUrl, fetchImpl = fetch } = {}) {
+// to stale or hand-written data. Each read has a timeout and one retry (registry-fetch.mjs); `fetchImpl`,
+// `timeoutMs` and `retryDelayMs` are for tests.
+export async function loadModelRegistry({ url = process.env.MODELSPEC_REGISTRY_INDEX_URL || modelRegistryDefaultUrl, ...fetching } = {}) {
   let scheme;
   try { scheme = new URL(url).protocol; } catch { scheme = undefined; }
   if (scheme !== 'https:') throw new Error(`the ModelSpec registry index must be read over https; ${JSON.stringify(url)} is not an https URL (check MODELSPEC_REGISTRY_INDEX_URL)`);
-  let response;
-  try { response = await fetchImpl(url, { redirect: 'error' }); } catch (error) { throw new Error(`cannot read ${url}: ${error.message}`); }
-  if (!response.ok) throw new Error(`cannot read ${url}: HTTP ${response.status}`);
+  const text = await readRegistryText({ name: 'ModelSpec registry', url, ...fetching });
   let index;
-  try { index = JSON.parse(await response.text()); } catch (error) { throw new Error(`${url} is not JSON: ${error.message}`); }
+  try { index = JSON.parse(text); } catch (error) { throw new Error(`the ModelSpec registry (${url}) is not JSON: ${error.message}`); }
   return indexModelRegistry(index, url);
 }
+
+// The registry's records at `address` (normalised, no pin), compared the way a manifest's address is
+// normalised: host, organisation and repository ignoring case, the module as written. Normally one;
+// more than one means the registry lists the same model twice.
+export const modelsAtAddress = (registry, address) => [...registry.byAddress.values()].filter((record) => {
+  const parsed = parseModelAddress(record?.address);
+  return parsed !== null && parsed.ref === undefined && normalisedModelAddress(parsed) === address;
+});
+
+// Whether a record's repository and module give the address it is registered under (ignoring the case of the
+// host, organisation and repository, as the lookup does).
+export const addressMatchesRecord = (record) => registeredModelAddress(record) === normalisedModelAddress(parseModelAddress(record.address));
 
 // The address a registry record must have: its repository and module.
 export const registeredModelAddress = (record) => (repositoryKey(record?.repository) && typeof record.module === 'string' ? normalisedModelAddress({ repository: repositoryKey(record.repository), module: record.module }) : null);

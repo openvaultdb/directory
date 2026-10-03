@@ -26,9 +26,18 @@ export const defects = {
   'synonyms-dash': 'the Country page says "Synonyms: —" (step 2)',
   'synonyms-to-be-added': 'the Country page says "Synonyms: to be added" (step 2)',
   'synonyms-none-in-brackets': 'the Country page says "Synonyms: (none)" (step 2)',
+  'synonyms-tag-only': 'the Country page has the Synonyms card with a language tag and no synonym, as the live page would without them (step 2)',
+  'synonyms-undefined': 'the Country page lists "undefined" as its synonym (step 2)',
+  'synonyms-null': 'the Country page lists "null" as its synonym (step 2)',
+  'synonyms-unknown': 'the Country page lists "unknown" as its synonym (step 2)',
+  'synonyms-empty-section': 'the Country page has an empty Synonyms card followed by the next heading (step 2)',
+  'synonyms-runs-into-heading': 'the Country page has the Synonyms label directly followed by the next section\'s heading (step 2)',
   'example-cards-words-only': 'the Directory home says "example" three times in one paragraph and has no cards (step 6)',
   'example-cards-bare-labels': 'the Directory home has three list items that say only "Example" (step 6)',
   'example-cards-heading-only': 'the Directory home has an Examples heading and a paragraph about sample data, but no cards (step 6)',
+  'example-cards-links-only': 'the Directory home has three links that use the word example or sample, and no cards (step 6)',
+  'example-cards-none-yet': 'the Directory home has three list items that say there are no example databases yet (step 6)',
+  'example-cards-same-title': 'the Directory home has three cards with the same title (step 6)',
   'concept-page-omits-recordset': 'the Chinook customer concept page does not list the Customer recordset (step 5)',
   'missing-graph': 'the graphs page lists core only (step 6)',
   'no-directory-card': 'the Directory home has no Chinook card (step 6)',
@@ -84,6 +93,11 @@ export async function startMockSites(index, { defect } = {}) {
         const broken = defect === 'wrong-field-link' && key === countryKey && field ? `${anchor}-x` : anchor;
         return `<li><a href="${dir}/databases/${database.id}/#${broken}">${field ? `${recordset.name}.${field.name}` : recordset.name}</a></li>`;
       }).join('');
+      // The Synonyms card as the live page marks it up: a label, then one group per language (the tag, then the synonyms).
+      const card = (groups) => `<div class="card"><span>Synonyms</span>${groups}</div>`;
+      const group = (...parts) => `<div class="provenance">${parts.join('')}</div>`;
+      const tag = (code) => `<small>${code}</small>`;
+      const word = (text) => `<span>${text}</span>`;
       const synonymsLine = {
         'no-synonyms': '',
         'synonyms-none-yet': '<p>Synonyms: none yet</p>',
@@ -92,7 +106,13 @@ export async function startMockSites(index, { defect } = {}) {
         'synonyms-dash': '<p>Synonyms: \u2014</p>',
         'synonyms-to-be-added': '<p>Synonyms: to be added</p>',
         'synonyms-none-in-brackets': '<p>Synonyms: (none)</p>',
-      }[defect] ?? '<p>Synonyms: nation, countries</p>';
+        'synonyms-tag-only': card(group(tag('en')) + group(tag('ru'))),
+        'synonyms-undefined': card(group(tag('en'), word('undefined'))),
+        'synonyms-null': card(group(tag('en'), word('null'))),
+        'synonyms-unknown': card(group(tag('en'), word('unknown'))),
+        'synonyms-empty-section': card(''),
+        'synonyms-runs-into-heading': '<div><span>Synonyms</span><h2>In OVDB databases</h2><p>Databases, recordsets and fields that carry the concept.</p></div>',
+      }[defect] ?? card(group(tag('en'), word('nation'), word('countries')) + group(tag('ru'), word('\u0433\u043e\u0441\u0443\u0434\u0430\u0440\u0441\u0442\u0432\u043e')));
       const pinned = /ref=([0-9a-f]{40})/.exec(concept.address)?.[1].slice(0, 7);
       pages[`/graphs/${concept.graph}/concepts/${concept.concept}/`] = page(concept.label,
         `<h1>${concept.label}</h1><p>Pinned at ${pinned}</p>${synonymsLine}${concept.extends.map((parent) => `<p>Extends <a href="/graphs/${parent.graph}/concepts/${parent.concept}/">${parent.label}</a></p>`).join('')}<h2>In OVDB databases</h2><ul>${rows}</ul>`);
@@ -104,12 +124,18 @@ export async function startMockSites(index, { defect } = {}) {
     const { mg } = base();
     const pages = {};
     const database0 = index.databases[0];
+    // The example cards as the live home page marks them up: a label, then a grid of articles, each with a heading
+    // of its own, a description and a "Sample recordset" line; a "Browse sample databases" link; and the real databases apart.
+    const exampleCard = (title, link = 'https://www.example.org/') => `<article><div><h3><a href="${link}">${title}</a></h3></div><p>Open data about ${title.toLowerCase()}.</p><div><span>Sample recordset</span></div></article>`;
     const exampleCards = {
       'no-example-cards': '',
       'example-cards-words-only': '<h2>Databases to explore</h2><p>Example, example, example: see the sample data.</p>',
       'example-cards-bare-labels': '<h2>Examples</h2><ul><li>Example</li><li>Example</li><li>Example</li></ul>',
       'example-cards-heading-only': '<h2>Examples</h2><p>Sample data is below. See the example guide, the sample guide and the example FAQ.</p>',
-    }[defect] ?? '<h2>Examples</h2><ul><li><article><h3>Retail orders</h3><p>Example database</p></article></li><li><article><h3>Hospital beds</h3><p>Example database</p></article></li><li><article><h3>Bike share trips</h3><p>Sample database</p></article></li></ul>';
+      'example-cards-links-only': '<nav><a href="https://www.example.org/manifest">Example manifest</a> <a href="https://www.example.org/queries">Sample queries</a> <a href="#explore">Browse sample databases</a></nav>',
+      'example-cards-none-yet': '<h2>Examples</h2><ul><li>No example databases yet</li><li>Sample databases are coming soon</li><li>Examples were removed</li></ul>',
+      'example-cards-same-title': `<p>Sample catalogue content</p><div>${[1, 2, 3].map(() => exampleCard('Retail orders')).join('')}</div>`,
+    }[defect] ?? `<p>Sample catalogue content</p><div>${[exampleCard('NASA Earthdata'), exampleCard('Global Health Observatory'), exampleCard('OpenStreetMap')].join('')}</div><a href="#explore">Browse sample databases \u2192</a>`;
     pages['/'] = page('OVDB Directory', `${exampleCards}<h2>Databases</h2><ul>${defect === 'no-directory-card' ? '' : index.databases.map((database) => `<li><a href="/databases/${database.id}/">${database.title}</a>${defect === 'chinook-badged-example' ? ' <span>Example</span>' : ''}</li>`).join('')}</ul>`);
     const link = (graph, concept, label) => `<a href="${defect === 'wrong-concept-link' ? `${mg}/graphs/${graph}/concept/${concept}/` : conceptHref(mg, graph, concept)}">${label}</a>`;
     for (const database of index.databases) {

@@ -93,9 +93,9 @@ relative to the repository root, never a glob. The manifest (`ovdb-manifest/draf
 for example [`ovdb.yaml` of Chinook](https://github.com/datatug/chinookdb/blob/8c9e62ed6641c0a00faa3867167d928af4c44b06/ovdb.yaml))
 declares the canonical `url`, the `deployment` (`url`, `engine`, `discovery` on
 the canonical origin, and an optional `recordset_page` template with `{name}`),
-an optional `homepage` (the publisher's own web page for the database, which the
-Directory and MeaningGraph sites show as "Website"; a public https URL on any
-origin, held to the URL rules below),
+an optional `homepage` (the publisher's own web page for the database, which a site
+may show as a link to its website; a public https URL on any origin, held to the
+stricter rule for `homepage` below),
 the `model` (its files, or its address when it is published elsewhere; see
 [Two forms](#two-forms-own-model-or-shared-model)), the `meaning` file and its
 graph, the publisher, the `licences` (`data`, `model`, `meaning`) and the
@@ -122,12 +122,17 @@ model files is refused, as are `meaning.address` and `recordsets_partial`.
 
 A manifest that gives `model.address` makes the check read the ModelSpec registry.
 If the registry has that address, the manifest's `model.modelspec` must be the same
-model as the registry's `files.json` (the two JSON files are compared as data, so
-white space and key order do not matter): that is what lets every database with one
-`model.address` be a database of the same model. The comparison is made at the
-registry's commit, so it happens only when this record's `commit` is that commit;
-with another commit the check prints a warning that the model was not compared. An
-address the registry does not know is not compared.
+model as the registry's `files.json`: the same parsed JSON, with the same order of
+entities, properties and every other key (only white space may differ). The order
+counts because an entity's property order is the field order of its recordset in
+`index.json`, so databases with one `model.address` always list the same fields in the
+same order. The comparison is made at the registry's commit, so it happens only when
+this record's `commit` is that commit; with another commit the check prints a warning
+that the model was not compared. An address the registry does not know is not
+compared. Because of this, a manifest that names a `model.address` needs the ModelSpec
+registry to be readable: if it cannot be read (after a timeout and one retry), the
+check fails with a problem that names the registry, as it does for the MeaningGraph
+registry; it never falls back to old data.
 
 **Shared model.** The model and the meaning graph are published in other
 repositories, and this manifest points at them instead of copying them, so that
@@ -153,9 +158,12 @@ listed:
 1. `model.address` and `meaning.address` follow one spelling rule: host,
    organisation and repository are written in lower case (a manifest that writes
    capitals is refused; the module name of a model is case-sensitive and written as
-   it is). The registries are searched ignoring case, so a graph that the
-   MeaningGraph registry registers with capitals is found by the lower-case
-   address, and `index.json` spells it the way the registry does. `model.address`,
+   it is). Every lookup of a repository address in a registry ignores that case, in
+   the manifest and in a meaning file's `meaning://` addresses and `models:` entries
+   alike: a model or graph that a registry registers with capitals is found by the
+   lower-case address. `index.json` spells a graph the way its registry does and a
+   model address in lower case. A registry that lists one repository twice, in two
+   cases, is a problem. `model.address`,
    with its `?ref=` removed, must be registered in the ModelSpec registry
    (`https://raw.githubusercontent.com/modelspec-org/registry/main/index.json`,
    format `modelspec-registry/draft-1`, checksum verified; `MODELSPEC_REGISTRY_INDEX_URL`
@@ -207,11 +215,18 @@ The publisher repository's `OVDB.md`, the manifest's `url`, `id`, `publisher` an
 `deployment` rules are the same in both forms.
 
 One deployment is listed once. Two databases may not have the same
-`deployment.url` (compared ignoring case and a trailing slash), and no two may have a
-`deployment.recordset_page` that starts with the same origin and path before `{name}`
-(compared ignoring case): a hoster could otherwise list another publisher's live
-deployment as its own, and a second listing of one deployment is not a second hoster.
-Databases that share a model are different databases on different deployments.
+`deployment.url`, and no two may have the same `deployment.recordset_page` template: a
+hoster could otherwise list another publisher's live deployment as its own, and a second
+listing of one deployment is not a second hoster. Databases that share a model are
+different databases on different deployments. The rule compares text, after the
+normalisations that the URL rules below already force (one spelling of the host, no port,
+no percent escape): `deployment.url` is compared ignoring case and a trailing slash, which
+is conservative (a path may be case-sensitive, but two listings that differ only in case
+are refused anyway), and the whole `recordset_page` template is compared as written, apart
+from a trailing slash, so two honest databases on one host whose templates differ after
+`{name}` are both listed. What the rule cannot see is two different host names that serve
+one database, or a proxy in front of another publisher's deployment: that is the
+reviewer's question when a registration pull request is opened.
 
 The canonical `url` is on an origin that the publisher is expected to control, and
 the check cannot prove it. The only rule is that `deployment.discovery` is on the
@@ -227,7 +242,8 @@ query or fragment, no IP address (in any spelling), `localhost`, single-label
 name, or local, internal or reserved name (`.local`, `.internal`, `.lan`, `.svc`,
 `.home`, `.test`, `.example`, `.invalid`, `.onion`, …), and written in one
 canonical spelling: no trailing dot or empty label in the host, no `//` in the
-path, no percent-encoded letter, digit, `-`, `.`, `_` or `~`. A name that looks
+path, no port (not even `:443`), and no percent escape in the path (outside the
+`{name}` of a template). A name that looks
 public but resolves to a private address (`127.0.0.1.nip.io`) cannot be seen from
 the text: clients must check the address they connect to. `recordset_page` has
 `{name}` exactly once, in the path only, and every URL generated from it is
@@ -296,7 +312,15 @@ address at the commit that address pins, resolved through the MeaningGraph regis
   sorted by concept and role.
 - `homepage` is the manifest's `homepage`, and is absent when the manifest has none
   (a client shows no website link then). It is not on the canonical `url`'s origin
-  by rule, so it says nothing about who controls that origin.
+  by rule, so it says nothing about who controls that origin. It is published as
+  written, so the index guarantees this much about it: at most 200 characters; the
+  scheme is exactly `https`, with no user information, port, query or fragment; the
+  host is lower case, of two or more dot-separated labels of ASCII letters, digits
+  and hyphen (no label starts or ends with a hyphen), and is not an IP address or a
+  reserved name; the path has only `A-Z a-z 0-9 . _ ~ / -` (no percent escape, no
+  `//`, no `.` or `..` segment, no quote, ampersand or other punctuation). It does not
+  say that the page exists or that the name is not a look-alike (an `xn--` name is
+  ASCII). A site that shows it must still HTML-escape it.
 - `licence` is the manifest's `licences.data`: the licence of the database's data.
 - A meaning's `address` carries the pinned commit of the meaning graph's repository:
   the record's `commit` for an own model, `meaning.address`'s pin for a shared one.
@@ -419,7 +443,7 @@ Two layers run in CI ([`.github/workflows/check.yml`](.github/workflows/check.ym
      https (no IP address, local or internal host, credentials, query or
      fragment) and the canonical `url` has `ovdb` as a path segment or
      subdomain; its discovery document is on the canonical origin; no other
-     database has the same `deployment.url` or recordset page prefix; for an own
+     database has the same `deployment.url` or `recordset_page` template; for an own
      model, `licences.meaning` is what the meaning file declares (a shared model's
      licences are the registries');
    - `meaning_graph` is registered in the MeaningGraph registry
@@ -487,14 +511,18 @@ from a fixture, like the MeaningGraph registry's. It covers:
   not the model's entities (or a bad partial list), a meaning graph in another
   repository that does not say which model it binds, a relative `models:` path
   when the two pins are different commits, a registry path that does not exist at a
-  pin other than the registry's, a graph the registry registers with capitals, and
-  an index URL that is not https.
+  pin other than the registry's, a model or graph the registry registers with capitals,
+  an index URL that is not https, and registry reads that time out, are tried twice and
+  name the registry when they fail.
 - **Across records:** two databases with the same `url`, `deployment.url` or
-  recordset page prefix; an own model that is not the registered one.
+  `recordset_page` template, and a port or percent escape that would make a second
+  spelling of one; an own model that is not the registered one, or has its
+  properties in another order.
 - **URLs and names:** a manifest URL that is http, has credentials, a query or a
   fragment, names an IP address in any spelling, `localhost` or an internal host,
-  has `{name}` in the host, or is written in a second spelling; a canonical `url`
-  without `ovdb`; names and values that are not identifiers or plain strings.
+  has `{name}` in the host, or is written in a second spelling, has a port or a percent
+  escape; a `homepage` that is long, has a port, a quote or an ampersand; a canonical
+  `url` without `ovdb`; names and values that are not identifiers or plain strings.
 - **Output:** the warnings and the errors reach what `npm run check` and
   `npm run index` print.
 - **The git cache:** a planted hook (in `hooks/` or defined in configuration),
@@ -539,9 +567,24 @@ deliberate defects listed in `mock-sites.mjs` (a search that returns nothing, a
 result that is not registered, a missing Customer recordset or its anchor, a
 recordset without concepts, a wrong field anchor, a concept page that omits the
 recordset, no live-deployment link, an example badge on Chinook, no example
-cards or three cards that only say "example", no synonyms or a line that says there
-are none, and others). It does not show that no defect is possible outside that
-list. It needs no real sites, only a browser, and runs in CI.
+cards, or three links, list items or cards that only use the word "example", no
+synonyms, a Synonyms section with only a language tag or an empty one, a synonym
+that is `undefined`, `null`, `unknown` or "none yet", and others). It matches the
+`Error:` line of the one assertion that failed, so a failure on a neighbouring
+assertion is noticed, and expects the other two journeys to pass. It does not show
+that no defect is possible outside that list. It needs no real sites, only a
+browser, and runs in CI.
+
+The synonyms check expects a concept page to have a label "Synonyms" followed by
+groups: for each language a language tag and then the synonyms (or one plain list, or
+"Synonyms: a, b" on one line). Language tags are not synonyms; a section with no
+synonym left (only a tag, nothing, or the next heading at once), or with a
+placeholder such as `undefined` or "none yet", fails. The example-card check counts
+items that have a heading of their own, say "example" or "sample" in their own text
+or in the short label before their list, and are not links to a database of the
+Directory. Both are best-effort readings of a page, not of data: the index holds no
+synonyms and no example cards. A site layout the checks do not expect is a failure
+to fix in the checks or in the site, not something they guess around.
 
 ## Licence
 

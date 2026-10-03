@@ -15,8 +15,10 @@
 // percent-encoded host names), so the checks below see the host a client would
 // connect to. Each URL must also be written the way that parser would write it,
 // so there is exactly one spelling of every URL that is checked and published:
-// no trailing dot or empty label in the host, no empty path segment, no
-// percent-encoded character that stands for an unreserved one, no dot segment.
+// no trailing dot or empty label in the host, no empty path segment, no dot
+// segment. There is also no port (not even :443) and no percent escape in the
+// path: with them one deployment would have many spellings (host:8443, ovdb%2Fdbs),
+// and the rule that a deployment is listed once compares text.
 
 // Names that are never public: local, internal and reserved naming zones.
 const privateSuffixes = [
@@ -75,11 +77,10 @@ export function publicHttpsProblem(value, { template = false } = {}) {
   if (url.hash || probe.includes('#')) return 'must not contain a fragment';
   const problem = hostProblem(url);
   if (problem) return problem;
+  // The parser drops the default port, so look at the text: any ":" in the authority is a port.
+  if (probe.slice('https://'.length).split('/')[0].includes(':')) return 'must not name a port (not even :443): a deployment is reached on the default https port';
   if (url.pathname.includes('//')) return 'has an empty path segment (//)';
-  for (const match of url.pathname.matchAll(/%([0-9a-fA-F]{2})/g)) {
-    const character = String.fromCharCode(Number.parseInt(match[1], 16));
-    if (/[A-Za-z0-9\-._~]/.test(character)) return `writes ${match[0]} for ${character}; write the character itself (one spelling per URL)`;
-  }
+  if (url.pathname.includes('%')) return 'must not contain a percent escape in the path (write the character itself, or leave it out)';
   // The literal text must be the URL's own spelling, so that what is checked is
   // what is published (no %2e dot segments, no mixed-case host, no decoded host).
   if (url.href !== probe) return `is not written canonically (it would be ${url.href})`;
@@ -98,4 +99,23 @@ export function hasOvdbMarker(value) {
   const labels = url.hostname.toLowerCase().split('.');
   const suffixLabels = twoLabelSuffixes.has(labels.slice(-2).join('.')) ? 2 : 1;
   return labels.slice(0, labels.length - suffixLabels - 1).includes('ovdb');
+}
+
+// What the index guarantees about a manifest's `homepage`, on top of publicHttpsProblem (https, no
+// userinfo, query or fragment, no port, a public host written canonically): at most 200 characters; a
+// lower-case host of two or more dot-separated labels of ASCII letters, digits and hyphen (no label starts
+// or ends with a hyphen); a path of only A-Z a-z 0-9 . _ ~ / - (no percent escape, no quote, ampersand or
+// other punctuation). A site that shows the value must still HTML-escape it, and must not put it in a
+// single-quoted or unquoted attribute.
+export const homepageMaxLength = 200;
+const homepageLabel = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+export function homepageProblem(value) {
+  const problem = publicHttpsProblem(value);
+  if (problem) return problem;
+  if (value.length > homepageMaxLength) return `is longer than ${homepageMaxLength} characters`;
+  const url = new URL(value);
+  const labels = url.hostname.split('.');
+  if (labels.length < 2 || !labels.every((label) => homepageLabel.test(label))) return `host ${url.hostname} must be lower-case labels of ASCII letters, digits and hyphen (none starting or ending with a hyphen), at least two, separated by dots`;
+  if (!/^[A-Za-z0-9._~/-]*$/.test(url.pathname)) return 'path may only use A-Z a-z 0-9 . _ ~ / and - (no quote, ampersand, percent escape or other punctuation)';
+  return null;
 }

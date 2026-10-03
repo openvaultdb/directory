@@ -10,12 +10,11 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { isAbsolute, join, posix, relative } from 'node:path';
-import { isDeepStrictEqual } from 'node:util';
 import { parse as parseYaml } from 'yaml';
 import { addressOf, commitPattern, defaultBranch, defaultCacheDir, ensurePlainDirectory, isRepositoryPath, onBranch, openCommit, repositoryKey, repositoryHosts } from './git.mjs';
 import { createMeaningResolver, entryOf, graphsAtAddress, loadMeaningRegistry, meaningFilesOf, parseConceptRef, parseGraphAddress, labelOf, validateConcept } from './meaning.mjs';
-import { loadModelRegistry, normalisedModelAddress, parseModelSpec, parseModelRef, parseModelAddress, registeredModelAddress } from './modelspec.mjs';
-import { hasOvdbMarker, publicHttpsProblem } from './urls.mjs';
+import { addressMatchesRecord, loadModelRegistry, modelsAtAddress, normalisedModelAddress, parseModelSpec, parseModelRef, parseModelAddress } from './modelspec.mjs';
+import { hasOvdbMarker, homepageProblem, publicHttpsProblem } from './urls.mjs';
 
 export { repositoryHosts };
 export const directoryFormat = 'ovdb-directory/draft-1';
@@ -95,16 +94,20 @@ export function recordProblems({ databases, maintainers }) {
 }
 
 // What a manifest says about the deployment that serves the database, for comparing it with the other
-// records': the deployment's url (ignoring case and a trailing slash) and the origin and path of the
-// recordset page template up to {name}. Two databases on the same deployment are not two hosters: a
+// records': the deployment's url, compared ignoring case and a trailing slash (conservative: the path of a
+// real deployment may be case-sensitive, but two listings that differ only in case are refused anyway), and
+// the whole recordset page template with {name} in place, compared as written apart from a trailing slash.
+// URLs are already one spelling each (no port, no percent escape, canonical host: see urls.mjs), so what is
+// compared is text after those normalisations. Two databases on the same deployment are not two hosters: a
 // hoster could otherwise list another publisher's live deployment as its own.
+const trimmed = (url) => url.replace(/\/+$/, '');
 export const deploymentClaims = (manifest) => ({
-  deploymentUrl: manifest.deployment.url.toLowerCase().replace(/\/+$/, ''),
-  recordsetPrefix: typeof manifest.deployment.recordset_page === 'string' ? manifest.deployment.recordset_page.slice(0, manifest.deployment.recordset_page.indexOf('{name}')).toLowerCase() : undefined,
+  deploymentUrl: trimmed(manifest.deployment.url.toLowerCase()),
+  recordsetPage: typeof manifest.deployment.recordset_page === 'string' ? trimmed(manifest.deployment.recordset_page) : undefined,
 });
 
-// Problems across records, from what analyseDatabase reports as `claims`: a deployment url, or the origin
-// and path a recordset page template starts with, that more than one database claims. Reported once per
+// Problems across records, from what analyseDatabase reports as `claims`: a deployment url, or a recordset
+// page template, that more than one database claims. Reported once per
 // value, on the last record (by file name) that claims it, naming every database that does.
 export function claimProblems(claimed) {
   const problems = [];
@@ -117,7 +120,7 @@ export function claimProblems(claimed) {
     }
   };
   report('deploymentUrl', (value, count, ids) => `deployment.url ${value} is claimed by ${count} databases (${ids}; compared ignoring case and a trailing slash)`);
-  report('recordsetPrefix', (value, count, ids) => `deployment.recordset_page of ${count} databases (${ids}) starts with ${value} (the origin and path before {name}, compared ignoring case)`);
+  report('recordsetPage', (value, count, ids) => `deployment.recordset_page ${value} is claimed by ${count} databases (${ids}; the whole template is compared, as written)`);
   return problems;
 }
 
@@ -198,8 +201,12 @@ export function manifestProblems(manifest) {
   }
   need(manifest.publisher, 'name', 'publisher.name');
   needUrl(manifest.publisher?.url, 'publisher.url');
-  // Optional: the publisher's own page for the database (a website for people). Any public https URL, on any origin.
-  if (manifest.homepage !== undefined) needUrl(manifest.homepage, 'homepage');
+  // Optional: the publisher's own page for the database (a website for people), on any origin, under the stricter
+  // rule of homepageProblem: it is published as written, so it is held to a short, plain spelling.
+  if (manifest.homepage !== undefined) {
+    const problem = typeof manifest.homepage === 'string' && manifest.homepage !== '' ? homepageProblem(manifest.homepage) : 'is not a URL (leave homepage out when the database has no website)';
+    if (problem) problems.push(`homepage ${problem}`);
+  }
   need(manifest.licences, 'data', 'licences.data', spdxLike);
   if (!Array.isArray(manifest.recordsets) || manifest.recordsets.length === 0 || !manifest.recordsets.every(isText)) problems.push('recordsets must be a non-empty list of names');
   return problems;
@@ -400,9 +407,11 @@ export async function analyseDatabase(record, context) {
     if (modelAddress !== undefined) {
       let modelRegistry;
       try { modelRegistry = await context.modelRegistry(); } catch (registryError) { bad(`ModelSpec registry: ${registryError.message}`); return stop(); }
-      const registered = modelRegistry.byAddress.get(modelAddress);
-      if (registered) {
-        if (registeredModelAddress(registered) !== registered.address) bad(`the ModelSpec registry's record for ${registered.address} is not well formed (its repository and module must give that address)`);
+      const records = modelsAtAddress(modelRegistry, modelAddress);
+      const registered = records[0];
+      if (records.length > 1) bad(`${data.manifest}: model.address ${modelAddress} matches ${records.length} records of the ModelSpec registry (${records.map((record) => record.address).join(', ')}), which differ only in case; the registry must list a model once`);
+      else if (registered) {
+        if (!addressMatchesRecord(registered)) bad(`the ModelSpec registry's record for ${registered.address} is not well formed (its repository and module must give that address)`);
         else if (!isRepositoryPath(registered.files?.json)) bad(`the ModelSpec registry's record for ${registered.address} is not well formed (files.json must be a path inside the repository)`);
         else if (registered.commit !== data.commit) warn(`model.address ${modelAddress} is registered in the ModelSpec registry at ${shown(registered.commit)}, but this record pins ${data.commit}; ${manifest.model.modelspec} was not compared with the registry's ${registered.files.json}`);
         else {
@@ -410,7 +419,10 @@ export async function analyseDatabase(record, context) {
           if (registeredText !== null) {
             let theirs;
             try { theirs = JSON.parse(registeredText); } catch (parseError) { bad(`${registered.files.json}, the files.json of ${registered.address} in the ModelSpec registry, is not JSON: ${parseError.message}`); }
-            if (theirs !== undefined && !isDeepStrictEqual(theirs, JSON.parse(modelText))) bad(`${data.manifest}: ${manifest.model.modelspec} is not the model the ModelSpec registry registers as ${registered.address}: it differs from ${registered.files.json}, the registry's files.json, at ${data.commit}; databases that share a model.address are databases of the same model`);
+            // Equal means the same parsed JSON with the same order of object keys and array items (white space aside):
+            // the order of an entity's properties is the order of a recordset's fields in index.json, so equal models
+            // always give the same index entries.
+            if (theirs !== undefined && JSON.stringify(theirs) !== JSON.stringify(JSON.parse(modelText))) bad(`${data.manifest}: ${manifest.model.modelspec} is not the model the ModelSpec registry registers as ${registered.address}: it differs from ${registered.files.json}, the registry's files.json, at ${data.commit} (the order of entities, properties and other keys counts); databases that share a model.address are databases of the same model`);
           }
         }
       }
@@ -443,10 +455,12 @@ export async function analyseDatabase(record, context) {
     // The ModelSpec registry: the address (without its pin) is registered. Loaded when a shared model needs it.
     let modelRegistry;
     try { modelRegistry = await context.modelRegistry(); } catch (registryError) { bad(`ModelSpec registry: ${registryError.message}`); return stop(); }
-    const registered = modelRegistry.byAddress.get(modelAddress);
-    if (!registered) bad(`${data.manifest}: model.address ${modelAddress} is not registered in the ModelSpec registry (${modelRegistry.source}); register the model there first`);
+    const records = modelsAtAddress(modelRegistry, modelAddress);
+    const registered = records[0];
+    if (records.length > 1) bad(`${data.manifest}: model.address ${modelAddress} matches ${records.length} records of the ModelSpec registry (${records.map((record) => record.address).join(', ')}), which differ only in case; the registry must list a model once`);
+    else if (!registered) bad(`${data.manifest}: model.address ${modelAddress} is not registered in the ModelSpec registry (${modelRegistry.source}); register the model there first`);
     else {
-      if (registeredModelAddress(registered) !== registered.address) bad(`the ModelSpec registry's record for ${registered.address} is not well formed (its repository and module must give that address)`);
+      if (!addressMatchesRecord(registered)) bad(`the ModelSpec registry's record for ${registered.address} is not well formed (its repository and module must give that address)`);
       if (!(isRepositoryPath(registered.files?.source) && modelSourcePattern.test(registered.files.source) && isRepositoryPath(registered.files?.json))) bad(`the ModelSpec registry's record for ${registered.address} is not well formed (files.source must be a .modelspec.hcl path and files.json a path inside the repository)`);
       if (manifest.licences.model !== undefined && manifest.licences.model !== registered.licence) bad(`${data.manifest}: licences.model is ${manifest.licences.model}, but the ModelSpec registry records ${JSON.stringify(registered.licence)} for ${registered.address}; the model's licence comes from the registry, so leave licences.model out`);
     }
@@ -492,7 +506,13 @@ export async function analyseDatabase(record, context) {
     const graphMoved = moved('MeaningGraph registry', graph.commit, graphPin.ref);
     const patterns = meaningFilesOf(graph);
     if (patterns === null) { bad(`the MeaningGraph registry's record for ${graph.id} is not well formed (meaning_files must be a list of file paths)`); return stop(); }
-    if (!patterns.some((pattern) => graphFiles.match(pattern).includes(manifest.meaning.file))) { bad(`${data.manifest}: meaning.file ${manifest.meaning.file} is not one of the meaning files the MeaningGraph registry lists for ${graph.id} (${patterns.join(', ')}) at commit ${graphPin.ref}${graphMoved}`); return stop(); }
+    if (!patterns.some((pattern) => graphFiles.match(pattern).includes(manifest.meaning.file))) {
+      // The "moved" note only when the registry's own files are not there at this pin; a manifest that names a file
+      // the registry does not list (a typing mistake) is just that.
+      const movedAway = patterns.length > 0 && patterns.every((pattern) => graphFiles.match(pattern).length === 0);
+      bad(`${data.manifest}: meaning.file ${manifest.meaning.file} is not one of the meaning files the MeaningGraph registry lists for ${graph.id} (${patterns.join(', ')}) at commit ${graphPin.ref}${movedAway ? graphMoved : ''}`);
+      return stop();
+    }
 
     // The ModelSpec JSON, at the model's pin; its module is the registered one.
     modelLabel = `${registered.files.json} of ${repositoryKey(registered.repository)}`;

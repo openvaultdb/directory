@@ -24,7 +24,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
-import { exampleCardTexts, synonymsOf } from './page-checks.mjs';
+import { exampleCardTitles, synonymBlocks, synonymsFrom } from './page-checks.mjs';
 
 const meaningGraphBase = (process.env.MEANINGGRAPH_BASE_URL ?? '').replace(/\/+$/, '');
 const directoryBase = (process.env.OVDB_DIRECTORY_BASE_URL ?? '').replace(/\/+$/, '');
@@ -148,7 +148,7 @@ test('journey 1 to 5: search "country" on MeaningGraph, follow Customer.Country 
   await expect(page).toHaveURL(countryUrl);
   await expect(page.getByRole('heading', { name: core.label, level: 1 })).toBeVisible();
   await expect(page.locator('body')).toContainText(refOf(core.address).slice(0, 7));
-  const synonyms = synonymsOf(await page.locator('body').innerText());
+  const synonyms = synonymsFrom(await page.evaluate(synonymBlocks));
   expect(synonyms, 'the page lists the concept\'s synonyms').not.toBeNull();
   expect(synonyms.problem, `the synonyms are real synonyms, not a statement that there are none (the page says "${synonyms?.text}")`).toBeNull();
   await expect(page.getByRole('heading', { name: /In OVDB databases/i })).toBeVisible();
@@ -220,8 +220,8 @@ test('journey 6a: the Directory lists every database in index.json as a real dat
   }
   // The existing cards stay, still labelled as examples (a site may say "sample"): at least three cards, each with something to say
   // beyond the label, not three uses of the word.
-  const cards = await page.evaluate(exampleCardTexts);
-  expect(cards.length, `the three example cards stay, each labelled as an example or sample and with a title or text of its own (found: ${JSON.stringify(cards)})`).toBeGreaterThanOrEqual(3);
+  const cards = await page.evaluate(exampleCardTitles);
+  expect(cards.length, `the three example cards stay, each with a heading of its own and labelled as an example or sample (found: ${JSON.stringify(cards)})`).toBeGreaterThanOrEqual(3);
 });
 
 test('journey 6b: MeaningGraph lists, on /graphs/, every graph that index.json names', async ({ page }) => {

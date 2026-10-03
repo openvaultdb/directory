@@ -10,6 +10,7 @@
 import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
 import { addressOf, commitPattern, defaultBranch, onBranch, openCommit } from './git.mjs';
+import { readRegistryText } from './registry-fetch.mjs';
 
 export const meaningRegistryUrl = 'https://raw.githubusercontent.com/meaninggraph/registry/main/index.json';
 export const meaningRegistryFormat = 'meaning-registry/draft-1';
@@ -98,12 +99,10 @@ export const graphsAtAddress = (registry, address) => [...registry.byAddress.val
 
 // Fetches and indexes meaninggraph/registry's index.json. Fails loudly: a build
 // never falls back to stale or hand-written data.
-export async function loadMeaningRegistry({ url = meaningRegistryUrl, fetchImpl = fetch } = {}) {
-  let response;
-  try { response = await fetchImpl(url, { redirect: 'error' }); } catch (error) { throw new Error(`cannot read ${url}: ${error.message}`); }
-  if (!response.ok) throw new Error(`cannot read ${url}: HTTP ${response.status}`);
+export async function loadMeaningRegistry({ url = meaningRegistryUrl, ...fetching } = {}) {
+  const text = await readRegistryText({ name: 'MeaningGraph registry', url, ...fetching });
   let index;
-  try { index = JSON.parse(await response.text()); } catch (error) { throw new Error(`${url} is not JSON: ${error.message}`); }
+  try { index = JSON.parse(text); } catch (error) { throw new Error(`the MeaningGraph registry (${url}) is not JSON: ${error.message}`); }
   return indexMeaningRegistry(index, url);
 }
 
@@ -157,7 +156,9 @@ export function createMeaningResolver({ own, registry, urlFor = (url) => url, ca
 
   // meaning://{repo}?ref={commit} resolves through the MeaningGraph registry.
   const resolveGraph = (repo, ref) => {
-    const graph = registry.byAddress.get(`meaning://${repo}`);
+    const matches = graphsAtAddress(registry, `meaning://${repo}`);
+    const graph = matches[0];
+    if (matches.length > 1) return { error: `meaning://${repo} matches ${matches.length} records of the MeaningGraph registry (${matches.map((match) => match.id).join(', ')}), which differ only in case` };
     if (!graph) return { error: `meaning://${repo} is not registered in the MeaningGraph registry` };
     if (ref === undefined) return { error: `meaning://${repo} needs a ?ref= pin` };
     if (!commitPattern.test(ref)) return { error: `meaning://${repo}?ref=${ref}: a pin is a full 40-character commit id` };
@@ -171,7 +172,7 @@ export function createMeaningResolver({ own, registry, urlFor = (url) => url, ca
   const resolveConcept = (ref, node) => {
     const parsed = parseConceptRef(ref);
     if (!parsed) return { error: `"${ref}" is not a concept reference` };
-    const inside = !parsed.repo || (parsed.ref === undefined && parsed.repo === node.address);
+    const inside = !parsed.repo || (parsed.ref === undefined && parsed.repo.toLowerCase() === node.address.toLowerCase());
     const target = inside ? node : resolveGraph(parsed.repo, parsed.ref);
     if (target.error) return { error: target.error };
     const concept = target.concepts.get(parsed.id);
