@@ -7,13 +7,14 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { execFile, execFileSync } from 'node:child_process';
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { devNull, tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, test } from 'node:test';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import { addressOf, cacheRepoSound, defaultBranch, defaultCacheDir, gitEnv, historyPath, openCommit, repositoryKey, setGitProtocols } from './lib/git.mjs';
+import { addressOf, cacheRepoSound, defaultBranch, defaultCacheDir, git, gitEnv, historyPath, onBranch, openCommit, repositoryKey, setGitProtocols } from './lib/git.mjs';
+import { runCheck, runIndex } from './lib/cli.mjs';
 import { hasOvdbMarker, publicHttpsProblem } from './lib/urls.mjs';
 import { buildIndex, checkDirectory, indexText, readDirectory, recordProblems, urlProblem } from './lib/directory.mjs';
 import { indexMeaningRegistry, loadMeaningRegistry } from './lib/meaning.mjs';
@@ -126,7 +127,10 @@ function world({ publisher, core: editCore, record: editRecord, registry, direct
   const meaningRegistry = meaningIndex({ chinook: publisherOrigin.commit, core: coreOrigin.commit, edit: registry });
   return { dir, publisher: publisherOrigin, core: coreOrigin, corePin, extraCore, meaningRegistry, urls, urlFor: (url) => urls.get(url) ?? url, cacheDir: fresh('cache') };
 }
-const options = (w, extra = {}) => ({ root: w.dir, urlFor: w.urlFor, cacheDir: w.cacheDir, meaningRegistry: w.meaningRegistry, fetched: new Set(), branches: new Map(), ...extra });
+// A manifest with its own model files that names its model's address reads the ModelSpec registry; unless a test says
+// otherwise that registry has no models, so no address is registered and nothing is compared.
+const emptyModelRegistry = async () => modelIndex({ commit: '0'.repeat(40), edit: (models) => models.splice(0) });
+const options = (w, extra = {}) => ({ root: w.dir, urlFor: w.urlFor, cacheDir: w.cacheDir, meaningRegistry: w.meaningRegistry, loadModelRegistry: emptyModelRegistry, fetched: new Set(), branches: new Map(), ...extra });
 const index = async (w, extra) => JSON.parse(await buildIndex(options(w, extra)));
 // Writes the index the way `npm run index` does, then checks.
 const checked = async (w, extra) => {
@@ -1152,11 +1156,16 @@ test('a second hoster of Chinook points at the published model and meaning graph
 
 test('the ModelSpec registry is read only when a database names its model by address', async () => {
   let loads = 0;
-  const loadModelRegistry = async () => { loads += 1; return modelIndex({ commit: shared.publisher.commit }); };
-  assert.equal((await index(world(), { loadModelRegistry })).databases.length, 1);
-  assert.equal(loads, 0, 'a directory of own-model databases never reads it');
+  const loaderFor = (commit) => async () => { loads += 1; return modelIndex({ commit }); };
+  const plain = world();
+  assert.equal((await index(plain, { loadModelRegistry: loaderFor(plain.publisher.commit) })).databases.length, 1);
+  assert.equal(loads, 0, 'a directory of own-model databases that name no address never reads it');
+  const naming = world(chinookNamesModel);
+  assert.equal((await index(naming, { loadModelRegistry: loaderFor(naming.publisher.commit) })).databases.length, 1);
+  assert.equal(loads, 1, 'an own model that names its address reads it, to compare the model with the registered one');
+  loads = 0;
   const shared = sharedWorld();
-  assert.equal((await sharedIndex(shared, { modelRegistry: undefined, loadModelRegistry })).databases.length, 2);
+  assert.equal((await sharedIndex(shared, { modelRegistry: undefined, loadModelRegistry: loaderFor(shared.publisher.commit) })).databases.length, 2);
   assert.equal(loads, 1);
 });
 
@@ -1397,4 +1406,446 @@ test('a shared-model database refuses the shapes that a shared form cannot have,
     const problems = await sharedProblems(sharedWorld(hosterManifestEdit(change)), none);
     expectProblem(problems, pattern);
   }
+});
+
+// ---- shared-model follow-ups ----
+
+test('a malformed meaning_files in a MeaningGraph registry record is a problem, never an exception: own form, shared form, and a graph that is only read', async () => {
+  const notWellFormed = /the MeaningGraph registry's record for chinook is not well formed \(meaning_files must be a list of file paths\)/;
+  for (const malformed of ['model/chinook.meaning.yaml', {}, [42], [null], [['x']], 7, true, null]) {
+    const label = JSON.stringify(malformed);
+    let problems;
+    try { problems = await problemsOf(world({ registry: (graphs) => { graphs[0].meaning_files = malformed; } })); } catch (error) { assert.fail(`own form, ${label}: threw ${error.stack}`); }
+    assert.ok(problems.some((problem) => notWellFormed.test(problem)), `own form, ${label}: ${problems.join('\n')}`);
+    try { problems = await sharedProblems(sharedWorld({ chinook: { registry: (graphs) => { graphs[0].meaning_files = malformed; } } })); } catch (error) { assert.fail(`shared form, ${label}: threw ${error.stack}`); }
+    assert.ok(problems.some((problem) => notWellFormed.test(problem)), `shared form, ${label}: ${problems.join('\n')}`);
+    // core is reached through an address, not named by the record: its record is checked when it is read.
+    try { problems = await problemsOf(world({ registry: (graphs) => { graphs[1].meaning_files = malformed; } })); } catch (error) { assert.fail(`read graph, ${label}: threw ${error.stack}`); }
+    expectProblem(problems, /the MeaningGraph registry's record for core is not well formed \(meaning_files must be a list of file paths\), so it is not read/);
+  }
+});
+
+test('with the model and the meaning graph in one repository, a relative models path needs both pins to be one commit', async () => {
+  let newer;
+  const differing = sharedWorld({
+    chinook: chinookNamesModel,
+    manifest: (manifest, w) => { newer = w.publisher.more(new Map([['NOTES.txt', 'newer\n']])); manifest.model.address = `${modelAddr}?ref=${newer}`; },
+  });
+  expectProblem(await sharedProblems(differing), new RegExp(`the models entry for module chinook is the relative path chinook\\.modelspec\\.hcl, which is the model file of the meaning graph's own commit \\(${differing.publisher.commit}\\), but ovdb\\.yaml pins the model at ${newer}; with the model and the meaning graph in one repository a relative path needs both pins to be the same commit`));
+  await assert.rejects(() => buildIndex(sharedOptions(differing)), /cannot build index\.json/);
+  // The same newer commit for both is fine (the registries' own pins differ, which is only a warning).
+  const same = sharedWorld({
+    chinook: chinookNamesModel,
+    manifest: (manifest, w) => { const pin = w.publisher.more(new Map([['NOTES.txt', 'newer\n']])); manifest.model.address = `${modelAddr}?ref=${pin}`; manifest.meaning.address = `${chinookAddress}?ref=${pin}`; },
+  });
+  assert.deepEqual(await sharedProblems(same), []);
+});
+
+test('two databases cannot list the same deployment url or recordset pages: a hoster cannot present another publisher\'s deployment as its own', async () => {
+  const deployment = 'https://cloud.openvaultdb.com/ovdb/dbs/chinook';
+  const page = `${deployment}/collections/{name}`;
+  const claimsOf = async (w) => (await checkDirectory(sharedOptions(w))).problems.filter((problem) => !problem.startsWith('index.json'));
+  const edit = (change) => hosterManifestEdit((manifest) => { manifest.deployment.discovery = 'https://ovdb.acme.com/.well-known/openvaultdb'; change(manifest); });
+  // Chinook's deployment url: as written, with a trailing slash, in another case.
+  for (const copy of [deployment, `${deployment}/`, deployment.replace('/chinook', '/CHINOOK')]) {
+    const problems = await claimsOf(sharedWorld(edit((manifest) => { manifest.deployment.url = copy; manifest.deployment.recordset_page = 'https://cloud.acme.com/other/{name}'; })));
+    expectProblem(problems, /ovdb\.yaml: deployment\.url https:\/\/cloud\.openvaultdb\.com\/ovdb\/dbs\/chinook is claimed by 2 databases \(chinook-acme, chinook; compared ignoring case and a trailing slash\); a deployment is listed once, because a second listing of the same deployment is not a second hoster/);
+  }
+  // Chinook's recordset pages: the same origin and path before {name}, whatever follows, in any case.
+  for (const template of [page, `${page}/rows`, page.replace('/collections/', '/COLLECTIONS/')]) {
+    const problems = await claimsOf(sharedWorld(edit((manifest) => { manifest.deployment.url = 'https://cloud.acme.com/ovdb/dbs/chinook'; manifest.deployment.recordset_page = template; })));
+    expectProblem(problems, /ovdb\.yaml: deployment\.recordset_page of 2 databases \(chinook-acme, chinook\) starts with https:\/\/cloud\.openvaultdb\.com\/ovdb\/dbs\/chinook\/collections\/ \(the origin and path before \{name\}, compared ignoring case\)/);
+  }
+  // Both at once is two problems, and the index is not written.
+  const both = sharedWorld(edit((manifest) => { manifest.deployment.url = deployment; manifest.deployment.recordset_page = page; }));
+  assert.equal((await claimsOf(both)).length, 2);
+  await assert.rejects(() => buildIndex(sharedOptions(both)), /cannot build index\.json[\s\S]*deployment\.url[\s\S]*deployment\.recordset_page/);
+  // A different deployment, and a recordset page under a different path, is a different database: the ordinary hoster passes.
+  assert.deepEqual(await claimsOf(sharedWorld()), []);
+  assert.deepEqual(await claimsOf(sharedWorld(edit((manifest) => { manifest.deployment.recordset_page = 'https://cloud.acme.com/ovdb/dbs/chinook/collections/x/{name}'; }))), []);
+  // A database that does not give recordset_page claims no pages.
+  const without = sharedWorld({ ...edit((manifest) => { delete manifest.deployment.recordset_page; }), chinook: { publisher: manifestEdit((manifest) => { delete manifest.deployment.recordset_page; }) } });
+  assert.deepEqual(await claimsOf(without), []);
+});
+
+test('the registries\' paths hold at the registry\'s own commit: at another pin they must exist there, or the problem names both commits and nothing is guessed', async () => {
+  const v2 = 'model/v2/chinook.modelspec.json';
+  // The ModelSpec registry moved its files to v2 at a newer commit; the hoster still pins the older one.
+  let newer;
+  const modelMoved = sharedWorld({
+    manifest: (manifest, w) => { newer = w.publisher.more(new Map([[v2, fixtureChinook.get('model/chinook.modelspec.json')], ['model/v2/chinook.modelspec.hcl', fixtureChinook.get('model/chinook.modelspec.hcl')]])); },
+    models: (models) => { models[0].commit = newer; models[0].files = { source: 'model/v2/chinook.modelspec.hcl', json: v2 }; },
+  });
+  const pinned = modelMoved.publisher.commit;
+  const problems = await sharedProblems(modelMoved);
+  expectProblem(problems, new RegExp(`the registered model ${v2.replaceAll('.', '\\.')} does not exist at commit ${pinned} \\(the ModelSpec registry names this path for its own commit ${newer}; this manifest pins ${pinned}, where the path is not there, so the files may have moved between the two\\. Pin the registry's commit, or wait until the registry follows\\)`));
+  // The same record at the registry's own commit has the path, and is read.
+  const atRegistry = sharedWorld({
+    manifest: (manifest, w) => { newer = w.publisher.more(new Map([[v2, fixtureChinook.get('model/chinook.modelspec.json')], ['model/v2/chinook.modelspec.hcl', fixtureChinook.get('model/chinook.modelspec.hcl')]])); manifest.model.address = `${modelAddr}?ref=${newer}`; manifest.meaning.address = `${chinookAddress}?ref=${newer}`; },
+    models: (models) => { models[0].commit = newer; models[0].files = { source: 'model/v2/chinook.modelspec.hcl', json: v2 }; },
+  });
+  const read = await sharedProblems(atRegistry);
+  assert.ok(!read.some((problem) => /registered model|model source/.test(problem)), read.join('\n'));
+  // Pins equal and the path missing: the registry's record is what is wrong, and there is no "moved" note.
+  const wrong = await sharedProblems(sharedWorld({ models: (models) => { models[0].files.json = 'model/nowhere.modelspec.json'; } }));
+  expectProblem(wrong, /the registered model model\/nowhere\.modelspec\.json does not exist at commit [0-9a-f]{40}$/);
+  // The model's source, and the graph's meaning_files, in the same way.
+  const sourceMoved = sharedWorld({
+    manifest: (manifest, w) => { newer = w.publisher.more(new Map([['model/v2/chinook.modelspec.hcl', fixtureChinook.get('model/chinook.modelspec.hcl')]])); },
+    models: (models) => { models[0].commit = newer; models[0].files.source = 'model/v2/chinook.modelspec.hcl'; },
+  });
+  expectProblem(await sharedProblems(sourceMoved), /the model source model\/v2\/chinook\.modelspec\.hcl of github\.com\/datatug\/chinookdb does not exist at commit [0-9a-f]{40} \(the ModelSpec registry names this path for its own commit [0-9a-f]{40}; this manifest pins/);
+  const meaningMoved = sharedWorld({
+    manifest: (manifest, w) => { newer = w.publisher.more(new Map([['model/v2/chinook.meaning.yaml', fixtureChinook.get('model/chinook.meaning.yaml')]])); w.meaningRegistry = meaningIndex({ chinook: newer, core: w.core.commit, edit: (graphs) => { graphs[0].meaning_files = ['model/v2/chinook.meaning.yaml']; } }); },
+  });
+  expectProblem(await sharedProblems(meaningMoved), /meaning\.file model\/chinook\.meaning\.yaml is not one of the meaning files the MeaningGraph registry lists for chinook \(model\/v2\/chinook\.meaning\.yaml\) at commit [0-9a-f]{40} \(the MeaningGraph registry names this path for its own commit [0-9a-f]{40}; this manifest pins/);
+});
+
+test('a graph the MeaningGraph registry registers with capitals is found by its lower-case address; the manifest is still written in lower case', async () => {
+  const capitals = 'https://github.com/DataTug/ChinookDB';
+  const registered = (graphs) => { graphs[0].address = 'meaning://github.com/DataTug/ChinookDB'; graphs[0].repository = capitals; };
+  const world_ = (extra = {}) => sharedWorld({ chinook: { registry: registered, publisher: manifestEdit((manifest) => { manifest.meaning.graph.address = 'meaning://github.com/DataTug/ChinookDB'; }) }, ...extra, manifest: (manifest, w) => { w.urls.set(capitals, w.publisher.url); extra.manifest?.(manifest, w); } });
+  const found = world_();
+  assert.deepEqual(await sharedProblems(found), []);
+  const acme = (await sharedIndex(found)).databases.find((database) => database.id === 'chinook-acme');
+  assert.deepEqual(acme.meaning_graph, { id: 'chinook', address: 'meaning://github.com/DataTug/ChinookDB' }, 'the index spells the graph as the registry does');
+  assert.equal(field(acme, 'Customer', 'Country').meanings[0].address, `meaning://github.com/DataTug/ChinookDB/customer-country?ref=${found.publisher.commit}`);
+  // One rule: the manifest writes host, organisation and repository in lower case, whatever the registry does.
+  expectProblem(await sharedProblems(world_({ manifest: (manifest, w) => { manifest.meaning.address = `meaning://github.com/DataTug/ChinookDB?ref=${w.publisher.commit}`; } })), /meaning\.address meaning:\/\/github\.com\/DataTug\/ChinookDB\?ref=[0-9a-f]{40} must be written in lower case \(host, organisation and repository\)$/);
+  // meaning.graph.address, when given, is the registry's spelling of the unpinned address.
+  expectProblem(await sharedProblems(world_({ manifest: (manifest) => { manifest.meaning.graph.address = 'meaning://github.com/datatug/chinookdb'; } })), /meaning\.graph\.address is meaning:\/\/github\.com\/datatug\/chinookdb, but meaning\.address names meaning:\/\/github\.com\/DataTug\/ChinookDB; leave meaning\.graph\.address out or make it the unpinned address as the registry spells it/);
+  assert.deepEqual(await sharedProblems(world_({ manifest: (manifest) => { manifest.meaning.graph.address = 'meaning://github.com/DataTug/ChinookDB'; } })), []);
+  // A registry that lists one repository twice, in two cases, does not say which record is the graph's.
+  expectProblem(await sharedProblems(sharedWorld({ chinook: { registry: (graphs) => graphs.push({ ...graphs[0], id: 'chinook-twice', address: 'meaning://github.com/DATATUG/chinookdb' }) } })), /meaning\.address meaning:\/\/github\.com\/datatug\/chinookdb matches 2 records of the MeaningGraph registry \(chinook, chinook-twice\), which differ only in case/);
+  // The message about a meaning address no longer talks about module names.
+  const messages = await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.meaning.address = `meaning://github.com/DataTug/ChinookDB?ref=${w.publisher.commit}`; })));
+  assert.ok(messages.some((message) => /meaning\.address .* must be written in lower case \(host, organisation and repository\)$/.test(message)), messages.join('\n'));
+  assert.ok(!messages.some((message) => /meaning\.address.*module name/.test(message)));
+});
+
+test('a hoster that keeps its meaning graph in its own repository is told what to do', async () => {
+  const problems = await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.meaning.address = `meaning://github.com/acme/chinook-hosting?ref=${w.publisher.commit}`; })));
+  expectProblem(problems, /meaning\.address meaning:\/\/github\.com\/acme\/chinook-hosting\?ref=[0-9a-f]{40} names this repository; a manifest that names a model published in another repository must name a meaning graph in a third repository, registered in the MeaningGraph registry \(a graph in the publisher's own repository goes with a model in that repository, named by local files: model\.modelspec and meaning\.file\)/);
+});
+
+test('an own model that names a registered address is the registered model: its file is compared with the registry\'s files.json at the registry\'s pin, else a warning', async () => {
+  const named = () => world(chinookNamesModel);
+  // The registry registers the model at this record's commit, with the same files.json: nothing to report.
+  const same = named();
+  assert.deepEqual((await checkDirectory(options(same, { modelRegistry: modelIndex({ commit: same.publisher.commit }) }))).warnings, []);
+  assert.deepEqual(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit }) }), []);
+  // files.json is another file with another model: the two are not the same model.
+  const other = world({ publisher: (files) => { const json = JSON.parse(files.get('model/chinook.modelspec.json')); delete json.entities.Genre; files.set('model/registered.modelspec.json', JSON.stringify(json)); manifestEdit((manifest) => { manifest.model.address = modelAddr; })(files); } });
+  expectProblem(await problemsOf(other, { modelRegistry: modelIndex({ commit: other.publisher.commit, edit: (models) => { models[0].files.json = 'model/registered.modelspec.json'; } }) }), /ovdb\.yaml: model\/chinook\.modelspec\.json is not the model the ModelSpec registry registers as modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook: it differs from model\/registered\.modelspec\.json, the registry's files\.json, at [0-9a-f]{40}; databases that share a model\.address are databases of the same model/);
+  // Key order and white space do not matter: it is the JSON that is compared.
+  const reordered = world({ publisher: (files) => { files.set('model/registered.modelspec.json', JSON.stringify(JSON.parse(files.get('model/chinook.modelspec.json')), null, 4)); manifestEdit((manifest) => { manifest.model.address = modelAddr; })(files); } });
+  assert.deepEqual(await problemsOf(reordered, { modelRegistry: modelIndex({ commit: reordered.publisher.commit, edit: (models) => { models[0].files.json = 'model/registered.modelspec.json'; } }) }), []);
+  // The registry's file is missing, or not JSON, or its record is not well formed.
+  expectProblem(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit, edit: (models) => { models[0].files.json = 'model/nowhere.json'; } }) }), /the model the ModelSpec registry registers as model\/nowhere\.json does not exist at commit [0-9a-f]{40} \(its files\.json for modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook\)/);
+  expectProblem(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit, edit: (models) => { models[0].files.json = 'OVDB.md'; } }) }), /OVDB\.md, the files\.json of modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook in the ModelSpec registry, is not JSON/);
+  expectProblem(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit, edit: (models) => { delete models[0].files; } }) }), /the ModelSpec registry's record for modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook is not well formed \(files\.json must be a path inside the repository\)/);
+  expectProblem(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit, edit: (models) => { models[0].repository = 'https://github.com/someone/else'; } }) }), /is not well formed \(its repository and module must give that address\)/);
+  // Another commit: not compared, and said so; the record is still listed.
+  const behind = named();
+  const registryCommit = 'a'.repeat(40);
+  const result = await checkDirectory(options(behind, { modelRegistry: modelIndex({ commit: registryCommit, edit: (models) => { models[0].files.json = 'model/nowhere.json'; } }) }));
+  assert.deepEqual(result.problems.filter((problem) => !problem.startsWith('index.json')), []);
+  assert.equal(result.warnings.length, 1);
+  assert.match(result.warnings[0], new RegExp(`^databases/\\$records/chinook\\.yaml: model\\.address ${modelAddr.replaceAll('/', '\\/')} is registered in the ModelSpec registry at ${registryCommit}, but this record pins ${behind.publisher.commit}; model/chinook\\.modelspec\\.json was not compared with the registry's model/nowhere\\.json$`));
+  // An address the registry does not know is not compared (the own form is not registered anywhere); an unreadable registry is a problem, never a fallback.
+  assert.deepEqual(await problemsOf(named()), []);
+  expectProblem(await problemsOf(named(), { loadModelRegistry: async () => { throw new Error('cannot read https://example.test/models.json: HTTP 503'); } }), /^databases\/\$records\/chinook\.yaml: ModelSpec registry: cannot read https:\/\/example\.test\/models\.json: HTTP 503/);
+  // A manifest that names no address is never compared.
+  assert.deepEqual(await problemsOf(world(), { loadModelRegistry: async () => { throw new Error('must not be read'); } }), []);
+});
+
+test('warnings: a refused pin is not "read", a registry commit that is not a string is shown as JSON, and both commands print them', async () => {
+  // A pin that only a side branch has, and that differs from the registry's: refused, so no "the pinned commit is read".
+  const chinook = { publisherOptions: { side: new Map([['extra.txt', 'only on a side branch\n']]) } };
+  const side = sharedWorld({ chinook, manifest: (manifest, w) => { manifest.model.address = `${modelAddr}?ref=${w.publisher.sideCommit}`; manifest.meaning.address = `${chinookAddress}?ref=${w.publisher.sideCommit}`; } });
+  const refused = await checkDirectory(sharedOptions(side));
+  expectProblem(refused.problems, /model\.address pins commit [0-9a-f]{40}, which is not in the history of main/);
+  assert.deepEqual(refused.warnings, [], 'nothing was read, so nothing says the pinned commit is read');
+  // A malformed registry commit is shown as it is written, never as [object Object].
+  for (const [commit, shown] of [[{ a: 1 }, '{"a":1}'], [42, '42'], [null, 'null'], [['x'], '["x"]'], ['not a commit\u001b[2J', '"not a commit\\u001b[2J"']]) {
+    const w = sharedWorld({ models: (models) => { models[0].commit = commit; } });
+    const { warnings } = await checkDirectory(sharedOptions(w));
+    const warning = warnings.find((text) => text.includes('ModelSpec registry registers'));
+    assert.ok(warning, JSON.stringify(warnings));
+    assert.ok(warning.includes(`at ${shown};`), warning);
+    assert.ok(!warning.includes('[object Object]') && !warning.includes('\u001b'), warning);
+  }
+  // `npm run check` and `npm run index` print every warning as a "warning:" line, and a failure as "error:" lines.
+  const w = sharedWorld({ chinook: chinookNamesModel, manifest: (manifest, world_) => { const newer = world_.publisher.more(new Map([['NOTES.txt', 'newer\n']])); manifest.model.address = `${modelAddr}?ref=${newer}`; manifest.meaning.address = `${chinookAddress}?ref=${newer}`; } });
+  const capture = () => { const lines = { out: [], err: [] }; return { lines, io: { out: (line) => lines.out.push(line), err: (line) => lines.err.push(line) } }; };
+  const written = capture();
+  assert.equal(await runIndex(sharedOptions(w), written.io), 0);
+  assert.deepEqual(written.lines.out, ['wrote index.json']);
+  assert.equal(written.lines.err.length, 2);
+  assert.match(written.lines.err[0], /^warning: databases\/\$records\/chinook-acme\.yaml: model\.address pins [0-9a-f]{40}, but the ModelSpec registry registers modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook at [0-9a-f]{40}; the pinned commit is read$/);
+  assert.match(written.lines.err[1], /^warning: databases\/\$records\/chinook-acme\.yaml: meaning\.address pins [0-9a-f]{40}, but the MeaningGraph registry registers chinook at [0-9a-f]{40}; the pinned commit is read$/);
+  assert.equal(readFileSync(join(w.dir, 'index.json'), 'utf8').includes('"chinook-acme"'), true);
+  const checkedRun = capture();
+  assert.equal(await runCheck(sharedOptions(w), checkedRun.io), 0);
+  assert.deepEqual(checkedRun.lines.out, ['ok: 2 databases checked']);
+  assert.deepEqual(checkedRun.lines.err, written.lines.err);
+  // A failure: the warnings still come first, then each problem, then the count, and the exit code is 1; no index is written.
+  const broken = sharedWorld({ chinook: chinookNamesModel, manifest: (manifest, world_) => { manifest.model.address = `${modelAddr}?ref=${world_.publisher.commit}`; manifest.recordsets = ['Album']; } });
+  const failing = capture();
+  assert.equal(await runCheck(sharedOptions(broken), failing.io), 1);
+  assert.deepEqual(failing.lines.out, []);
+  assert.ok(failing.lines.err.some((line) => /^error: databases\/\$records\/chinook-acme\.yaml: ovdb\.yaml: recordsets lacks ModelSpec entities/.test(line)), failing.lines.err.join('\n'));
+  assert.match(failing.lines.err.at(-1), /^\d+ problems? in 2 databases$/);
+  const noIndex = capture();
+  assert.equal(await runIndex(sharedOptions(broken), noIndex.io), 1);
+  assert.equal(existsSync(join(broken.dir, 'index.json')), false);
+  assert.match(noIndex.lines.err.at(-1), /^error: cannot build index\.json:/);
+  assert.deepEqual(noIndex.lines.out, []);
+});
+
+test('MODELSPEC_REGISTRY_INDEX_URL, and any index URL, must be https', async () => {
+  let fetched = 0;
+  const fetchImpl = async () => { fetched += 1; return { ok: true, status: 200, text: async () => JSON.stringify({ format: 'modelspec-registry/draft-1', checksum: `sha256:${createHash('sha256').update('[]').digest('hex')}`, models: [] }) }; };
+  for (const url of ['data:application/json,{}', 'file:///etc/passwd', 'http://example.test/index.json', 'ftp://example.test/index.json', '/tmp/index.json', 'index.json', '', 'javascript:alert(1)', 'https:', 'HTTP://example.test/x']) {
+    await assert.rejects(() => loadModelRegistry({ url, fetchImpl }), /must be read over https/, url);
+  }
+  assert.equal(fetched, 0, 'nothing is fetched for a URL that is refused');
+  assert.equal((await loadModelRegistry({ url: 'https://example.test/index.json', fetchImpl })).byAddress.size, 0);
+  assert.equal(fetched, 1);
+  const saved = process.env.MODELSPEC_REGISTRY_INDEX_URL;
+  try {
+    process.env.MODELSPEC_REGISTRY_INDEX_URL = 'data:application/json,{}';
+    await assert.rejects(() => loadModelRegistry({ fetchImpl }), /must be read over https; "data:application\/json,\{\}" is not an https URL \(check MODELSPEC_REGISTRY_INDEX_URL\)/);
+    process.env.MODELSPEC_REGISTRY_INDEX_URL = 'https://example.test/other.json';
+    await loadModelRegistry({ fetchImpl });
+  } finally {
+    if (saved === undefined) delete process.env.MODELSPEC_REGISTRY_INDEX_URL; else process.env.MODELSPEC_REGISTRY_INDEX_URL = saved;
+  }
+  assert.equal(fetched, 2);
+  // A run with a bad variable reports the registry as unreadable, for the databases that need it.
+  const w = sharedWorld();
+  const { problems } = await checkDirectory(options(w, { loadModelRegistry: () => loadModelRegistry({ url: 'data:text/plain,x', fetchImpl }) }));
+  expectProblem(problems, /^databases\/\$records\/chinook-acme\.yaml: ModelSpec registry: the ModelSpec registry index must be read over https/);
+});
+
+test('a binding to an entity or module whose name starts with _ says why it cannot be bound', async () => {
+  const bind = (model) => meaningEdit((doc) => { doc.concepts.push({ id: 'hidden', kind: 'attribute', labels: { en: 'Hidden' }, description: 'x', bindings: [{ model, role: 'entity' }] }); });
+  expectProblem(await problemsOf(world({ publisher: bind('modelspec:///chinook._Hidden') })), /binding model "modelspec:\/\/\/chinook\._Hidden" is not a modelspec:\/\/\/\{module\}\.\{Entity\} reference \(the module and the entity name in a reference start with a letter, so an entity or module whose name starts with _ cannot be bound\)/);
+  expectProblem(await problemsOf(world({ publisher: bind('modelspec:///_chinook.Customer') })), /is not a modelspec:\/\/\/\{module\}\.\{Entity\} reference \(the module and the entity name in a reference start with a letter/);
+  // An entity named with a leading underscore is still a ModelSpec entity: it can be listed as a recordset, just not bound.
+  const underscore = world({ publisher: (files) => { modelEdit((doc) => { doc.entities._Audit = { properties: { Id: { type: 'int' } } }; })(files); manifestEdit((manifest) => { manifest.recordsets.push('_Audit'); })(files); } });
+  assert.deepEqual(await problemsOf(underscore), []);
+});
+
+test('the list of two-label public suffixes is short, and a name under a suffix that is not on it counts as having a subdomain', () => {
+  for (const url of ['https://ovdb.co.il/sales', 'https://ovdb.com.sg/sales', 'https://ovdb.github.io/sales', 'https://ovdb.pages.dev/sales']) {
+    assert.equal(urlProblem(url), null, `${url} is accepted: its suffix is not on the list`);
+  }
+  for (const url of ['https://ovdb.co.uk/sales', 'https://ovdb.com.au/sales']) assert.notEqual(urlProblem(url), null, `${url}: the suffix is on the list, so ovdb is the registered name`);
+  const readme = readFileSync(join(root, 'README.md'), 'utf8').replace(/\s+/g, ' ');
+  assert.match(readme, /The list of two-label suffixes is short \(17 common ones, kept by hand in scripts\/lib\/urls\.mjs, not the public suffix list\)/);
+  assert.match(readme, /a suffix is added by a reviewed change when a publisher needs it/);
+  assert.match(readFileSync(join(root, 'scripts', 'lib', 'urls.mjs'), 'utf8'), /17\n\/\/ of the common ones/);
+});
+
+// ---- the git cache: what a planted repository can do ----
+
+const lazyOrigin = () => {
+  const source = origin(new Map([['a.txt', 'hello\n']]), { name: 'lazy' });
+  gitIn(source.dir, 'config', 'uploadpack.allowFilter', 'true');
+  gitIn(source.dir, 'config', 'uploadpack.allowAnySHA1InWant', 'true');
+  return { ...source, blob: gitIn(source.dir, 'rev-parse', 'HEAD:a.txt') };
+};
+const plainGitEnv = { ...process.env, GIT_CONFIG_GLOBAL: devNull, GIT_CONFIG_NOSYSTEM: '1' };
+const partialClone = (url) => {
+  const dir = join(fresh('partial'), 'repo');
+  execFileSync('git', ['clone', '-q', '--bare', '--filter=blob:none', '--end-of-options', url, dir], { stdio: 'pipe', env: plainGitEnv });
+  return dir;
+};
+
+test('git never fetches a missing object on its own: GIT_NO_LAZY_FETCH, and a planted remote that is not the one the repository was cloned from is refused', async () => {
+  assert.equal(gitEnv().GIT_NO_LAZY_FETCH, '1');
+  const source = lazyOrigin();
+  // Positive control: with plain git a partial clone fetches the blob it lacks from its remote, on its own.
+  const control = partialClone(source.url);
+  assert.equal(execFileSync('git', ['-C', control, 'cat-file', '-p', source.blob], { stdio: 'pipe', env: plainGitEnv }).toString(), 'hello\n');
+  // With this module's git it does not.
+  const clone = partialClone(source.url);
+  assert.throws(() => git(['-C', clone, 'cat-file', '-p', source.blob]), /unable to read|fatal/);
+  // The planted remote: the repository is a partial clone whose origin is somewhere else. It is not the repository cloned from the url.
+  assert.equal(cacheRepoSound(clone, { url: source.url }), true, 'the clone of that url is sound');
+  assert.equal(cacheRepoSound(clone, { url: 'file:///somewhere/else' }), false, 'another url');
+  gitIn(clone, 'config', 'remote.origin.url', 'file:///planted');
+  assert.equal(cacheRepoSound(clone, { url: source.url }), false, 'a planted remote.origin.url');
+  gitIn(clone, 'config', '--add', 'remote.origin.url', source.url);
+  assert.equal(cacheRepoSound(clone, { url: source.url }), false, 'two urls');
+  // A one-commit repository was made by `init` and a fetch that names the url: it has no remote at all.
+  const oneCommit = fresh('repo');
+  gitIn(oneCommit, 'init', '-q', '--bare');
+  assert.equal(cacheRepoSound(oneCommit, { commit: 'a'.repeat(40), url: source.url }), true);
+  gitIn(oneCommit, 'config', 'remote.origin.url', 'file:///planted');
+  assert.equal(cacheRepoSound(oneCommit, { commit: 'a'.repeat(40), url: source.url }), false, 'a remote in a one-commit repository');
+  const promisor = fresh('repo');
+  gitIn(promisor, 'init', '-q', '--bare');
+  gitIn(promisor, 'config', 'extensions.partialclone', 'origin');
+  assert.equal(cacheRepoSound(promisor, { commit: 'a'.repeat(40) }), false, 'a promisor in a one-commit repository');
+  // End to end: a history clone in the cache whose remote was changed is thrown away and made again from the right url.
+  const w = world();
+  const url = w.urlFor(chinookUrl);
+  const history = join(w.cacheDir, 'history');
+  assert.equal(onBranch(url, 'main', w.publisher.commit, history, new Set()), true);
+  const dir = historyPath(history, url, 'main');
+  assert.equal(gitIn(dir, 'config', '--get', 'remote.origin.url'), url);
+  gitIn(dir, 'config', 'remote.origin.url', 'file:///planted');
+  assert.equal(onBranch(url, 'main', w.publisher.commit, history, new Set()), true);
+  assert.equal(gitIn(dir, 'config', '--get', 'remote.origin.url'), url, 'made again');
+});
+
+test('a cached repository directory that is itself a symbolic link is never used, even to a sound repository; the link is replaced, its target left alone', async () => {
+  const w = world();
+  const cache = fresh('cache');
+  openCommit(w.publisher.url, w.publisher.commit, cache);
+  const repo = readdirSync(cache).map((name) => join(cache, name)).find((path) => existsSync(join(path, 'HEAD')));
+  const elsewhere = join(fresh('elsewhere'), 'copy');
+  cpSync(repo, elsewhere, { recursive: true });
+  assert.equal(cacheRepoSound(elsewhere, { commit: w.publisher.commit }), true, 'the copy is a sound repository');
+  rmSync(repo, { recursive: true });
+  symlinkSync(elsewhere, repo);
+  assert.equal(cacheRepoSound(repo, { commit: w.publisher.commit }), false, 'the link to it is not');
+  writeFileSync(join(elsewhere, 'target-marker'), 'x');
+  assert.match(openCommit(w.publisher.url, w.publisher.commit, cache).read('OVDB.md'), /ovdb: 1/);
+  assert.equal(lstatSync(repo).isSymbolicLink(), false, 'the link was replaced by a real directory');
+  assert.ok(cacheRepoSound(repo, { commit: w.publisher.commit }));
+  assert.equal(existsSync(join(elsewhere, 'target-marker')), true, 'the target was not touched');
+  // A dangling link at the repository\'s place does not stop the run either, and history clones are covered too.
+  rmSync(repo, { recursive: true });
+  symlinkSync(join(scratch, `nowhere-${count++}`), repo);
+  assert.match(openCommit(w.publisher.url, w.publisher.commit, cache).read('OVDB.md'), /ovdb: 1/);
+  assert.equal(lstatSync(repo).isSymbolicLink(), false);
+  const url = w.urlFor(chinookUrl);
+  const history = join(w.cacheDir, 'history');
+  assert.equal(onBranch(url, 'main', w.publisher.commit, history, new Set()), true);
+  const clone = historyPath(history, url, 'main');
+  const copy = join(fresh('elsewhere'), 'copy');
+  cpSync(clone, copy, { recursive: true });
+  rmSync(clone, { recursive: true });
+  symlinkSync(copy, clone);
+  assert.equal(onBranch(url, 'main', w.publisher.commit, history, new Set()), true);
+  assert.equal(lstatSync(clone).isSymbolicLink(), false);
+  assert.equal(existsSync(join(copy, 'HEAD')), true);
+});
+
+const gitAtLeast = (major, minor) => {
+  const [found, foundMinor] = /(\d+)\.(\d+)/.exec(execFileSync('git', ['--version']).toString()).slice(1).map(Number);
+  return found > major || (found === major && foundMinor >= minor);
+};
+
+test('git 2.54 and later run hooks that a repository\'s configuration defines (hook.<name>.command), wherever core.hooksPath points; the configuration allow-list keeps them out', async () => {
+  const marker = join(scratch, `config-hook-ran-${count++}`);
+  const planted = (dir) => {
+    mkdirSync(dir, { recursive: true });
+    gitIn(dir, 'init', '-q', '--bare');
+    writeFileSync(join(dir, 'config'), `${readFileSync(join(dir, 'config'), 'utf8')}[hook "plant"]\n\tevent = reference-transaction\n\tcommand = touch '${marker}'\n`);
+  };
+  const dir = fresh('repo');
+  planted(dir);
+  assert.equal(cacheRepoSound(dir), false, 'a configured hook is not in the allow-list');
+  assert.equal(cacheRepoSound(dir, { commit: 'a'.repeat(40) }), false);
+  if (gitAtLeast(2, 54)) {
+    // Positive control: this git runs it, with core.hooksPath pointed at nothing as the module does.
+    const tree = gitIn(dir, 'mktree');
+    const commit = gitIn(dir, '-c', 'user.name=t', '-c', 'user.email=t@example.com', 'commit-tree', tree, '-m', 'x');
+    gitIn(dir, '-c', `core.hooksPath=${devNull}`, 'update-ref', 'refs/heads/control', commit);
+    assert.equal(existsSync(marker), true, 'the configured hook runs although core.hooksPath is /dev/null');
+    rmSync(marker, { force: true });
+  }
+  // A cache that holds such a repository where the history clone goes: it is thrown away, and the hook never runs.
+  const w = world();
+  const target = historyPath(join(w.cacheDir, 'history'), w.urlFor(chinookUrl), 'main');
+  planted(target);
+  const { problems } = await checkDirectory(options(w));
+  assert.deepEqual(problems.filter((problem) => !problem.startsWith('index.json')), []);
+  assert.equal(existsSync(marker), false, 'the configured hook did not run during the check');
+  assert.equal(cacheRepoSound(target, { url: w.urlFor(chinookUrl) }), true, 'the repository there now is the one made here');
+  // The same for every other key that makes git run something.
+  for (const key of ['hook.x.command', 'hook.x.event', 'hook.x.enabled', 'core.fsmonitor', 'core.hooksPath', 'core.attributesFile', 'core.sshCommand', 'core.pager', 'core.editor', 'core.gitProxy', 'filter.x.clean', 'filter.x.smudge', 'diff.x.textconv', 'diff.external', 'merge.x.driver', 'credential.helper', 'gpg.program', 'uploadpack.packObjectsHook', 'remote.origin.uploadpack', 'remote.origin.receivepack', 'remote.origin.proxy', 'url.x.insteadOf', 'safe.directory', 'maintenance.auto', 'gc.auto', 'includeIf.gitdir:/.path']) {
+    const probe = fresh('repo');
+    gitIn(probe, 'init', '-q', '--bare');
+    gitIn(probe, 'config', '--file', join(probe, 'config'), key, 'x');
+    assert.equal(cacheRepoSound(probe), false, key);
+  }
+});
+
+test('the cache keeps no checkout: bare repositories only, no index and no work tree, so there is no index to trust and no .gitattributes to obey', async () => {
+  const w = world({ publisher: (files) => { files.set('.gitattributes', '* text eol=crlf\n*.yaml filter=evil\n* export-ignore\n'); } });
+  const cache = fresh('cache');
+  const files = openCommit(w.publisher.url, w.publisher.commit, cache);
+  const body = files.read('OVDB.md');
+  const url = w.urlFor(chinookUrl);
+  assert.equal(onBranch(url, 'main', w.publisher.commit, join(cache, 'history'), new Set()), true);
+  // Everything in the cache is a bare repository: git says so, there is no index, no work tree and no checked-out file.
+  const repositories = [...readdirSync(cache).filter((name) => !name.startsWith('.') && name !== 'history').map((name) => join(cache, name)), ...readdirSync(join(cache, 'history')).filter((name) => !name.startsWith('.')).map((name) => join(cache, 'history', name))];
+  assert.ok(repositories.length >= 2, repositories.join(', '));
+  for (const repo of repositories) {
+    assert.equal(gitIn(repo, 'rev-parse', '--is-bare-repository'), 'true', repo);
+    assert.equal(existsSync(join(repo, 'index')), false, `${repo} has no index`);
+    assert.deepEqual(readdirSync(repo).filter((name) => ['OVDB.md', 'ovdb.yaml', '.gitattributes', 'model'].includes(name)), [], `${repo} holds no checked-out file`);
+  }
+  // A tracked .gitattributes, and one planted in the repository's info/, change nothing: files are read from the object store, byte for byte.
+  const repo = repositories.find((path) => existsSync(join(path, 'shallow')));
+  mkdirSync(join(repo, 'info'), { recursive: true });
+  writeFileSync(join(repo, 'info', 'attributes'), '* text eol=crlf\n* filter=evil\n* ident\n');
+  const again = openCommit(w.publisher.url, w.publisher.commit, cache);
+  assert.equal(again.read('OVDB.md'), body);
+  assert.ok(!body.includes('\r'), 'no line ending was rewritten');
+  assert.equal(again.read('OVDB.md'), fixtureChinook.get('OVDB.md'));
+  // An index file is something a bare repository made here never has: a repository with one is not trusted.
+  const withIndex = fresh('repo');
+  gitIn(withIndex, 'init', '-q', '--bare');
+  assert.equal(cacheRepoSound(withIndex), true);
+  writeFileSync(join(withIndex, 'index'), 'DIRC');
+  assert.equal(cacheRepoSound(withIndex), false);
+  // The whole check passes with a tracked .gitattributes in the publisher's repository.
+  assert.deepEqual(await problemsOf(w), []);
+});
+
+test('an optional homepage is accepted in both forms, held to the URL rules, and published only when the manifest has one', async () => {
+  const site = 'https://chinookdb.com/';
+  // Without it (the fixture, like the pinned Chinook): no key in the entry.
+  const [plain] = (await index(world())).databases;
+  assert.equal('homepage' in plain, false);
+  // Own form, on the canonical origin or on any other.
+  for (const homepage of [site, 'https://www.example.org/databases/chinook', 'https://acme.com/']) {
+    const withHomepage = world({ publisher: manifestEdit((manifest) => { manifest.homepage = homepage; }) });
+    assert.deepEqual(await problemsOf(withHomepage), [], homepage);
+    const [entry] = (await index(withHomepage)).databases;
+    assert.equal(entry.homepage, homepage);
+  }
+  // Shared form.
+  const shared = sharedWorld(hosterManifestEdit((manifest) => { manifest.homepage = 'https://acme.com/chinook'; }));
+  assert.deepEqual(await sharedProblems(shared), []);
+  const [chinook, acme] = (await sharedIndex(shared)).databases;
+  assert.equal(acme.homepage, 'https://acme.com/chinook');
+  assert.equal('homepage' in chinook, false);
+  // Refused like every other URL a manifest publishes.
+  const refused = [
+    ['http://chinookdb.com/', /homepage must be https, not http/],
+    ['https://user:pw@chinookdb.com/', /homepage must not contain credentials/],
+    ['https://chinookdb.com/?x=1', /homepage must not contain a query/],
+    ['https://chinookdb.com/#top', /homepage must not contain a fragment/],
+    ['https://127.0.0.1/', /homepage 127\.0\.0\.1 is an IP address/],
+    ['https://[::1]/', /homepage \[::1\] is an IP address/],
+    ['https://localhost/', /homepage localhost is a single-label name/],
+    ['https://metadata.google.internal/', /homepage metadata\.google\.internal is a local, internal or reserved name/],
+    ['https://CHINOOKDB.com/', /homepage is not written canonically/],
+    ['https://acme.com', /homepage is not written canonically \(it would be https:\/\/acme\.com\/\)/],
+    ['chinookdb.com', /homepage is not a URL/],
+    ['', /homepage is required/],
+    [null, /homepage is required/],
+  ];
+  for (const [homepage, pattern] of refused) {
+    expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.homepage = homepage; }) })), new RegExp(`ovdb\\.yaml: ${pattern.source}`));
+    expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.homepage = homepage; }))), new RegExp(`ovdb\\.yaml: ${pattern.source}`));
+  }
+  expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.homepage = ['https://chinookdb.com/']; }) })), /ovdb\.yaml: homepage is not a URL/);
 });

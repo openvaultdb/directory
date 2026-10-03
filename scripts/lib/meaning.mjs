@@ -83,6 +83,19 @@ export function indexMeaningRegistry(index, source = 'the MeaningGraph registry'
   return { source, byId: new Map(index.graphs.map((graph) => [graph.id, graph])), byAddress: new Map(index.graphs.map((graph) => [graph.address, graph])) };
 }
 
+// The path patterns of a registry record's `meaning_files`: a list of strings (none when the record
+// has no such list), or null when it is anything else (a string, an object, a list that holds a
+// non-string). A malformed registry record is a problem to report, never an exception.
+export const meaningFilesOf = (graph) => {
+  if (graph?.meaning_files === undefined) return [];
+  return Array.isArray(graph.meaning_files) && graph.meaning_files.every((pattern) => typeof pattern === 'string') ? graph.meaning_files : null;
+};
+
+// The registered graphs at `address` (meaning://{host}/{org}/{repo}, no pin), compared ignoring case: GitHub does
+// not tell host, organisation and repository apart by case, and the registry spells the address as the repository
+// is written. Normally one graph; more than one means the registry lists the same repository twice.
+export const graphsAtAddress = (registry, address) => [...registry.byAddress.values()].filter((graph) => typeof graph?.address === 'string' && graph.address.toLowerCase() === address.toLowerCase());
+
 // Fetches and indexes meaninggraph/registry's index.json. Fails loudly: a build
 // never falls back to stale or hand-written data.
 export async function loadMeaningRegistry({ url = meaningRegistryUrl, fetchImpl = fetch } = {}) {
@@ -120,7 +133,9 @@ export function createMeaningResolver({ own, registry, urlFor = (url) => url, ca
     } catch (error) { return { error: `${ref0}: ${error.message}` }; }
     const concepts = new Map();
     const paths = new Set();
-    for (const pattern of graph.meaning_files ?? []) {
+    const patterns = meaningFilesOf(graph);
+    if (patterns === null) return { error: `${ref0}: the MeaningGraph registry's record for ${graph.id} is not well formed (meaning_files must be a list of file paths), so it is not read` };
+    for (const pattern of patterns) {
       const matched = files.match(pattern);
       if (matched.length === 0) return { error: `${ref0}: ${pattern} not found at ${ref}` };
       matched.forEach((path) => paths.add(path));

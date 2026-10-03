@@ -93,6 +93,9 @@ relative to the repository root, never a glob. The manifest (`ovdb-manifest/draf
 for example [`ovdb.yaml` of Chinook](https://github.com/datatug/chinookdb/blob/8c9e62ed6641c0a00faa3867167d928af4c44b06/ovdb.yaml))
 declares the canonical `url`, the `deployment` (`url`, `engine`, `discovery` on
 the canonical origin, and an optional `recordset_page` template with `{name}`),
+an optional `homepage` (the publisher's own web page for the database, which the
+Directory and MeaningGraph sites show as "Website"; a public https URL on any
+origin, held to the URL rules below),
 the `model` (its files, or its address when it is published elsewhere; see
 [Two forms](#two-forms-own-model-or-shared-model)), the `meaning` file and its
 graph, the publisher, the `licences` (`data`, `model`, `meaning`) and the
@@ -117,6 +120,15 @@ module name, without `?ref=`. The host, organisation and repository are written
 in lower case; the module name is case-sensitive. A foreign address next to local
 model files is refused, as are `meaning.address` and `recordsets_partial`.
 
+A manifest that gives `model.address` makes the check read the ModelSpec registry.
+If the registry has that address, the manifest's `model.modelspec` must be the same
+model as the registry's `files.json` (the two JSON files are compared as data, so
+white space and key order do not matter): that is what lets every database with one
+`model.address` be a database of the same model. The comparison is made at the
+registry's commit, so it happens only when this record's `commit` is that commit;
+with another commit the check prints a warning that the model was not compared. An
+address the registry does not know is not compared.
+
 **Shared model.** The model and the meaning graph are published in other
 repositories, and this manifest points at them instead of copying them, so that
 every hoster of the same model is a database of that model. There are no local
@@ -138,29 +150,46 @@ recordsets: [Album, Artist, …]        # every entity of the model
 Resolution, in order; each step that fails is a problem and the database is not
 listed:
 
-1. `model.address`, with its `?ref=` removed and the host, organisation and
-   repository lower-cased (the module is not), must be registered in the ModelSpec
-   registry (`https://raw.githubusercontent.com/modelspec-org/registry/main/index.json`,
-   format `modelspec-registry/draft-1`, checksum verified; set
-   `MODELSPEC_REGISTRY_INDEX_URL` to read another index). It is read only when a
-   database names its model by address. `meaning.address`, without its pin, must be
-   registered in the MeaningGraph registry, under the record's `meaning_graph`.
-   Neither address may name the publisher's own repository (that is the own-model
-   form).
+1. `model.address` and `meaning.address` follow one spelling rule: host,
+   organisation and repository are written in lower case (a manifest that writes
+   capitals is refused; the module name of a model is case-sensitive and written as
+   it is). The registries are searched ignoring case, so a graph that the
+   MeaningGraph registry registers with capitals is found by the lower-case
+   address, and `index.json` spells it the way the registry does. `model.address`,
+   with its `?ref=` removed, must be registered in the ModelSpec registry
+   (`https://raw.githubusercontent.com/modelspec-org/registry/main/index.json`,
+   format `modelspec-registry/draft-1`, checksum verified; `MODELSPEC_REGISTRY_INDEX_URL`
+   reads another index, which must be an https URL: a `data:`, `file:` or `http:`
+   URL or a plain path is refused). It is read only when a database names its model
+   by address. `meaning.address`, without its pin, must be registered in the
+   MeaningGraph registry, under the record's `meaning_graph`. Neither address may
+   name the publisher's own repository: a model there is the own-model form, and a
+   meaning graph there cannot go with a model published elsewhere. A hoster that
+   wants its own meaning graph with a shared model puts the graph in a third
+   repository and registers it in the MeaningGraph registry.
 2. Each pinned commit must be in the history of the default branch of the model's
    (respectively the graph's) repository. The pins need not be the registries' own;
-   when they differ the check prints a warning and reads the pinned commit.
-3. The ModelSpec JSON (`files.json` of the registry's record) and the model's source
-   (`files.source`, a tracked regular file) are read at the model's pin, and
-   `meaning.file` (which must be one of the registry's `meaning_files` for the graph,
-   so it is always named) at the graph's pin, with the same hardened git and cache
-   as everywhere else. The JSON's module is the registered one.
+   when they differ the check prints a warning and reads the pinned commit (the
+   warning is printed only for a pin that is accepted).
+3. The ModelSpec JSON (`files.json` of the registry's record) is read at the
+   model's pin, and the model's source (`files.source`) is only checked there to be a
+   tracked regular file. `meaning.file` must be one of the registry's `meaning_files`
+   for the graph (the manifest always names it), and is read at the graph's pin, with
+   the same hardened git and cache as everywhere else. The JSON's module is the
+   registered one. The registry's paths are the ones that hold at the registry's own
+   commit. When the manifest pins that commit they are read as they are. When it
+   pins another commit they must exist there: the Directory does not guess where
+   files moved, and a path that is missing is a problem that names both commits (the
+   registry's and the manifest's). The limit is real: if a model's repository moves
+   its files and the registry follows, a database pinned to an older commit fails
+   until it pins the registry's commit.
 4. The meaning file's `models:` entry for the module says which model it binds. A
-   relative path is the model's source in the meaning graph's own repository, so it
-   is accepted only when the graph and the model live in the same repository and the
-   path is the registry's `files.source`. When they live in different repositories a
-   relative path cannot say which model is meant and is refused; the entry must be
-   the model's address instead (`chinook: modelspec://github.com/datatug/chinookdb/chinook`,
+   relative path is the model's source in the meaning graph's own repository, at the
+   graph's own commit, so it is accepted only when the graph and the model live in
+   the same repository, the two pins are the same commit, and the path is the
+   registry's `files.source`. When they live in different repositories a relative
+   path cannot say which model is meant and is refused; the entry must be the
+   model's address instead (`chinook: modelspec://github.com/datatug/chinookdb/chinook`,
    with `?ref=` only if it is the manifest's pin). Bindings are written
    `modelspec:///{module}.{Entity}`, or with the shared model's own address (and pin)
    spelled out; a binding to any other model is refused.
@@ -177,8 +206,23 @@ listed:
 The publisher repository's `OVDB.md`, the manifest's `url`, `id`, `publisher` and
 `deployment` rules are the same in both forms.
 
+One deployment is listed once. Two databases may not have the same
+`deployment.url` (compared ignoring case and a trailing slash), and no two may have a
+`deployment.recordset_page` that starts with the same origin and path before `{name}`
+(compared ignoring case): a hoster could otherwise list another publisher's live
+deployment as its own, and a second listing of one deployment is not a second hoster.
+Databases that share a model are different databases on different deployments.
+
+The canonical `url` is on an origin that the publisher is expected to control, and
+the check cannot prove it. The only rule is that `deployment.discovery` is on the
+same origin as `url`; the Directory does not fetch the discovery document, so it
+does not see who answers there. Whether a publisher controls the origin of its
+canonical `url` is therefore the reviewer's question when a registration pull
+request is opened, and a client that relies on the identity must fetch the discovery
+document and check that it lists the `url`.
+
 Every URL a manifest publishes (`url`, `deployment.url`, `deployment.discovery`,
-`deployment.recordset_page`, `publisher.url`) is public https: no credentials,
+`deployment.recordset_page`, `publisher.url`, `homepage`) is public https: no credentials,
 query or fragment, no IP address (in any spelling), `localhost`, single-label
 name, or local, internal or reserved name (`.local`, `.internal`, `.lan`, `.svc`,
 `.home`, `.test`, `.example`, `.invalid`, `.onion`, …), and written in one
@@ -193,7 +237,13 @@ labels, or the last three under a two-label suffix such as `co.uk`. So
 `https://acme.com/ovdb/sales`, `https://ovdb.acme.com/sales` and
 `https://x.ovdb.acme.co.uk/sales` count; `https://ovdb.com/sales`,
 `https://ovdb.co.uk/sales` (where `ovdb` is the registered name itself) and
-`https://acme.com/ovdbx/sales` do not.
+`https://acme.com/ovdbx/sales` do not. The list of two-label suffixes is short (17
+common ones, kept by hand in scripts/lib/urls.mjs, not the public suffix list): a
+suffix is added by a reviewed change when a publisher needs it, so
+`https://ovdb.co.il/sales`, `https://ovdb.com.sg/sales`, `https://ovdb.github.io/sales`
+and `https://ovdb.pages.dev/sales` count as having `ovdb` as a subdomain today, although
+`ovdb` is the registered name, or a publisher's own site, there. The marker is a naming
+convention, not a proof of ownership.
 
 Names that reach `index.json` are checked too: ModelSpec entity, property and
 module names are identifiers (`[A-Za-z_][A-Za-z0-9_]*`, since recordset names are
@@ -218,6 +268,7 @@ address at the commit that address pins, resolved through the MeaningGraph regis
     "title": "…", "description": "…", "status": "draft",
     "url": "https://chinookdb.com/ovdb/dbs/chinook",
     "deployment": { "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook", "engine": "sqlite" },
+    "homepage": "https://chinookdb.com/",
     "repository": "https://github.com/datatug/chinookdb",
     "commit": "<40 hex>",
     "manifest": "ovdb.yaml",
@@ -243,6 +294,9 @@ address at the commit that address pins, resolved through the MeaningGraph regis
   differently (`&`, `<`, `>`) gives a different hash. Databases are sorted by
   `id`, recordsets by name; fields keep the ModelSpec's order; meanings are
   sorted by concept and role.
+- `homepage` is the manifest's `homepage`, and is absent when the manifest has none
+  (a client shows no website link then). It is not on the canonical `url`'s origin
+  by rule, so it says nothing about who controls that origin.
 - `licence` is the manifest's `licences.data`: the licence of the database's data.
 - A meaning's `address` carries the pinned commit of the meaning graph's repository:
   the record's `commit` for an own model, `meaning.address`'s pin for a shared one.
@@ -255,8 +309,9 @@ address at the commit that address pins, resolved through the MeaningGraph regis
   registry's record. `model.address` is the model's address in the ModelSpec
   registry without a pin, host, organisation and repository in lower case, the
   module as written; it is always present for a shared model and present for an own
-  model when the manifest gives one (validated against its own repository, never
-  against the registry). Databases that share a `model.address` are databases of the
+  model when the manifest gives one (checked against its own repository, and
+  compared with the registry's model when the registry has the address, see
+  [Two forms](#two-forms-own-model-or-shared-model)). Databases that share a `model.address` are databases of the
   same model, whoever hosts them. A model that lives in another repository than the
   database's also has `model.repository` (its https URL, as the registry records it)
   and `model.commit` (the manifest's pin); both are absent when the model is in the
@@ -363,14 +418,20 @@ Two layers run in CI ([`.github/workflows/check.yml`](.github/workflows/check.ym
      publisher repository equal the record's; every URL it publishes is public
      https (no IP address, local or internal host, credentials, query or
      fragment) and the canonical `url` has `ovdb` as a path segment or
-     subdomain; its discovery document is on the canonical origin;
-     `licences.meaning` is what the meaning file declares;
+     subdomain; its discovery document is on the canonical origin; no other
+     database has the same `deployment.url` or recordset page prefix; for an own
+     model, `licences.meaning` is what the meaning file declares (a shared model's
+     licences are the registries');
    - `meaning_graph` is registered in the MeaningGraph registry
      (`https://raw.githubusercontent.com/meaninggraph/registry/main/index.json`,
-     read with its checksum verified), for the same repository, with the same
-     address, and lists the manifest's meaning file;
+     read with its checksum verified) and lists the manifest's meaning file; for an
+     own model it is registered for the same repository, with the same address
+     (for a shared model, `meaning.address` is registered under that id);
    - `recordsets` are exactly the ModelSpec entities (a shared model's manifest
      may list a subset, explicitly, with `recordsets_partial: true`);
+   - an own model that names a registered `model.address` is the registered model
+     (compared with the registry's `files.json`, or a warning when the commits
+     differ);
    - a shared model resolves as described under
      [Two forms](#two-forms-own-model-or-shared-model): its address is registered in
      the ModelSpec registry, its meaning graph in the MeaningGraph registry, both
@@ -388,49 +449,71 @@ Two layers run in CI ([`.github/workflows/check.yml`](.github/workflows/check.ym
 The git cache is the user's, not the checkout's: `$XDG_CACHE_HOME/ovdb-directory`
 (or `~/.cache/ovdb-directory`), created private and refused if it is a link, owned
 by another user or writable by others; a cache inside the checkout is refused. A
-cached repository is used only after its configuration, alternates, grafts, replace
-refs, links and objects have been verified (and is fetched again otherwise), and
-git runs with hooks, fsmonitor and replace refs switched off, so nothing a pull
-request commits can run code in CI or on a maintainer's machine. Each repository is
+cached repository is used only after it has been verified, and is made again
+otherwise: the directory is not itself a link; its configuration holds only keys this
+check writes (a closed list, so a hook that git 2.54 and later define in
+configuration, `hook.<name>.command`, is refused like every other setting that makes
+git run something); a history clone's `remote.origin.url` is the URL it was cloned
+from and a one-commit repository has no remote; there are no alternates, grafts,
+replace refs, links or index; and every object hashes to its name. Git runs with
+hooks, fsmonitor, replace refs and lazy fetching switched off (`GIT_NO_LAZY_FETCH`: a
+missing object is never fetched from a remote the configuration names), so nothing a
+pull request commits can run code in CI or on a maintainer's machine. The cache holds
+bare repositories only: there is no checkout, no index to trust and no work-tree
+`.gitattributes`, and files are read from the object store byte for byte. Each repository is
 made in a temporary directory and renamed into place, so two runs that start on an
 empty cache at the same time both work.
 
-`npm test` proves each check fails on a broken entry, offline, with local
-repositories standing in for the publisher and for the core meaning graph (a
-copy of Chinook's manifest, ModelSpec and meaning file is in
-[`scripts/fixtures`](scripts/fixtures)): an unknown commit, a commit only a side
-branch has, a missing or unlisted `OVDB.md`, a manifest that disagrees with the
-record, recordsets that are not the ModelSpec entities, a binding to a missing
-entity or property, an unregistered graph, an address without or with a bad
-`?ref=`, an `extends` cycle or a chain over the limit, a bad or missing concept id,
-a model path that is missing, a link, not a `.modelspec.hcl` file or leaves the
-repository, a second hoster of the Chinook model that is listed under the same
-model address as Chinook itself with the same fields and meanings, and, for a
-shared model, an unregistered model or meaning graph address, a missing pin, a
-pin that is not on the default branch, local model files next to a foreign
-address, a module or recordset that is not the model's, a recordset list that is
-not the model's entities (or a bad partial list), and a meaning graph in another
-repository that does not say which model it binds (the ModelSpec registry index
-comes from a fixture, like the MeaningGraph registry's), a manifest URL that is http, has credentials, a query, a fragment,
-names an IP address in any spelling, `localhost` or an internal host, has
-`{name}` in the host, or is written in a second spelling, a canonical `url`
-without `ovdb`, names and values that are not identifiers or plain strings,
-malformed meaning data of every shape tried, a planted hook, replace ref, graft
-or configuration in a cached repository, a damaged cache, two runs on a cold
-cache, a stale
-`index.json`, repository values of every
-refused shape (`.git`, other hosts, `http`, `ssh`, `..`, option-like or
-shell-like text), git's environment and protocol restrictions, and that
-nothing is interpreted by a shell. `npm run test:ingitdb` (with `INGITDB_CLI`
-set to the CLI) proves inGitDB rejects each broken constraint of the collection
-definitions.
+`npm test` proves, offline, that each check fails on a broken entry. Local
+repositories stand in for the publisher and for the core meaning graph (a copy of
+Chinook's manifest, ModelSpec and meaning file is in
+[`scripts/fixtures`](scripts/fixtures)), and the ModelSpec registry's index comes
+from a fixture, like the MeaningGraph registry's. It covers:
+
+- **Records and the publisher repository:** an unknown commit, a commit only a side
+  branch has, a missing or unlisted `OVDB.md`, a manifest that disagrees with the
+  record, repository values of every refused shape (`.git`, other hosts, `http`,
+  `ssh`, `..`, option-like or shell-like text), and a stale `index.json`.
+- **Model and meaning:** recordsets that are not the ModelSpec entities, a binding
+  to a missing entity or property (and to an entity or module whose name starts
+  with `_`), an unregistered graph, an address without or with a bad `?ref=`, an
+  `extends` cycle or a chain over the limit, a bad or missing concept id, a model
+  path that is missing, a link, not a `.modelspec.hcl` file or leaves the
+  repository, and malformed meaning data of every shape tried, a registry's
+  `meaning_files` that is not a list of paths among them.
+- **Shared model:** an unregistered model or meaning graph address, a missing pin, a
+  pin that is not on the default branch, local model files next to a foreign
+  address, a module or recordset that is not the model's, a recordset list that is
+  not the model's entities (or a bad partial list), a meaning graph in another
+  repository that does not say which model it binds, a relative `models:` path
+  when the two pins are different commits, a registry path that does not exist at a
+  pin other than the registry's, a graph the registry registers with capitals, and
+  an index URL that is not https.
+- **Across records:** two databases with the same `url`, `deployment.url` or
+  recordset page prefix; an own model that is not the registered one.
+- **URLs and names:** a manifest URL that is http, has credentials, a query or a
+  fragment, names an IP address in any spelling, `localhost` or an internal host,
+  has `{name}` in the host, or is written in a second spelling; a canonical `url`
+  without `ovdb`; names and values that are not identifiers or plain strings.
+- **Output:** the warnings and the errors reach what `npm run check` and
+  `npm run index` print.
+- **The git cache:** a planted hook (in `hooks/` or defined in configuration),
+  replace ref, graft, remote, link, index or setting is refused; a damaged cache
+  is made again; an object that is missing is never fetched on git's own;
+  two runs on a cold cache both work; git's environment and protocol restrictions;
+  and that nothing is interpreted by a shell.
+
+A second hoster of the Chinook model, listed under the same model address as
+Chinook itself with the same fields and meanings, is a case that passes.
+
+`npm run test:ingitdb` (with `INGITDB_CLI` set to the CLI) proves inGitDB rejects
+each broken constraint of the collection definitions.
 
 ### Journey test
 
 `npm run test:journey` runs a Playwright test that walks the journey between the
-two sites by clicking links only: search "country" on meaninggraph.io (the
-concept must not be on the page before the search, and the result must be marked
-registered), the core Country concept, "In OVDB databases", `Customer.Country` on
+two sites by clicking links only: search "country" on meaninggraph.io (the result
+must be marked registered), the core Country concept, "In OVDB databases", `Customer.Country` on
 the Directory's Chinook page with that field in view, a concept link back, and
 both catalogues. It takes the two sites' base URLs and follows names read from
 `index.json`; every step asserts the exact target of the link it follows, and the
@@ -456,8 +539,9 @@ deliberate defects listed in `mock-sites.mjs` (a search that returns nothing, a
 result that is not registered, a missing Customer recordset or its anchor, a
 recordset without concepts, a wrong field anchor, a concept page that omits the
 recordset, no live-deployment link, an example badge on Chinook, no example
-cards, no synonyms, and others). It does not show that no defect is possible
-outside that list. It needs no real sites, only a browser, and runs in CI.
+cards or three cards that only say "example", no synonyms or a line that says there
+are none, and others). It does not show that no defect is possible outside that
+list. It needs no real sites, only a browser, and runs in CI.
 
 ## Licence
 

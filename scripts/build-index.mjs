@@ -4,16 +4,9 @@
 // and fails loudly when it cannot; there is no stale fallback.
 //
 //   node scripts/build-index.mjs
-import { writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildIndex } from './lib/directory.mjs';
+import { runIndex } from './lib/cli.mjs';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-try {
-  writeFileSync(join(root, 'index.json'), await buildIndex({ root, onWarning: (warning) => console.error(`warning: ${warning}`) }));
-} catch (error) {
-  console.error(`error: ${error.message}`);
-  process.exit(1);
-}
-console.log('wrote index.json');
+process.exitCode = await runIndex({ root });

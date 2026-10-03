@@ -25,9 +25,14 @@ const privateSuffixes = [
 ];
 
 // Two-label public suffixes where the registered name sits one label further left
-// (ovdb.co.uk is a registered name under co.uk, not a subdomain). A short list
-// of the common ones, not the public suffix list: a name under a suffix that is
-// not here and that is its own registered name is the publisher's to avoid.
+// (ovdb.co.uk is a registered name under co.uk, not a subdomain). The list is short: 17
+// of the common ones, kept by hand, not the public suffix list. How it is decided: a
+// suffix is added by a reviewed change to this list when a real publisher needs it. Until
+// then a name under a suffix that is not listed counts as having `ovdb` as a subdomain
+// (ovdb.co.il, ovdb.com.sg, ovdb.github.io and ovdb.pages.dev pass although `ovdb` is
+// the registered name, or a publisher's own site, there). That is acceptable because
+// the marker is a naming convention, not proof that the publisher owns the origin (see
+// the README).
 const twoLabelSuffixes = new Set([
   'co.uk', 'org.uk', 'ac.uk', 'gov.uk', 'me.uk', 'com.au', 'net.au', 'org.au', 'co.nz', 'co.jp', 'co.in', 'co.za', 'com.br', 'com.cn', 'com.mx', 'com.tr', 'com.ar',
 ]);

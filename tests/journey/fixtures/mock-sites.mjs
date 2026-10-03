@@ -2,7 +2,8 @@
 // site and a Directory site, generated from index.json, each in a good form and
 // in forms with one deliberate defect. The self-test (../self-test.mjs) runs the
 // journey spec against every form and expects the good one to pass and each
-// broken one to fail, so the journey cannot go green while a step is broken.
+// broken one to fail, so a defect on this list is noticed. It does not show that
+// no other defect is possible.
 // The mocks use only the URLs and anchors the journey spec relies on; they are not the real sites.
 import { createServer } from 'node:http';
 
@@ -19,6 +20,15 @@ export const defects = {
   'chinook-badged-example': 'the Chinook card is badged as an example (step 6)',
   'no-example-cards': 'the Directory home has no example cards (step 6)',
   'no-synonyms': 'the Country page shows no synonyms (step 2)',
+  'synonyms-none-yet': 'the Country page says "Synonyms: none yet" (step 2)',
+  'synonyms-no-synonyms-listed': 'the Country page says "No synonyms listed" (step 2)',
+  'synonyms-na': 'the Country page says "Synonyms: n/a" (step 2)',
+  'synonyms-dash': 'the Country page says "Synonyms: —" (step 2)',
+  'synonyms-to-be-added': 'the Country page says "Synonyms: to be added" (step 2)',
+  'synonyms-none-in-brackets': 'the Country page says "Synonyms: (none)" (step 2)',
+  'example-cards-words-only': 'the Directory home says "example" three times in one paragraph and has no cards (step 6)',
+  'example-cards-bare-labels': 'the Directory home has three list items that say only "Example" (step 6)',
+  'example-cards-heading-only': 'the Directory home has an Examples heading and a paragraph about sample data, but no cards (step 6)',
   'concept-page-omits-recordset': 'the Chinook customer concept page does not list the Customer recordset (step 5)',
   'missing-graph': 'the graphs page lists core only (step 6)',
   'no-directory-card': 'the Directory home has no Chinook card (step 6)',
@@ -74,9 +84,18 @@ export async function startMockSites(index, { defect } = {}) {
         const broken = defect === 'wrong-field-link' && key === countryKey && field ? `${anchor}-x` : anchor;
         return `<li><a href="${dir}/databases/${database.id}/#${broken}">${field ? `${recordset.name}.${field.name}` : recordset.name}</a></li>`;
       }).join('');
+      const synonymsLine = {
+        'no-synonyms': '',
+        'synonyms-none-yet': '<p>Synonyms: none yet</p>',
+        'synonyms-no-synonyms-listed': '<p>No synonyms listed</p>',
+        'synonyms-na': '<p>Synonyms: n/a</p>',
+        'synonyms-dash': '<p>Synonyms: \u2014</p>',
+        'synonyms-to-be-added': '<p>Synonyms: to be added</p>',
+        'synonyms-none-in-brackets': '<p>Synonyms: (none)</p>',
+      }[defect] ?? '<p>Synonyms: nation, countries</p>';
       const pinned = /ref=([0-9a-f]{40})/.exec(concept.address)?.[1].slice(0, 7);
       pages[`/graphs/${concept.graph}/concepts/${concept.concept}/`] = page(concept.label,
-        `<h1>${concept.label}</h1><p>Pinned at ${pinned}</p>${defect === 'no-synonyms' ? '' : '<p>Synonyms: nation, countries</p>'}${concept.extends.map((parent) => `<p>Extends <a href="/graphs/${parent.graph}/concepts/${parent.concept}/">${parent.label}</a></p>`).join('')}<h2>In OVDB databases</h2><ul>${rows}</ul>`);
+        `<h1>${concept.label}</h1><p>Pinned at ${pinned}</p>${synonymsLine}${concept.extends.map((parent) => `<p>Extends <a href="/graphs/${parent.graph}/concepts/${parent.concept}/">${parent.label}</a></p>`).join('')}<h2>In OVDB databases</h2><ul>${rows}</ul>`);
     }
     void mg;
     return pages;
@@ -85,7 +104,13 @@ export async function startMockSites(index, { defect } = {}) {
     const { mg } = base();
     const pages = {};
     const database0 = index.databases[0];
-    pages['/'] = page('OVDB Directory', `${defect === 'no-example-cards' ? '' : '<h2>Examples</h2><ul><li>Example one</li><li>Example two</li><li>Example three</li></ul>'}<h2>Databases</h2><ul>${defect === 'no-directory-card' ? '' : index.databases.map((database) => `<li><a href="/databases/${database.id}/">${database.title}</a>${defect === 'chinook-badged-example' ? ' <span>Example</span>' : ''}</li>`).join('')}</ul>`);
+    const exampleCards = {
+      'no-example-cards': '',
+      'example-cards-words-only': '<h2>Databases to explore</h2><p>Example, example, example: see the sample data.</p>',
+      'example-cards-bare-labels': '<h2>Examples</h2><ul><li>Example</li><li>Example</li><li>Example</li></ul>',
+      'example-cards-heading-only': '<h2>Examples</h2><p>Sample data is below. See the example guide, the sample guide and the example FAQ.</p>',
+    }[defect] ?? '<h2>Examples</h2><ul><li><article><h3>Retail orders</h3><p>Example database</p></article></li><li><article><h3>Hospital beds</h3><p>Example database</p></article></li><li><article><h3>Bike share trips</h3><p>Sample database</p></article></li></ul>';
+    pages['/'] = page('OVDB Directory', `${exampleCards}<h2>Databases</h2><ul>${defect === 'no-directory-card' ? '' : index.databases.map((database) => `<li><a href="/databases/${database.id}/">${database.title}</a>${defect === 'chinook-badged-example' ? ' <span>Example</span>' : ''}</li>`).join('')}</ul>`);
     const link = (graph, concept, label) => `<a href="${defect === 'wrong-concept-link' ? `${mg}/graphs/${graph}/concept/${concept}/` : conceptHref(mg, graph, concept)}">${label}</a>`;
     for (const database of index.databases) {
       pages[`/databases/${database.id}/`] = page(database.title, `<h1>${database.title}</h1><p>${database.url}</p>${defect === 'no-live-deployment-link' ? '' : `<p><a href="${database.deployment.url}">Live deployment</a></p>`}<p>${database.repository} at ${database.commit.slice(0, 7)}; meaning graph ${database.meaning_graph.id}</p>${

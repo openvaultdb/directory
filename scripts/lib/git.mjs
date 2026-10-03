@@ -16,19 +16,23 @@
 //   inherited GIT_* variable is dropped, so a local insteadOf rewrite, hook
 //   setting or GIT_DIR cannot change what is fetched or run.
 // - Hooks and file-system monitors never run (-c core.hooksPath, core.fsmonitor),
-//   replace refs are ignored (core.useReplaceRefs, GIT_NO_REPLACE_OBJECTS), and a
-//   cached repository is used only after its configuration, alternates, grafts,
-//   replace refs, links and objects have been verified (cacheRepoSound); the cache
-//   lives outside the checkout, in a per-user directory (defaultCacheDir), so
-//   nothing a pull request commits can plant a repository there. Two runs that
-//   start on an empty cache are safe: each repository is made in a temporary
-//   directory and renamed into place.
+//   replace refs are ignored (core.useReplaceRefs, GIT_NO_REPLACE_OBJECTS), git never
+//   fetches a missing object on its own (GIT_NO_LAZY_FETCH), and a cached repository
+//   is used only after its configuration (a closed allow-list of keys, which also
+//   keeps out hooks that git 2.54 and later define in configuration), remote,
+//   alternates, grafts, replace refs, links and objects have been verified
+//   (cacheRepoSound). The cache keeps bare repositories only: no checkout, so no
+//   index and no .gitattributes of a work tree; files are read from the object
+//   store. The cache lives outside the checkout, in a per-user directory
+//   (defaultCacheDir), so nothing a pull request commits can plant a repository
+//   there. Two runs that start on an empty cache are safe: each repository is made
+//   in a temporary directory and renamed into place.
 // - A commit only counts when it is in the history of the repository's default
 //   branch: GitHub serves a fork's commits through the parent's URL, so "can be
 //   fetched" alone would let a fork's commit be registered under the parent.
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import { lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { devNull, homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 
@@ -51,6 +55,9 @@ export const gitEnv = () => ({
   GIT_TERMINAL_PROMPT: '0', GIT_ALLOW_PROTOCOL: allowedProtocols, GIT_CONFIG_GLOBAL: devNull, GIT_CONFIG_NOSYSTEM: '1',
   // A replace ref in a repository must never make one commit read as another.
   GIT_NO_REPLACE_OBJECTS: '1',
+  // A repository that lacks an object (a history clone has no trees or blobs) must never fetch it
+  // from a remote that its own configuration names: every fetch here names its URL on the command line.
+  GIT_NO_LAZY_FETCH: '1',
 });
 // Hooks are pointed at a path with no hooks in it, and fsmonitor is off, so a
 // repository in the cache cannot run code of its own however it got there.
@@ -91,26 +98,41 @@ const safeConfigKeys = [
   /^branch\.[^.]+\.(remote|merge)$/,
 ];
 
+// Whether anything exists at `path`, a symbolic link (even a dangling one) included.
+const exists = (path) => { try { lstatSync(path); return true; } catch { return false; } };
+
 // Whether anything below `dir` is a symbolic link.
 const containsLink = (dir) => readdirSync(dir, { withFileTypes: true }).some((entry) => entry.isSymbolicLink() || (entry.isDirectory() && containsLink(join(dir, entry.name))));
 
-// Whether a cached bare repository is what this module made: only safe
-// configuration; no alternates, grafts, replace refs or links anywhere inside it;
-// the shallow file is what a one-commit fetch writes (`commit`, for an
-// openCommit repository) or absent (a history clone is whole); and every
-// object it holds hashes to its name (git fsck). A repository that fails is
-// thrown away and fetched again.
-export function cacheRepoSound(dir, { commit } = {}) {
+// Whether a cached bare repository is what this module made: the directory is itself a
+// real directory (not a link to somewhere else); only safe configuration (a closed
+// allow-list, so no hook of any kind, whether in hooks/ or defined in configuration);
+// no checkout (it is bare, and has no index); no alternates, grafts, replace refs or
+// links anywhere inside it; the shallow file is what a one-commit fetch writes (`commit`,
+// for an openCommit repository) or absent (a history clone is whole); a one-commit
+// repository has no remote at all (it was made by `init` and a fetch that names its URL),
+// and a history clone's remote is the `url` it was cloned from, so git can never be sent
+// to another place for an object; and every object it holds hashes to its name (git fsck).
+// A repository that fails is thrown away and fetched again.
+export function cacheRepoSound(dir, { commit, url } = {}) {
   try {
-    if (existsSync(join(dir, 'objects', 'info', 'alternates')) || existsSync(join(dir, 'commondir')) || existsSync(join(dir, 'info', 'grafts'))) return false;
+    if (!lstatSync(dir).isDirectory()) return false; // lstat: a link, even to a sound repository, is not the directory itself
+    if (exists(join(dir, 'objects', 'info', 'alternates')) || exists(join(dir, 'commondir')) || exists(join(dir, 'info', 'grafts'))) return false;
+    if (exists(join(dir, 'index'))) return false;
     const replace = join(dir, 'refs', 'replace');
-    if (existsSync(replace) && readdirSync(replace).length > 0) return false;
-    if (existsSync(join(dir, 'packed-refs')) && /refs\/replace\//.test(readFileSync(join(dir, 'packed-refs'), 'utf8'))) return false;
+    if (exists(replace) && readdirSync(replace).length > 0) return false;
+    if (exists(join(dir, 'packed-refs')) && /refs\/replace\//.test(readFileSync(join(dir, 'packed-refs'), 'utf8'))) return false;
     if (containsLink(dir)) return false;
     const shallow = join(dir, 'shallow');
-    if (commit === undefined ? existsSync(shallow) : (existsSync(shallow) && readFileSync(shallow, 'utf8').trim() !== commit)) return false;
-    const keys = git(['config', '--file', join(dir, 'config'), '--list', '--name-only']).split('\n').filter(Boolean);
+    if (commit === undefined ? exists(shallow) : (exists(shallow) && readFileSync(shallow, 'utf8').trim() !== commit)) return false;
+    const config = join(dir, 'config');
+    const keys = git(['config', '--file', config, '--list', '--name-only']).split('\n').filter(Boolean);
     if (!keys.every((key) => safeConfigKeys.some((pattern) => pattern.test(key)))) return false;
+    if (commit !== undefined && keys.some((key) => key.startsWith('remote.') || key.startsWith('extensions.partialclone'))) return false;
+    if (url !== undefined && keys.includes('remote.origin.url')) {
+      const remotes = git(['config', '--file', config, '--get-all', 'remote.origin.url']).split('\n').filter(Boolean);
+      if (remotes.length !== 1 || remotes[0] !== url) return false;
+    }
     git(['-C', dir, 'fsck', '--no-dangling', '--no-progress']);
     return true;
   } catch {
@@ -153,7 +175,7 @@ export function defaultBranch(url) {
 // that is not good is renamed away first, never deleted in place, so that two runs
 // never remove a directory the other is moving in.
 function install(work, dir, good, scratch) {
-  try { renameSync(work, dir); return; } catch (error) { if (!existsSync(dir)) throw error; }
+  try { renameSync(work, dir); return; } catch (error) { if (!exists(dir)) throw error; }
   if (good()) { rmSync(work, { recursive: true, force: true }); return; }
   const aside = mkdtempSync(join(scratch, '.old-'));
   try { renameSync(dir, join(aside, 'old')); } catch { /* another run moved it already */ }
@@ -178,7 +200,7 @@ export function onBranch(url, branch, commit, cacheDir, fetched = new Set()) {
   const ref = `refs/heads/${branch}`;
   if (!fetched.has(dir)) {
     try {
-      if (existsSync(join(dir, 'HEAD')) && cacheRepoSound(dir)) fetchBranch(dir, url, ref);
+      if (exists(join(dir, 'HEAD')) && cacheRepoSound(dir, { url })) fetchBranch(dir, url, ref);
       else {
         // Clone into a private temporary directory and rename it into place, so that
         // two runs that start on a cold cache never see a half-made repository; the
@@ -187,7 +209,7 @@ export function onBranch(url, branch, commit, cacheDir, fetched = new Set()) {
         const work = mkdtempSync(join(cacheDir, '.clone-'));
         try {
           git(['clone', '-q', '--bare', '--template=', '--filter=tree:0', '--single-branch', '--branch', branch, '--end-of-options', url, join(work, 'repo')]);
-          install(join(work, 'repo'), dir, () => existsSync(join(dir, 'HEAD')) && cacheRepoSound(dir), cacheDir);
+          install(join(work, 'repo'), dir, () => exists(join(dir, 'HEAD')) && cacheRepoSound(dir, { url }), cacheDir);
         } finally { rmSync(work, { recursive: true, force: true }); }
         fetchBranch(dir, url, ref);
       }
@@ -217,14 +239,14 @@ export function openCommit(url, commit, cacheDir) {
   const ready = () => {
     try { git(['-C', dir, 'cat-file', '-e', `${commit}^{commit}`]); return true; } catch { return false; }
   };
-  if (!(existsSync(join(dir, 'HEAD')) && cacheRepoSound(dir, { commit }) && ready())) {
+  if (!(exists(join(dir, 'HEAD')) && cacheRepoSound(dir, { commit, url }) && ready())) {
     mkdirSync(cacheDir, { recursive: true, mode: 0o700 });
     const work = mkdtempSync(join(cacheDir, '.fetch-'));
     try {
       git(['init', '-q', '--bare', '--template=', work]);
       git(['-C', work, 'fetch', '-q', '--depth', '1', '--end-of-options', url, commit]);
       if (git(['-C', work, 'rev-parse', 'FETCH_HEAD']).trim() !== commit) throw new Error('did not fetch that commit');
-      install(work, dir, () => existsSync(join(dir, 'HEAD')) && cacheRepoSound(dir, { commit }) && ready(), cacheDir);
+      install(work, dir, () => exists(join(dir, 'HEAD')) && cacheRepoSound(dir, { commit, url }) && ready(), cacheDir);
     } catch (error) {
       rmSync(work, { recursive: true, force: true });
       throw new Error(`cannot fetch ${commit} from ${url}: ${lastLine(error)}`);
@@ -244,6 +266,7 @@ export function openCommit(url, commit, cacheDir) {
   };
   // `*` matches within one path segment, so `*.meaning.yaml` is the root.
   const match = (pattern) => {
+    if (typeof pattern !== 'string') return [];
     if (!pattern.includes('*')) return entries.has(pattern) ? [pattern] : [];
     const regExp = new RegExp(`^${pattern.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('[^/]*')}$`);
     return [...entries.keys()].filter((path) => regExp.test(path)).sort();

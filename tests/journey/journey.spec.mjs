@@ -24,6 +24,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
+import { exampleCardTexts, synonymsOf } from './page-checks.mjs';
 
 const meaningGraphBase = (process.env.MEANINGGRAPH_BASE_URL ?? '').replace(/\/+$/, '');
 const directoryBase = (process.env.OVDB_DIRECTORY_BASE_URL ?? '').replace(/\/+$/, '');
@@ -124,7 +125,7 @@ test('journey 1 to 5: search "country" on MeaningGraph, follow Customer.Country 
   const term = core.label.toLowerCase();
   const countryUrl = conceptUrl(core.graph, core.concept);
 
-  // 1. The visitor opens meaninggraph.io and searches. The concept is offered by the search, not already on the page, marked registered.
+  // 1. The visitor opens meaninggraph.io and searches. The search offers the concept, marked registered.
   await page.goto(`${meaningGraphBase}/`);
   const search = page.getByRole('searchbox').or(page.locator('input[type="search"]')).or(page.getByPlaceholder(/search/i)).first();
   await expect(search, 'the home page has a search box').toBeVisible();
@@ -147,9 +148,9 @@ test('journey 1 to 5: search "country" on MeaningGraph, follow Customer.Country 
   await expect(page).toHaveURL(countryUrl);
   await expect(page.getByRole('heading', { name: core.label, level: 1 })).toBeVisible();
   await expect(page.locator('body')).toContainText(refOf(core.address).slice(0, 7));
-  const synonyms = /synonyms?\s*:?\s*([^\n]+)/i.exec(await page.locator('body').innerText());
-  expect(synonyms, 'the page lists the concept\'s synonyms').toBeTruthy();
-  expect(synonyms[1].trim(), 'the synonyms are not empty').not.toMatch(/^(none|n\/a|no synonyms|—|-)/i);
+  const synonyms = synonymsOf(await page.locator('body').innerText());
+  expect(synonyms, 'the page lists the concept\'s synonyms').not.toBeNull();
+  expect(synonyms.problem, `the synonyms are real synonyms, not a statement that there are none (the page says "${synonyms?.text}")`).toBeNull();
   await expect(page.getByRole('heading', { name: /In OVDB databases/i })).toBeVisible();
   for (const { database, recordset, field } of usesOf(core.graph, core.concept)) {
     const anchor = field ? fieldAnchor(recordset.name, field.name) : recordsetAnchor(recordset.name);
@@ -217,9 +218,10 @@ test('journey 6a: the Directory lists every database in index.json as a real dat
     await expect(card).toContainText(new RegExp(escape(database.title), 'i'));
     expect(await itemText(card, '/databases/'), 'a real database is not labelled an example').not.toMatch(/example/i);
   }
-  // The existing cards stay, still labelled as examples (a site may say "sample"): at least three labels in all.
-  const labelled = (await page.locator('body').innerText()).match(/example|sample/gi) ?? [];
-  expect(labelled.length, 'the three example cards stay, each labelled as an example or sample').toBeGreaterThanOrEqual(3);
+  // The existing cards stay, still labelled as examples (a site may say "sample"): at least three cards, each with something to say
+  // beyond the label, not three uses of the word.
+  const cards = await page.evaluate(exampleCardTexts);
+  expect(cards.length, `the three example cards stay, each labelled as an example or sample and with a title or text of its own (found: ${JSON.stringify(cards)})`).toBeGreaterThanOrEqual(3);
 });
 
 test('journey 6b: MeaningGraph lists, on /graphs/, every graph that index.json names', async ({ page }) => {

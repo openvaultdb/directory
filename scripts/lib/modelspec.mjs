@@ -56,9 +56,14 @@ export function indexModelRegistry(index, source = 'the ModelSpec registry') {
 }
 
 // Fetches and indexes the ModelSpec registry's index.json: MODELSPEC_REGISTRY_INDEX_URL, else
-// the default branch of modelspec-org/registry. Fails loudly: a build never falls back to stale
-// or hand-written data.
+// the default branch of modelspec-org/registry. The URL must be https (like every other source
+// here): `fetch` would also read a data: or file: URL. Tests that must not touch the network pass
+// `fetchImpl`, which stands in for the fetch of an https URL. Fails loudly: a build never falls back
+// to stale or hand-written data.
 export async function loadModelRegistry({ url = process.env.MODELSPEC_REGISTRY_INDEX_URL || modelRegistryDefaultUrl, fetchImpl = fetch } = {}) {
+  let scheme;
+  try { scheme = new URL(url).protocol; } catch { scheme = undefined; }
+  if (scheme !== 'https:') throw new Error(`the ModelSpec registry index must be read over https; ${JSON.stringify(url)} is not an https URL (check MODELSPEC_REGISTRY_INDEX_URL)`);
   let response;
   try { response = await fetchImpl(url, { redirect: 'error' }); } catch (error) { throw new Error(`cannot read ${url}: ${error.message}`); }
   if (!response.ok) throw new Error(`cannot read ${url}: HTTP ${response.status}`);
