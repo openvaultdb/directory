@@ -12,16 +12,10 @@
 // `npm run index` writes. A manifest that names its model and meaning graph by
 // pinned address (a shared model) is resolved through the ModelSpec and
 // MeaningGraph registries; a pin that differs from a registry's own is a warning.
+// The printing is in lib/cli.mjs.
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checkDirectory } from './lib/directory.mjs';
+import { runCheck } from './lib/cli.mjs';
 
 const root = process.argv[2] ?? dirname(dirname(fileURLToPath(import.meta.url)));
-const { problems, warnings, databases } = await checkDirectory({ root });
-for (const warning of warnings) console.error(`warning: ${warning}`);
-if (problems.length > 0) {
-  for (const problem of problems) console.error(`error: ${problem}`);
-  console.error(`${problems.length} problem${problems.length === 1 ? '' : 's'} in ${databases} database${databases === 1 ? '' : 's'}`);
-  process.exit(1);
-}
-console.log(`ok: ${databases} database${databases === 1 ? '' : 's'} checked`);
+process.exitCode = await runCheck({ root });

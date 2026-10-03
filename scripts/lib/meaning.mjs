@@ -10,9 +10,18 @@
 import { createHash } from 'node:crypto';
 import { parse as parseYaml } from 'yaml';
 import { addressOf, commitPattern, defaultBranch, onBranch, openCommit } from './git.mjs';
+import { readRegistryText } from './registry-fetch.mjs';
 
 export const meaningRegistryUrl = 'https://raw.githubusercontent.com/meaninggraph/registry/main/index.json';
 export const meaningRegistryFormat = 'meaning-registry/draft-1';
+
+// The shape of every id this repository publishes for a graph or a database: lower-case letters and digits in words
+// joined by single hyphens. A graph id that comes from the MeaningGraph registry's index is held to it before it is
+// used or published (it reaches index.json as `graph` in each meaning).
+export const registryIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const graphIdProblem = (graph) => (typeof graph?.id === 'string' && registryIdPattern.test(graph.id)
+  ? null
+  : `the MeaningGraph registry's record for ${JSON.stringify(graph?.id)} is not well formed (its id must be lower-case letters and digits in words joined by single hyphens)`);
 
 const conceptId = '[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*';
 export const conceptIdPattern = new RegExp(`^${conceptId}$`);
@@ -83,14 +92,25 @@ export function indexMeaningRegistry(index, source = 'the MeaningGraph registry'
   return { source, byId: new Map(index.graphs.map((graph) => [graph.id, graph])), byAddress: new Map(index.graphs.map((graph) => [graph.address, graph])) };
 }
 
+// The path patterns of a registry record's `meaning_files`: a list of strings (none when the record
+// has no such list), or null when it is anything else (a string, an object, a list that holds a
+// non-string). A malformed registry record is a problem to report, never an exception.
+export const meaningFilesOf = (graph) => {
+  if (graph?.meaning_files === undefined) return [];
+  return Array.isArray(graph.meaning_files) && graph.meaning_files.every((pattern) => typeof pattern === 'string') ? graph.meaning_files : null;
+};
+
+// The registered graphs at `address` (meaning://{host}/{org}/{repo}, no pin), compared ignoring case: GitHub does
+// not tell host, organisation and repository apart by case, and the registry spells the address as the repository
+// is written. Normally one graph; more than one means the registry lists the same repository twice.
+export const graphsAtAddress = (registry, address) => [...registry.byAddress.values()].filter((graph) => typeof graph?.address === 'string' && graph.address.toLowerCase() === address.toLowerCase());
+
 // Fetches and indexes meaninggraph/registry's index.json. Fails loudly: a build
 // never falls back to stale or hand-written data.
-export async function loadMeaningRegistry({ url = meaningRegistryUrl, fetchImpl = fetch } = {}) {
-  let response;
-  try { response = await fetchImpl(url, { redirect: 'error' }); } catch (error) { throw new Error(`cannot read ${url}: ${error.message}`); }
-  if (!response.ok) throw new Error(`cannot read ${url}: HTTP ${response.status}`);
+export async function loadMeaningRegistry({ url = meaningRegistryUrl, ...fetching } = {}) {
+  const text = await readRegistryText({ name: 'MeaningGraph registry', url, ...fetching });
   let index;
-  try { index = JSON.parse(await response.text()); } catch (error) { throw new Error(`${url} is not JSON: ${error.message}`); }
+  try { index = JSON.parse(text); } catch (error) { throw new Error(`the MeaningGraph registry (${url}) is not JSON: ${error.message}`); }
   return indexMeaningRegistry(index, url);
 }
 
@@ -111,6 +131,8 @@ export function createMeaningResolver({ own, registry, urlFor = (url) => url, ca
 
   const loadNode = (graph, ref) => {
     const ref0 = `${graph.address}?ref=${ref}`;
+    const idProblem = graphIdProblem(graph);
+    if (idProblem) return { error: `${ref0}: ${idProblem}, so it is not read` };
     if (addressOf(graph.repository) !== graph.address) return { error: `${ref0}: the MeaningGraph registry's record for ${graph.id} is not well formed (its repository must be the https URL whose meaning:// form is its address), so it is not read` };
     let files;
     try {
@@ -120,7 +142,9 @@ export function createMeaningResolver({ own, registry, urlFor = (url) => url, ca
     } catch (error) { return { error: `${ref0}: ${error.message}` }; }
     const concepts = new Map();
     const paths = new Set();
-    for (const pattern of graph.meaning_files ?? []) {
+    const patterns = meaningFilesOf(graph);
+    if (patterns === null) return { error: `${ref0}: the MeaningGraph registry's record for ${graph.id} is not well formed (meaning_files must be a list of file paths), so it is not read` };
+    for (const pattern of patterns) {
       const matched = files.match(pattern);
       if (matched.length === 0) return { error: `${ref0}: ${pattern} not found at ${ref}` };
       matched.forEach((path) => paths.add(path));
@@ -142,7 +166,9 @@ export function createMeaningResolver({ own, registry, urlFor = (url) => url, ca
 
   // meaning://{repo}?ref={commit} resolves through the MeaningGraph registry.
   const resolveGraph = (repo, ref) => {
-    const graph = registry.byAddress.get(`meaning://${repo}`);
+    const matches = graphsAtAddress(registry, `meaning://${repo}`);
+    const graph = matches[0];
+    if (matches.length > 1) return { error: `meaning://${repo} matches ${matches.length} records of the MeaningGraph registry (${matches.map((match) => match.id).join(', ')}), which differ only in case` };
     if (!graph) return { error: `meaning://${repo} is not registered in the MeaningGraph registry` };
     if (ref === undefined) return { error: `meaning://${repo} needs a ?ref= pin` };
     if (!commitPattern.test(ref)) return { error: `meaning://${repo}?ref=${ref}: a pin is a full 40-character commit id` };
@@ -156,7 +182,7 @@ export function createMeaningResolver({ own, registry, urlFor = (url) => url, ca
   const resolveConcept = (ref, node) => {
     const parsed = parseConceptRef(ref);
     if (!parsed) return { error: `"${ref}" is not a concept reference` };
-    const inside = !parsed.repo || (parsed.ref === undefined && parsed.repo === node.address);
+    const inside = !parsed.repo || (parsed.ref === undefined && parsed.repo.toLowerCase() === node.address.toLowerCase());
     const target = inside ? node : resolveGraph(parsed.repo, parsed.ref);
     if (target.error) return { error: target.error };
     const concept = target.concepts.get(parsed.id);
