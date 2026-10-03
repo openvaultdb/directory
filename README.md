@@ -611,6 +611,10 @@ Directory. Both are best-effort readings of a page, not of data: the index holds
 synonyms and no example cards. A site layout the checks do not expect is a failure
 to fix in the checks or in the site, not something they guess around.
 
+## Notifying the sites
+
+A change to `index.json` on `main` notifies the sites built from it, so they redeploy.
+
 ## Licence
 
 Everything in this repository (the records, the collection definitions,
