@@ -9,7 +9,7 @@ carry. The Directory website is a separate repository; it reads
 
 | Id | Canonical URL | Repository at commit | Status |
 |---|---|---|---|
-| `chinook` | `https://chinookdb.com/ovdb/dbs/chinook` | [datatug/chinookdb@8c9e62e](https://github.com/datatug/chinookdb/tree/8c9e62ed6641c0a00faa3867167d928af4c44b06) | draft |
+| `chinook` | `https://chinookdb.com/ovdb/dbs/chinook` | [datatug/chinookdb@f0c71b9](https://github.com/datatug/chinookdb/tree/f0c71b959bd082c3ec495df5fbecb4af014d6d12) | draft |
 
 ## This repository is the source of truth
 
@@ -90,7 +90,7 @@ Keyed by GitHub handle, with a `name`.
 A publisher repository opts in with a root `OVDB.md` whose frontmatter is
 `ovdb: 1` and `publish: [./ovdb.yaml]`, an explicit list of manifest paths
 relative to the repository root, never a glob. The manifest (`ovdb-manifest/draft-1`,
-for example [`ovdb.yaml` of Chinook](https://github.com/datatug/chinookdb/blob/8c9e62ed6641c0a00faa3867167d928af4c44b06/ovdb.yaml))
+for example [`ovdb.yaml` of Chinook](https://github.com/datatug/chinookdb/blob/f0c71b959bd082c3ec495df5fbecb4af014d6d12/ovdb.yaml))
 declares the canonical `url`, the `deployment` (`url`, `engine`, `discovery` on
 the canonical origin, and an optional `recordset_page` template with `{name}`),
 an optional `homepage` (the publisher's own web page for the database, which a site
