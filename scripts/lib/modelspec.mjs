@@ -57,16 +57,13 @@ export function indexModelRegistry(index, source = 'the ModelSpec registry') {
 }
 
 // Fetches and indexes the ModelSpec registry's index.json: MODELSPEC_REGISTRY_INDEX_URL, else
-// the default branch of modelspec-org/registry. The URL must be https (like every other source
-// here): `fetch` would also read a data: or file: URL. Tests that must not touch the network pass
-// `fetchImpl`, which stands in for the fetch of an https URL. Fails loudly: a build never falls back
+// the default branch of modelspec-org/registry. The URL must be https on raw.githubusercontent.com or
+// github.com (checked in readRegistryText, so no caller can pass a data:, file: or http: URL, or another host).
+// Tests that must not touch the network pass `fetchImpl`, which stands in for the fetch. Fails loudly: a build never falls back
 // to stale or hand-written data. Each read has a timeout and one retry (registry-fetch.mjs); `fetchImpl`,
 // `timeoutMs` and `retryDelayMs` are for tests.
 export async function loadModelRegistry({ url = process.env.MODELSPEC_REGISTRY_INDEX_URL || modelRegistryDefaultUrl, ...fetching } = {}) {
-  let scheme;
-  try { scheme = new URL(url).protocol; } catch { scheme = undefined; }
-  if (scheme !== 'https:') throw new Error(`the ModelSpec registry index must be read over https; ${JSON.stringify(url)} is not an https URL (check MODELSPEC_REGISTRY_INDEX_URL)`);
-  const text = await readRegistryText({ name: 'ModelSpec registry', url, ...fetching });
+  const text = await readRegistryText({ name: 'ModelSpec registry', url, envName: 'MODELSPEC_REGISTRY_INDEX_URL', ...fetching });
   let index;
   try { index = JSON.parse(text); } catch (error) { throw new Error(`the ModelSpec registry (${url}) is not JSON: ${error.message}`); }
   return indexModelRegistry(index, url);

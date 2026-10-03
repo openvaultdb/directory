@@ -94,8 +94,8 @@ for example [`ovdb.yaml` of Chinook](https://github.com/datatug/chinookdb/blob/8
 declares the canonical `url`, the `deployment` (`url`, `engine`, `discovery` on
 the canonical origin, and an optional `recordset_page` template with `{name}`),
 an optional `homepage` (the publisher's own web page for the database, which a site
-may show as a link to its website; a public https URL on any origin, held to the
-stricter rule for `homepage` below),
+may show as a link to its website; a public https URL on any origin, at most 200
+characters, held to the rules for every URL below),
 the `model` (its files, or its address when it is published elsewhere; see
 [Two forms](#two-forms-own-model-or-shared-model)), the `meaning` file and its
 graph, the publisher, the `licences` (`data`, `model`, `meaning`) and the
@@ -131,8 +131,8 @@ this record's `commit` is that commit; with another commit the check prints a wa
 that the model was not compared. An address the registry does not know is not
 compared. Because of this, a manifest that names a `model.address` needs the ModelSpec
 registry to be readable: if it cannot be read (after a timeout and one retry), the
-check fails with a problem that names the registry, as it does for the MeaningGraph
-registry; it never falls back to old data.
+check fails with a problem that names the registry and the cause, as it does for the
+MeaningGraph registry; it never falls back to old data.
 
 **Shared model.** The model and the meaning graph are published in other
 repositories, and this manifest points at them instead of copying them, so that
@@ -167,9 +167,13 @@ listed:
    with its `?ref=` removed, must be registered in the ModelSpec registry
    (`https://raw.githubusercontent.com/modelspec-org/registry/main/index.json`,
    format `modelspec-registry/draft-1`, checksum verified; `MODELSPEC_REGISTRY_INDEX_URL`
-   reads another index, which must be an https URL: a `data:`, `file:` or `http:`
-   URL or a plain path is refused). It is read only when a database names its model
-   by address. `meaning.address`, without its pin, must be registered in the
+   reads another index, which must be an https URL on `raw.githubusercontent.com` or
+   `github.com`, on the default port and without credentials: a `data:`, `file:` or
+   `http:` URL, a plain path or another host is refused). It is read only when a
+   database names its model by address. Both registry indexes are read with one
+   20-second deadline for the whole read and one retry of a failure that may pass (no
+   connection, no answer, a 5xx or 429); a redirect or any other answer is final and
+   a redirect is never followed; a failure names the registry and its cause. `meaning.address`, without its pin, must be registered in the
    MeaningGraph registry, under the record's `meaning_graph`. Neither address may
    name the publisher's own repository: a model there is the own-model form, and a
    meaning graph there cannot go with a model published elsewhere. A hoster that
@@ -214,19 +218,21 @@ listed:
 The publisher repository's `OVDB.md`, the manifest's `url`, `id`, `publisher` and
 `deployment` rules are the same in both forms.
 
-One deployment is listed once. Two databases may not have the same
-`deployment.url`, and no two may have the same `deployment.recordset_page` template: a
-hoster could otherwise list another publisher's live deployment as its own, and a second
-listing of one deployment is not a second hoster. Databases that share a model are
-different databases on different deployments. The rule compares text, after the
-normalisations that the URL rules below already force (one spelling of the host, no port,
-no percent escape): `deployment.url` is compared ignoring case and a trailing slash, which
-is conservative (a path may be case-sensitive, but two listings that differ only in case
-are refused anyway), and the whole `recordset_page` template is compared as written, apart
-from a trailing slash, so two honest databases on one host whose templates differ after
-`{name}` are both listed. What the rule cannot see is two different host names that serve
-one database, or a proxy in front of another publisher's deployment: that is the
-reviewer's question when a registration pull request is opened.
+One deployment is listed once. A database may not claim, in any of its `url`,
+`deployment.url` and `deployment.recordset_page` template, an address that another
+database claims in any of them: a hoster could otherwise list another publisher's live
+deployment as its own, by its deployment url, by its recordset pages or by the other
+database's canonical `url` (which can redirect to the deployment). A database may use one
+value in two of its own fields. Databases that share a model are different databases on
+different deployments. The rule compares text, after the normalisations that the URL rules
+below already force (one spelling of the host, no port, no percent escape, only plain
+characters), and all three fields are compared the same way: ignoring case and a trailing
+slash. That is conservative (a path may be case-sensitive, but two listings that differ only
+in case are refused anyway). The whole `recordset_page` template is compared, so two honest
+databases on one host whose templates differ after `{name}` are both listed. What the rule
+cannot see is two different host names that serve one database, or a proxy in front of
+another publisher's deployment: that is the reviewer's question when a registration pull
+request is opened.
 
 The canonical `url` is on an origin that the publisher is expected to control, and
 the check cannot prove it. The only rule is that `deployment.discovery` is on the
@@ -236,18 +242,34 @@ canonical `url` is therefore the reviewer's question when a registration pull
 request is opened, and a client that relies on the identity must fetch the discovery
 document and check that it lists the `url`.
 
-Every URL a manifest publishes (`url`, `deployment.url`, `deployment.discovery`,
-`deployment.recordset_page`, `publisher.url`, `homepage`) is public https: no credentials,
-query or fragment, no IP address (in any spelling), `localhost`, single-label
-name, or local, internal or reserved name (`.local`, `.internal`, `.lan`, `.svc`,
-`.home`, `.test`, `.example`, `.invalid`, `.onion`, …), and written in one
-canonical spelling: no trailing dot or empty label in the host, no `//` in the
-path, no port (not even `:443`), and no percent escape in the path (outside the
-`{name}` of a template). A name that looks
-public but resolves to a private address (`127.0.0.1.nip.io`) cannot be seen from
-the text: clients must check the address they connect to. `recordset_page` has
-`{name}` exactly once, in the path only, and every URL generated from it is
-checked again. The canonical `url` also has `ovdb` as a complete path segment or as
+### What the index guarantees about every URL it publishes
+
+Every URL a manifest publishes or reads (`url`, `deployment.url`, `deployment.discovery`,
+`deployment.recordset_page`, `publisher.url`, `homepage`), and the `url` of a record, is
+checked on the text as written, never on what a URL parser makes of it. In `index.json`
+(`url`, `deployment.url`, each recordset's `url`, `homepage`) every one of them is:
+
+- `https`, with no user information, no port (not even `:443`), no query and no fragment;
+- a host of two or more dot-separated labels, each 1 to 63 characters of lower-case ASCII
+  letters, digits and hyphen, none starting or ending with a hyphen, at most 253
+  characters in all; not an IP address (in any spelling), `localhost`, a single-label name
+  or a local, internal or reserved name (`.local`, `.internal`, `.lan`, `.svc`, `.home`,
+  `.test`, `.example`, `.invalid`, `.onion`, …);
+- a path of only `A-Z a-z 0-9 . _ ~ / -`: no percent escape, no `//`, no `.` or `..`
+  segment, and no quote, apostrophe, ampersand, backtick, angle bracket, brace,
+  parenthesis, semicolon, comma, equals sign, space or other punctuation;
+- written in one canonical spelling (no trailing dot or empty label in the host).
+
+`homepage` is also at most 200 characters. A `recordset_page` has `{name}` exactly once,
+in the path only, and every URL generated from it is checked again. A deployment whose path
+needs a space, a non-ASCII character or other punctuation cannot be listed.
+
+What this does not say: that the page exists, that the name is not a look-alike (an `xn--`
+name is ASCII), or that the name does not resolve to a private address
+(`127.0.0.1.nip.io`). A site that shows a URL must still HTML-escape it, whatever it
+guarantees, and clients must check the address they connect to.
+
+The canonical `url` also has `ovdb` as a complete path segment or as
 a subdomain: a host label left of the registered name, which is the last two
 labels, or the last three under a two-label suffix such as `co.uk`. So
 `https://acme.com/ovdb/sales`, `https://ovdb.acme.com/sales` and
@@ -312,15 +334,9 @@ address at the commit that address pins, resolved through the MeaningGraph regis
   sorted by concept and role.
 - `homepage` is the manifest's `homepage`, and is absent when the manifest has none
   (a client shows no website link then). It is not on the canonical `url`'s origin
-  by rule, so it says nothing about who controls that origin. It is published as
-  written, so the index guarantees this much about it: at most 200 characters; the
-  scheme is exactly `https`, with no user information, port, query or fragment; the
-  host is lower case, of two or more dot-separated labels of ASCII letters, digits
-  and hyphen (no label starts or ends with a hyphen), and is not an IP address or a
-  reserved name; the path has only `A-Z a-z 0-9 . _ ~ / -` (no percent escape, no
-  `//`, no `.` or `..` segment, no quote, ampersand or other punctuation). It does not
-  say that the page exists or that the name is not a look-alike (an `xn--` name is
-  ASCII). A site that shows it must still HTML-escape it.
+  by rule, so it says nothing about who controls that origin. It is at most 200
+  characters and as plain as every URL in the index (see
+  [what the index guarantees](#what-the-index-guarantees-about-every-url-it-publishes)).
 - `licence` is the manifest's `licences.data`: the licence of the database's data.
 - A meaning's `address` carries the pinned commit of the meaning graph's repository:
   the record's `commit` for an own model, `meaning.address`'s pin for a shared one.
@@ -521,7 +537,8 @@ from a fixture, like the MeaningGraph registry's. It covers:
 - **URLs and names:** a manifest URL that is http, has credentials, a query or a
   fragment, names an IP address in any spelling, `localhost` or an internal host,
   has `{name}` in the host, or is written in a second spelling, has a port or a percent
-  escape; a `homepage` that is long, has a port, a quote or an ampersand; a canonical
+  escape; any URL field (and `homepage`) that has a quote, an apostrophe, an ampersand, a
+  backtick or any character outside the plain set, a long `homepage`; a canonical
   `url` without `ovdb`; names and values that are not identifiers or plain strings.
 - **Output:** the warnings and the errors reach what `npm run check` and
   `npm run index` print.

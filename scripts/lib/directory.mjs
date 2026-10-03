@@ -93,34 +93,43 @@ export function recordProblems({ databases, maintainers }) {
   return problems;
 }
 
-// What a manifest says about the deployment that serves the database, for comparing it with the other
-// records': the deployment's url, compared ignoring case and a trailing slash (conservative: the path of a
-// real deployment may be case-sensitive, but two listings that differ only in case are refused anyway), and
-// the whole recordset page template with {name} in place, compared as written apart from a trailing slash.
-// URLs are already one spelling each (no port, no percent escape, canonical host: see urls.mjs), so what is
-// compared is text after those normalisations. Two databases on the same deployment are not two hosters: a
-// hoster could otherwise list another publisher's live deployment as its own.
-const trimmed = (url) => url.replace(/\/+$/, '');
-export const deploymentClaims = (manifest) => ({
-  deploymentUrl: trimmed(manifest.deployment.url.toLowerCase()),
-  recordsetPage: typeof manifest.deployment.recordset_page === 'string' ? trimmed(manifest.deployment.recordset_page) : undefined,
-});
+// The addresses a manifest claims, for comparing it with the other records': its canonical `url`, its
+// deployment's `url`, and its recordset page template (with {name} in place). All three are compared the same
+// way, ignoring case and a trailing slash: conservative (a path may be case-sensitive, but two listings that
+// differ only in case are refused anyway). URLs are already one spelling each (no port, no percent escape,
+// canonical plain host: see urls.mjs), so what is compared is text after those normalisations. A database
+// may not claim, in any of the three, an address that another database claims in any of them: two
+// databases on one deployment are not two hosters, and a hoster could otherwise list another publisher's live
+// deployment as its own, by its deployment url, its recordset pages or even its canonical url (which
+// redirects there).
+const claimedForm = (address) => address.toLowerCase().replace(/\/+$/, '');
+export const addressClaims = (manifest) => [
+  { field: 'url', value: claimedForm(manifest.url) },
+  { field: 'deployment.url', value: claimedForm(manifest.deployment.url) },
+  ...(typeof manifest.deployment.recordset_page === 'string' ? [{ field: 'deployment.recordset_page', value: claimedForm(manifest.deployment.recordset_page) }] : []),
+];
 
-// Problems across records, from what analyseDatabase reports as `claims`: a deployment url, or a recordset
-// page template, that more than one database claims. Reported once per
-// value, on the last record (by file name) that claims it, naming every database that does.
+// Problems across records, from what analyseDatabase reports as `claims` ({ key, file, manifest, addresses }):
+// an address claimed, in any field, by more than one database. A database that uses one value in two of its own
+// fields is fine. Reported once per address, on the last record (by file name) that claims it, naming every
+// database and field. Two canonical `url`s alone are reported by recordProblems already.
 export function claimProblems(claimed) {
   const problems = [];
-  const report = (field, describe) => {
-    const owners = new Map();
-    for (const claim of claimed) if (claim[field] !== undefined) owners.set(claim[field], [...(owners.get(claim[field]) ?? []), claim]);
-    for (const [value, list] of owners) {
-      if (list.length < 2) continue;
-      problems.push(`${list.at(-1).file}: ${list.at(-1).manifest}: ${describe(value, list.length, list.map((claim) => claim.key).join(', '))}; a deployment is listed once, because a second listing of the same deployment is not a second hoster`);
+  const owners = new Map();
+  for (const claim of claimed) {
+    for (const { field, value } of claim.addresses) {
+      if (!owners.has(value)) owners.set(value, new Map());
+      const byKey = owners.get(value);
+      byKey.set(claim.key, { claim, fields: [...(byKey.get(claim.key)?.fields ?? []), field] });
     }
-  };
-  report('deploymentUrl', (value, count, ids) => `deployment.url ${value} is claimed by ${count} databases (${ids}; compared ignoring case and a trailing slash)`);
-  report('recordsetPage', (value, count, ids) => `deployment.recordset_page ${value} is claimed by ${count} databases (${ids}; the whole template is compared, as written)`);
+  }
+  for (const [value, byKey] of owners) {
+    if (byKey.size < 2) continue;
+    const list = [...byKey.values()];
+    if (list.every(({ fields }) => fields.length === 1 && fields[0] === 'url')) continue;
+    const last = list.at(-1).claim;
+    problems.push(`${last.file}: ${last.manifest}: ${value} is claimed by ${list.length} databases (${list.map(({ claim, fields }) => `${claim.key} as ${fields.join(' and ')}`).join('; ')}; compared ignoring case and a trailing slash); a deployment is listed once, because a second listing of the same deployment is not a second hoster`);
+  }
   return problems;
 }
 
@@ -284,7 +293,7 @@ export async function analyseDatabase(record, context) {
   const missing = manifestProblems(manifest);
   for (const problem of missing) bad(`${data.manifest}: ${problem}`);
   if (missing.length) return stop();
-  claims = { key, file, manifest: data.manifest, ...deploymentClaims(manifest) };
+  claims = { key, file, manifest: data.manifest, addresses: addressClaims(manifest) };
   if (manifest.url !== data.url) bad(`${data.manifest}: url is ${manifest.url}, but the record's url is ${data.url}; the manifest and the record name one canonical identity`);
   if (manifest.id !== key) bad(`${data.manifest}: id is ${manifest.id}, but the record is ${key}`);
   if (manifest.meaning.graph.id !== data.meaning_graph) bad(`${data.manifest}: meaning.graph.id is ${manifest.meaning.graph.id}, but the record's meaning_graph is ${data.meaning_graph}`);

@@ -39,6 +39,8 @@ const twoLabelSuffixes = new Set([
   'co.uk', 'org.uk', 'ac.uk', 'gov.uk', 'me.uk', 'com.au', 'net.au', 'org.au', 'co.nz', 'co.jp', 'co.in', 'co.za', 'com.br', 'com.cn', 'com.mx', 'com.tr', 'com.ar',
 ]);
 
+const hostLabel = /^(?!-)[a-z0-9-]{1,63}(?<!-)$/;
+
 // A problem with the host of `url` for a public mapping, or null.
 export function hostProblem(url) {
   const host = url.hostname.toLowerCase();
@@ -53,12 +55,20 @@ export function hostProblem(url) {
   return null;
 }
 
-// A problem with `value` as a public https URL (the canonical url, the
-// deployment's url, discovery document or recordset page, the publisher's
-// url), or null. `template` allows `{name}` exactly once, and only in the path
-// (never in the host, userinfo or port), as in recordset_page.
-// Refused: anything but https, userinfo, a query, a fragment, a host that is
-// not public (see hostProblem), a malformed or non-canonical spelling.
+// A problem with `value` as a public https URL (the canonical url, the deployment's url,
+// discovery document or recordset page, the publisher's url, the homepage), or null.
+// `template` allows `{name}` exactly once, and only in the path (never in the host,
+// userinfo or port), as in recordset_page.
+// Refused: anything but https, userinfo, a port, a query, a fragment, a host that is
+// not public (see hostProblem), a malformed or non-canonical spelling, and, judged on the
+// text as written (never on what the parser makes of it), anything but a plain host and
+// path: the host is lower-case letters, digits and hyphen in dot-separated labels (1 to 63
+// characters each, none starting or ending with a hyphen), at least two labels, at most 253
+// characters in all; the path is only A-Z a-z 0-9 . _ ~ / and - (and `{name}` in a
+// template), with no percent escape, no `//` and no `.` or `..` segment. So nothing that
+// could leave an HTML attribute or a URL (quote, apostrophe, ampersand, backtick, angle
+// bracket, brace, parenthesis, semicolon, comma, equals sign, space) is ever published.
+// A site that shows the value must still HTML-escape it.
 export function publicHttpsProblem(value, { template = false } = {}) {
   if (typeof value !== 'string' || value.trim() === '') return 'is not a URL';
   if (value !== value.trim() || /[\u0000- \u007f\\]/.test(value)) return 'contains whitespace, control characters or a backslash';
@@ -78,12 +88,21 @@ export function publicHttpsProblem(value, { template = false } = {}) {
   const problem = hostProblem(url);
   if (problem) return problem;
   // The parser drops the default port, so look at the text: any ":" in the authority is a port.
-  if (probe.slice('https://'.length).split('/')[0].includes(':')) return 'must not name a port (not even :443): a deployment is reached on the default https port';
+  if (probe.slice('https://'.length).split('/')[0].includes(':')) return 'must not name a port (not even :443): a published URL is reached on the default https port';
   if (url.pathname.includes('//')) return 'has an empty path segment (//)';
   if (url.pathname.includes('%')) return 'must not contain a percent escape in the path (write the character itself, or leave it out)';
   // The literal text must be the URL's own spelling, so that what is checked is
   // what is published (no %2e dot segments, no mixed-case host, no decoded host).
   if (url.href !== probe) return `is not written canonically (it would be ${url.href})`;
+  // The plain host and path rules, on the written text (probe has `name` where a template had {name}).
+  const rest = probe.slice('https://'.length);
+  const slash = rest.indexOf('/');
+  const host = rest.slice(0, slash);
+  const path = rest.slice(slash);
+  const labels = host.split('.');
+  if (host.length > 253 || labels.length < 2 || !labels.every((label) => hostLabel.test(label))) return `host ${host} must be lower-case labels of ASCII letters, digits and hyphen (1 to 63 characters each, none starting or ending with a hyphen), at least two, separated by dots, at most 253 characters in all`;
+  if (!/^[A-Za-z0-9._~/-]*$/.test(path)) return 'path may only use A-Z a-z 0-9 . _ ~ / and - (no quote, apostrophe, ampersand, percent escape or other punctuation)';
+  if (path.split('/').some((segment) => segment === '.' || segment === '..')) return 'must not have a . or .. segment';
   return null;
 }
 
@@ -101,21 +120,12 @@ export function hasOvdbMarker(value) {
   return labels.slice(0, labels.length - suffixLabels - 1).includes('ovdb');
 }
 
-// What the index guarantees about a manifest's `homepage`, on top of publicHttpsProblem (https, no
-// userinfo, query or fragment, no port, a public host written canonically): at most 200 characters; a
-// lower-case host of two or more dot-separated labels of ASCII letters, digits and hyphen (no label starts
-// or ends with a hyphen); a path of only A-Z a-z 0-9 . _ ~ / - (no percent escape, no quote, ampersand or
-// other punctuation). A site that shows the value must still HTML-escape it, and must not put it in a
-// single-quoted or unquoted attribute.
+// A manifest's `homepage` is a public https URL under the same plain host and path rules as every
+// published URL (publicHttpsProblem), and at most 200 characters.
 export const homepageMaxLength = 200;
-const homepageLabel = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 export function homepageProblem(value) {
   const problem = publicHttpsProblem(value);
   if (problem) return problem;
   if (value.length > homepageMaxLength) return `is longer than ${homepageMaxLength} characters`;
-  const url = new URL(value);
-  const labels = url.hostname.split('.');
-  if (labels.length < 2 || !labels.every((label) => homepageLabel.test(label))) return `host ${url.hostname} must be lower-case labels of ASCII letters, digits and hyphen (none starting or ending with a hyphen), at least two, separated by dots`;
-  if (!/^[A-Za-z0-9._~/-]*$/.test(url.pathname)) return 'path may only use A-Z a-z 0-9 . _ ~ / and - (no quote, ampersand, percent escape or other punctuation)';
   return null;
 }
