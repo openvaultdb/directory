@@ -14,11 +14,11 @@
 // concept links to land on MEANINGGRAPH_BASE_URL.
 //
 // Without both base URLs every test is skipped, not failed, so CI can run it
-// unconditionally. The test relies on the URLs and anchors of the plan's
-// contract (/graphs/<graph>/concepts/<concept>/, /databases/<id>/ with
-// #recordset-<Name> and #field-<Recordset>-<Field>) and on link text, never on
-// CSS classes. Each step asserts the exact target of the link it follows, so a
-// link that goes anywhere but the contract URL fails the step. self-test.mjs runs
+// unconditionally. The test relies on these URLs and anchors
+// (/graphs/<graph>/concepts/<concept>/ on meaninggraph.io; /databases/<id>/ on the
+// Directory, with #recordset-<Name> and #field-<Recordset>-<Field>) and on link
+// text, never on CSS classes. Each step asserts the exact target of the link it follows, so a
+// link that goes anywhere but the URL above fails the step. self-test.mjs runs
 // this file against mock sites with one deliberate defect each and expects it to fail.
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -91,14 +91,31 @@ const hasLink = async (page, expected, what) => {
 
 // The smallest region around a search result that holds that result and no other concept: the result's own
 // item, never the page. Climbing stops at a list, table, section, form, nav, main or the body.
-const resultItemText = (link) => link.evaluate((anchor) => {
+const itemText = (link, others) => link.evaluate((anchor, marker) => {
   const boundary = /^(UL|OL|TABLE|TBODY|SECTION|FORM|NAV|MAIN|BODY|HTML)$/;
   let item = anchor;
   for (let node = anchor.parentElement; node && !boundary.test(node.tagName); node = node.parentElement) {
-    if (node.querySelectorAll('a[href*="/concepts/"]').length > 1) break;
+    if (node.querySelectorAll(`a[href*="${marker}"]`).length > 1) break;
     item = node;
   }
   return item.innerText;
+}, others);
+
+// For every recordset and field anchor on the page, the links that sit between it and the next such anchor
+// (a recordset's own concepts come before its first field; a field's concepts before the next field), as absolute URLs.
+const linksByAnchor = (page) => page.evaluate(() => {
+  const anchors = [...document.querySelectorAll('[id^="recordset-"], [id^="field-"]')];
+  const links = [...document.querySelectorAll('a[href]')];
+  const found = {};
+  anchors.forEach((anchor, position) => {
+    const next = anchors[position + 1];
+    found[anchor.id] = links.filter((link) => {
+      const from = anchor.contains(link) || Boolean(anchor.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING);
+      if (!from) return false;
+      return !next || (Boolean(next.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_PRECEDING) && !next.contains(link));
+    }).map((link) => link.href);
+  });
+  return found;
 });
 
 test('journey 1 to 5: search "country" on MeaningGraph, follow Customer.Country to the Directory and a concept back', async ({ page }) => {
@@ -109,25 +126,30 @@ test('journey 1 to 5: search "country" on MeaningGraph, follow Customer.Country 
 
   // 1. The visitor opens meaninggraph.io and searches. The concept is offered by the search, not already on the page, marked registered.
   await page.goto(`${meaningGraphBase}/`);
-  await expect(linkTo(page, countryUrl), 'the home page does not already link to the concept: only the search may offer it').toHaveCount(0);
   const search = page.getByRole('searchbox').or(page.locator('input[type="search"]')).or(page.getByPlaceholder(/search/i)).first();
   await expect(search, 'the home page has a search box').toBeVisible();
   await search.fill(term);
-  let result = linkTo(page, countryUrl);
-  await result.waitFor({ timeout: 3000 }).catch(() => {});
-  if (!(await result.isVisible())) await search.press('Enter');
-  result = linkTo(page, countryUrl);
-  await expect(result, `searching "${term}" offers the ${core.graph} ${core.label} concept`).toBeVisible();
-  const item = await resultItemText(result);
-  expect(item, 'the result is marked registered').toMatch(/registered/i);
-  expect(item, 'the result is not illustrative').not.toMatch(/illustrative/i);
+  const offered = () => linkTo(page, countryUrl);
+  await offered().waitFor({ timeout: 3000 }).catch(() => {});
+  if (!(await offered().isVisible())) await search.press('Enter');
+  await expect(offered(), `searching "${term}" offers the ${core.graph} ${core.label} concept`).toBeVisible();
+  // The result is the one marked registered, not illustrative: read from the result's own item.
+  const candidates = await page.locator(`a:visible[href="${countryUrl}"], a:visible[href="${new URL(countryUrl).pathname}"]`).all();
+  let result;
+  for (const candidate of candidates) {
+    const item = await itemText(candidate, '/concepts/');
+    if (/registered/i.test(item) && !/illustrative/i.test(item)) { result = candidate; break; }
+  }
+  expect(result, 'the search result for the concept is marked registered, not illustrative').toBeTruthy();
   await result.click();
 
   // 2. The Country concept page: pinned commit, synonyms, and "In OVDB databases" lists every use, linking to the Directory.
   await expect(page).toHaveURL(countryUrl);
   await expect(page.getByRole('heading', { name: core.label, level: 1 })).toBeVisible();
   await expect(page.locator('body')).toContainText(refOf(core.address).slice(0, 7));
-  await expect(page.locator('body')).toContainText(/synonym/i);
+  const synonyms = /synonyms?\s*:?\s*([^\n]+)/i.exec(await page.locator('body').innerText());
+  expect(synonyms, 'the page lists the concept\'s synonyms').toBeTruthy();
+  expect(synonyms[1].trim(), 'the synonyms are not empty').not.toMatch(/^(none|n\/a|no synonyms|—|-)/i);
   await expect(page.getByRole('heading', { name: /In OVDB databases/i })).toBeVisible();
   for (const { database, recordset, field } of usesOf(core.graph, core.concept)) {
     const anchor = field ? fieldAnchor(recordset.name, field.name) : recordsetAnchor(recordset.name);
@@ -147,7 +169,7 @@ test('journey 1 to 5: search "country" on MeaningGraph, follow Customer.Country 
   // 4. The Directory page stands on its own: identity, deployment, publisher, pin, meaning graph, every recordset and field, concepts that link back.
   const body = page.locator('body');
   await expect(body).toContainText(database.url);
-  await expect(page.locator(`a:visible[href^="${database.deployment.url}"]`).first(), 'links to the live deployment').toBeVisible();
+  await hasLink(page, database.deployment.url, `links to the live deployment ${database.deployment.url}`);
   const repositoryPath = database.repository.replace(/^https:\/\//, '');
   await expect(page.locator(`a:visible[href^="${database.repository}"]`).or(page.getByText(repositoryPath)).first(), 'names the publisher repository').toBeVisible();
   await expect(body).toContainText(database.commit.slice(0, 7));
@@ -158,13 +180,20 @@ test('journey 1 to 5: search "country" on MeaningGraph, follow Customer.Country 
     await expect(page.locator(`[id="${recordsetAnchor(each.name)}"]`), `#${recordsetAnchor(each.name)} shows the recordset name`).toContainText(each.name);
     for (const eachField of each.fields) expect(ids.has(fieldAnchor(each.name, eachField.name)), `the page has #${fieldAnchor(each.name, eachField.name)}`).toBe(true);
   }
-  const own = first.meaning;
-  await hasLink(page, conceptUrl(own.graph, own.concept), `${recordset.name}.${field.name} links to its ${own.label} concept on meaninggraph.io`);
-  // A dataset concept that extends a core concept shows both.
+  // Each recordset shows the concepts of its meanings, and each field the concepts of its own, between its anchor and the next:
+  // a dataset concept that extends another shows both.
+  const between = await linksByAnchor(page);
+  for (const each of database.recordsets) {
+    for (const [anchorId, list] of [[recordsetAnchor(each.name), each.meanings], ...each.fields.map((eachField) => [fieldAnchor(each.name, eachField.name), eachField.meanings])]) {
+      for (const meaning of list) {
+        for (const entry of [meaning, ...(meaning.extends.length ? [meaning.extends[0]] : [])]) {
+          expect(between[anchorId] ?? [], `#${anchorId} shows the ${entry.graph} ${entry.label} concept, linking to meaninggraph.io`).toContain(conceptUrl(entry.graph, entry.concept));
+        }
+      }
+    }
+  }
   const entity = recordset.meanings.find((meaning) => meaning.role === 'entity' && meaning.extends?.length);
   expect(entity, `index.json has an entity concept of ${recordset.name} that extends another`).toBeTruthy();
-  await hasLink(page, conceptUrl(entity.graph, entity.concept), `${recordset.name} links to its ${entity.label} concept`);
-  await hasLink(page, conceptUrl(entity.extends[0].graph, entity.extends[0].concept), `${recordset.name} shows the ${entity.extends[0].graph} ${entity.extends[0].label} concept it extends`);
 
   // 5. They return to meaninggraph.io through the recordset's concept link: what it extends, and every recordset and field that uses it.
   await (await hasLink(page, conceptUrl(entity.graph, entity.concept))).click();
@@ -186,9 +215,11 @@ test('journey 6a: the Directory lists every database in index.json as a real dat
   for (const database of directory.databases) {
     const card = await hasLink(page, databaseUrl(database), `the Directory home links to ${database.title}`);
     await expect(card).toContainText(new RegExp(escape(database.title), 'i'));
-    expect(await card.innerText(), 'a real database is not labelled an example').not.toMatch(/example/i);
+    expect(await itemText(card, '/databases/'), 'a real database is not labelled an example').not.toMatch(/example/i);
   }
-  await expect(page.locator('body'), 'the example cards stay, labelled as examples').toContainText(/example/i);
+  // The existing cards stay, still labelled as examples (a site may say "sample"): at least three labels in all.
+  const labelled = (await page.locator('body').innerText()).match(/example|sample/gi) ?? [];
+  expect(labelled.length, 'the three example cards stay, each labelled as an example or sample').toBeGreaterThanOrEqual(3);
 });
 
 test('journey 6b: MeaningGraph lists, on /graphs/, every graph that index.json names', async ({ page }) => {

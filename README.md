@@ -98,13 +98,34 @@ source `hcl`), the `meaning` file and its graph (`id` and `address`), the
 publisher, the `licences` (`data`, `model`, `meaning`) and the `recordsets`.
 Every path is relative to the repository root and must be a regular file tracked
 at the pinned commit: no `..`, leading `/`, `.` or empty segment, no glob, and
-symbolic links are refused. Every URL a manifest publishes (`url`,
-`deployment.url`, `deployment.discovery`, `deployment.recordset_page`,
-`publisher.url`) is public https: no credentials, query or fragment, no IP
-address (in any spelling), `localhost`, single-label name, or local or internal
-name (`.local`, `.internal`, `.lan`, …). The canonical `url` also has `ovdb` as a
-complete path segment or as a subdomain, as the Directory's convention asks
-(`https://acme.com/ovdb/sales`, `https://ovdb.acme.com/sales`).
+symbolic links are refused. The model's source (`model.hcl`) ends in
+`.modelspec.hcl`; it may also be named by `model.address`, the model's address
+in the ModelSpec registry, `modelspec://github.com/{org}/{repo}/{module}` in lower
+case, which for a manifest with its own model files is its own repository and the
+ModelSpec's module name, without `?ref=`.
+
+Every URL a manifest publishes (`url`, `deployment.url`, `deployment.discovery`,
+`deployment.recordset_page`, `publisher.url`) is public https: no credentials,
+query or fragment, no IP address (in any spelling), `localhost`, single-label
+name, or local, internal or reserved name (`.local`, `.internal`, `.lan`, `.svc`,
+`.home`, `.test`, `.example`, `.invalid`, `.onion`, …), and written in one
+canonical spelling: no trailing dot or empty label in the host, no `//` in the
+path, no percent-encoded letter, digit, `-`, `.`, `_` or `~`. A name that looks
+public but resolves to a private address (`127.0.0.1.nip.io`) cannot be seen from
+the text: clients must check the address they connect to. `recordset_page` has
+`{name}` exactly once, in the path only, and every URL generated from it is
+checked again. The canonical `url` also has `ovdb` as a complete path segment or as
+a subdomain: a host label left of the registered name, which is the last two
+labels, or the last three under a two-label suffix such as `co.uk`. So
+`https://acme.com/ovdb/sales`, `https://ovdb.acme.com/sales` and
+`https://x.ovdb.acme.co.uk/sales` count; `https://ovdb.com/sales`,
+`https://ovdb.co.uk/sales` (where `ovdb` is the registered name itself) and
+`https://acme.com/ovdbx/sales` do not.
+
+Names that reach `index.json` are checked too: ModelSpec entity, property and
+module names are identifiers (`[A-Za-z_][A-Za-z0-9_]*`, since recordset names are
+used in URLs and anchors), property types are type names, concept labels are
+plain strings, binding roles are `meaning/draft-1` roles, licences are SPDX-shaped.
 
 ## `index.json`
 
@@ -150,9 +171,12 @@ address pins, resolved through the MeaningGraph registry.
   sorted by concept and role.
 - `licence` is the manifest's `licences.data`: the licence of the database's data.
 - `model.name` is the ModelSpec module name. `model.path` is the meaning file's
-  `models:` entry for that module, made relative to the repository root: a
-  regular file tracked at the pinned commit. When the manifest has `model.hcl`
-  it must be that same file.
+  `models:` entry for that module, joined to the meaning file's directory (so
+  `../x.modelspec.hcl` from `model/sub/` is fine, leaving the repository is not):
+  a `.modelspec.hcl` file tracked at the pinned commit. When the manifest has
+  `model.hcl` it must be that same file. `model.address` is the manifest's
+  `model.address`, validated, and absent when the manifest has none; databases that
+  share a `model.address` are databases of the same model.
 - `recordsets` are the ModelSpec entities, and their names are the collection
   names the deployment serves. A recordset's `url` is the manifest's
   `deployment.recordset_page` template with `{name}` filled in, and is absent
@@ -185,8 +209,8 @@ address pins, resolved through the MeaningGraph registry.
   `customer-country` is an attribute of customer whose values are countries, so it
   extends nothing and takes its values from core `country`. `extends` is the full
   "is a kind of" chain, nearest first, resolved at the pinned commits; it is `[]`
-  when the concept extends nothing (a recordset's entity concept, such as
-  Chinook's `customer`, extends core `customer`). `values_of` is the concept's own
+  when the concept extends nothing. A recordset's entity concept is different:
+  Chinook's `customer` extends core `customer`. `values_of` is the concept's own
   `values-of` only, never inherited through `extends`, and it is absent when the
   concept sets none. Each `values_of` entry carries its own `extends` chain, so a
   page for a broader concept still finds the field: `Employee.ReportsTo` takes its
@@ -215,8 +239,8 @@ certificate authority, set `HTTPS_PROXY` or `GIT_SSL_CAINFO`.
 To list databases, read `index.json` from the default branch
 (`https://raw.githubusercontent.com/openvaultdb/directory/main/index.json`). To
 find the databases that carry a concept, look for it in the `meanings` of every
-recordset and field: as `concept` (with its `graph`), in `extends`, or in
-`values_of`. Read a build's input only from the default branch, and fail the
+recordset and field: as `concept` (with its `graph`), in `extends`, as
+`values_of`, or in the `extends` chain of `values_of`. Read a build's input only from the default branch, and fail the
 build when it cannot be read; do not fall back to stale data.
 
 ## Versioning
@@ -269,10 +293,12 @@ Two layers run in CI ([`.github/workflows/check.yml`](.github/workflows/check.ym
 The git cache is the user's, not the checkout's: `$XDG_CACHE_HOME/ovdb-directory`
 (or `~/.cache/ovdb-directory`), created private and refused if it is a link, owned
 by another user or writable by others; a cache inside the checkout is refused. A
-cached repository is used only after its configuration, alternates and objects
-have been verified (and is fetched again otherwise), and git runs with hooks and
-fsmonitor switched off, so nothing a pull request commits can run code in CI or on
-a maintainer's machine.
+cached repository is used only after its configuration, alternates, grafts, replace
+refs, links and objects have been verified (and is fetched again otherwise), and
+git runs with hooks, fsmonitor and replace refs switched off, so nothing a pull
+request commits can run code in CI or on a maintainer's machine. Each repository is
+made in a temporary directory and renamed into place, so two runs that start on an
+empty cache at the same time both work.
 
 `npm test` proves each check fails on a broken entry, offline, with local
 repositories standing in for the publisher and for the core meaning graph (a
@@ -282,10 +308,14 @@ branch has, a missing or unlisted `OVDB.md`, a manifest that disagrees with the
 record, recordsets that are not the ModelSpec entities, a binding to a missing
 entity or property, an unregistered graph, an address without or with a bad
 `?ref=`, an `extends` cycle or a chain over the limit, a bad or missing concept id,
-a model path that is missing, a link or leaves the repository, a manifest URL
-that is http, has credentials, a query, a fragment, names an IP address in any
-spelling, `localhost` or an internal host, a canonical `url` without `ovdb`, a
-planted hook or configuration in a cached repository, a damaged cache, a stale
+a model path that is missing, a link, not a `.modelspec.hcl` file or leaves the
+repository, a manifest URL that is http, has credentials, a query, a fragment,
+names an IP address in any spelling, `localhost` or an internal host, has
+`{name}` in the host, or is written in a second spelling, a canonical `url`
+without `ovdb`, names and values that are not identifiers or plain strings,
+malformed meaning data of every shape tried, a planted hook, replace ref, graft
+or configuration in a cached repository, a damaged cache, two runs on a cold
+cache, a stale
 `index.json`, repository values of every
 refused shape (`.git`, other hosts, `http`, `ssh`, `..`, option-like or
 shell-like text), git's environment and protocol restrictions, and that
@@ -317,13 +347,15 @@ Without both variables every test is skipped, not failed. `OVDB_DIRECTORY_INDEX_
 reads the index from a URL instead of this checkout; `PLAYWRIGHT_CHANNEL=chrome`
 runs the installed Chrome (otherwise `npx playwright install chromium` once).
 
-`npm run test:journey:selftest` shows the journey cannot go green while a step is
-broken: it runs the spec against mock sites ([`tests/journey/fixtures`](tests/journey/fixtures))
-and expects it to pass on the good pair and to fail on each pair with one
-deliberate defect (a search that returns nothing, a result that is not
-registered, a missing Customer recordset, a wrong field anchor, a concept page
-that omits the recordset, and others). It needs no real sites, only a browser, and
-runs in CI.
+`npm run test:journey:selftest` runs the spec against mock sites
+([`tests/journey/fixtures`](tests/journey/fixtures)) and expects it to pass on the
+good pair and to fail, on the assertion that belongs to it, on each of the
+deliberate defects listed in `mock-sites.mjs` (a search that returns nothing, a
+result that is not registered, a missing Customer recordset or its anchor, a
+recordset without concepts, a wrong field anchor, a concept page that omits the
+recordset, no live-deployment link, an example badge on Chinook, no example
+cards, no synonyms, and others). It does not show that no defect is possible
+outside that list. It needs no real sites, only a browser, and runs in CI.
 
 ## Licence
 

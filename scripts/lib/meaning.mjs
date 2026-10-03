@@ -28,8 +28,39 @@ export function parseConceptRef(ref) {
   return match ? { repo: match[1], id: match[2], ref: match[3] } : null;
 }
 
-// The English label, else the first label, else the id.
+// The English label, else the first label, else the id. (validateConcept has
+// already refused labels that are not short plain strings.)
 export const labelOf = (concept) => concept.labels?.en ?? Object.values(concept.labels ?? {})[0] ?? concept.id;
+
+// The roles a binding can have in meaning/draft-1.
+export const bindingRoles = ['entity', 'identifier', 'display-name', 'foreign-key', 'value'];
+
+// Problems with the shape of a concept, before any of it is published: the id,
+// the labels (short plain strings), extends and values-of (strings), and, when
+// `bindings` is asked for, the bindings list and each role. Never throws, whatever the file holds.
+export function validateConcept(concept, position, { bindings = false } = {}) {
+  const problems = [];
+  if (concept === null || typeof concept !== 'object' || Array.isArray(concept) || typeof concept.id !== 'string') return [`concept #${position + 1} has no id`];
+  if (!conceptIdPattern.test(concept.id)) return [`concept id ${JSON.stringify(concept.id)} must be lower-case words joined by single hyphens`];
+  const at = `concept ${concept.id}`;
+  if (concept.labels !== undefined) {
+    if (concept.labels === null || typeof concept.labels !== 'object' || Array.isArray(concept.labels)) problems.push(`${at}: labels must map language codes to labels`);
+    else {
+      for (const [language, label] of Object.entries(concept.labels)) {
+        if (typeof label !== 'string' || label.trim() === '' || label.length > 200 || /[\u0000-\u001f\u007f<>]/.test(label)) problems.push(`${at}: the ${language} label must be a plain string of at most 200 characters (no control characters, < or >)`);
+      }
+    }
+  }
+  for (const key of ['extends', 'values-of']) {
+    if (concept[key] !== undefined && typeof concept[key] !== 'string') problems.push(`${at}: ${key} must be a concept reference (a string)`);
+  }
+  if (bindings && concept.bindings !== undefined) {
+    if (!Array.isArray(concept.bindings)) problems.push(`${at}: bindings must be a list`);
+    else if (concept.bindings.some((binding) => binding === null || typeof binding !== 'object' || Array.isArray(binding))) problems.push(`${at}: every binding must be a mapping with model, role and property`);
+    else for (const binding of concept.bindings) if (!bindingRoles.includes(binding.role)) problems.push(`${at}: binding role ${JSON.stringify(binding.role)} must be one of ${bindingRoles.join(', ')}`);
+  }
+  return problems;
+}
 
 // The reference to a concept in a graph at a pinned commit.
 export const entryOf = (node, concept) => ({ graph: node.id, concept: concept.id, label: labelOf(concept), address: `meaning://${node.address}/${concept.id}?ref=${node.ref}` });
@@ -92,8 +123,8 @@ export function createMeaningResolver({ own, registry, urlFor = (url) => url, ca
       try { doc = parseYaml(files.read(path)); } catch (error) { return { error: `${ref0}: ${path} is not YAML: ${error.message.split('\n')[0]}` }; }
       if (doc?.concepts !== undefined && !Array.isArray(doc.concepts)) return { error: `${ref0}: ${path}: concepts must be a list` };
       for (const [position, concept] of (doc?.concepts ?? []).entries()) {
-        if (concept === null || typeof concept !== 'object' || typeof concept.id !== 'string') return { error: `${ref0}: ${path}: concept #${position + 1} has no id` };
-        if (!conceptIdPattern.test(concept.id)) return { error: `${ref0}: ${path}: concept id ${JSON.stringify(concept.id)} must be lower-case words joined by single hyphens` };
+        const shape = validateConcept(concept, position);
+        if (shape.length) return { error: `${ref0}: ${path}: ${shape[0]}` };
         if (concepts.has(concept.id)) return { error: `${ref0}: concept ${concept.id} is declared twice` };
         concepts.set(concept.id, concept);
       }

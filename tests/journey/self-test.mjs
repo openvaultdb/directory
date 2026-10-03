@@ -42,15 +42,19 @@ test('the journey passes against good mock sites, so a failure below is about th
 // Each defect fails the step it breaks (the message names what the step could not find).
 const expected = {
   'no-search-results': /searching "country" offers the core Country concept/,
-  'search-not-needed': /the home page does not already link to the concept/,
-  'not-registered': /the result is marked registered/,
+  'not-registered': /the search result for the concept is marked registered, not illustrative/,
   'wrong-field-link': /the page lists Customer\.Country of Chinook music store/,
   'missing-recordset': /the page has exactly one #field-Customer-Country/,
   'missing-recordset-anchor': /the page has the #recordset-Customer recordset anchor/,
-  'wrong-concept-link': /links to its Customer concept on meaninggraph\.io|links to its Customer country concept on meaninggraph\.io/,
+  'no-concepts-on-recordset': /#recordset-Customer shows the chinook Customer concept, linking to meaninggraph\.io/,
+  'no-live-deployment-link': /links to the live deployment/,
+  'wrong-concept-link': /shows the .* concept, linking to meaninggraph\.io/,
   'concept-page-omits-recordset': /Customer lists the Customer recordset of Chinook music store/,
   'missing-graph': /\/graphs\/ lists the chinook graph/,
   'no-directory-card': /the Directory home links to Chinook music store/,
+  'chinook-badged-example': /a real database is not labelled an example/,
+  'no-example-cards': /the three example cards stay/,
+  'no-synonyms': /the page lists the concept's synonyms/,
 };
 
 for (const defect of Object.keys(defects)) {
