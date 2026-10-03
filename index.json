@@ -1,0 +1,937 @@
+{
+  "format": "ovdb-directory/draft-1",
+  "checksum": "sha256:4fb9c10d3f05c1949c11d59d22efa2339309e5ca2b20d2f324c2cdd337126946",
+  "databases": [
+    {
+      "id": "chinook",
+      "title": "Chinook music store",
+      "description": "The Chinook sample database: a digital music store with artists, albums, tracks, playlists, customers, employees and invoices. Read-only, served from a pinned copy of the upstream SQLite fixture. Its recordsets and fields carry the meanings of the chinook meaning graph.",
+      "status": "draft",
+      "url": "https://chinookdb.com/ovdb/dbs/chinook",
+      "deployment": {
+        "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook",
+        "engine": "sqlite"
+      },
+      "repository": "https://github.com/datatug/chinookdb",
+      "commit": "be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+      "manifest": "ovdb.yaml",
+      "licence": "MIT",
+      "model": {
+        "name": "chinook",
+        "path": "model/chinook.modelspec.hcl"
+      },
+      "meaning_graph": {
+        "id": "chinook",
+        "address": "meaning://github.com/datatug/chinookdb"
+      },
+      "recordsets": [
+        {
+          "name": "Album",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Album",
+          "meanings": [
+            {
+              "graph": "chinook",
+              "concept": "album",
+              "label": "Album",
+              "role": "entity",
+              "address": "meaning://github.com/datatug/chinookdb/album?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "AlbumId",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Title",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "album",
+                  "label": "Album",
+                  "role": "display-name",
+                  "address": "meaning://github.com/datatug/chinookdb/album?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "ArtistId",
+              "type": "reference",
+              "references": "Artist",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "artist",
+                  "label": "Artist",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/datatug/chinookdb/artist?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Artist",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Artist",
+          "meanings": [
+            {
+              "graph": "chinook",
+              "concept": "artist",
+              "label": "Artist",
+              "role": "entity",
+              "address": "meaning://github.com/datatug/chinookdb/artist?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "ArtistId",
+              "type": "int",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "artist",
+                  "label": "Artist",
+                  "role": "identifier",
+                  "address": "meaning://github.com/datatug/chinookdb/artist?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "artist",
+                  "label": "Artist",
+                  "role": "display-name",
+                  "address": "meaning://github.com/datatug/chinookdb/artist?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Customer",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Customer",
+          "meanings": [
+            {
+              "graph": "chinook",
+              "concept": "customer",
+              "label": "Customer",
+              "role": "entity",
+              "address": "meaning://github.com/datatug/chinookdb/customer?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "customer",
+                  "label": "Customer",
+                  "address": "meaning://github.com/meaninggraph/core/customer?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "CustomerId",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "FirstName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "LastName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Company",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Address",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "City",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "State",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Country",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "customer-country",
+                  "label": "Customer country",
+                  "role": "value",
+                  "address": "meaning://github.com/datatug/chinookdb/customer-country?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": [],
+                  "values_of": {
+                    "graph": "core",
+                    "concept": "country",
+                    "label": "Country",
+                    "address": "meaning://github.com/meaninggraph/core/country?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7",
+                    "extends": []
+                  }
+                }
+              ]
+            },
+            {
+              "name": "PostalCode",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Phone",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Fax",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Email",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "SupportRepId",
+              "type": "reference",
+              "references": "Employee",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "support-rep",
+                  "label": "Support representative",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/datatug/chinookdb/support-rep?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": [],
+                  "values_of": {
+                    "graph": "chinook",
+                    "concept": "employee",
+                    "label": "Employee",
+                    "address": "meaning://github.com/datatug/chinookdb/employee?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                    "extends": [
+                      {
+                        "graph": "core",
+                        "concept": "employee",
+                        "label": "Employee",
+                        "address": "meaning://github.com/meaninggraph/core/employee?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      },
+                      {
+                        "graph": "core",
+                        "concept": "person",
+                        "label": "Person",
+                        "address": "meaning://github.com/meaninggraph/core/person?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Employee",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Employee",
+          "meanings": [
+            {
+              "graph": "chinook",
+              "concept": "employee",
+              "label": "Employee",
+              "role": "entity",
+              "address": "meaning://github.com/datatug/chinookdb/employee?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "employee",
+                  "label": "Employee",
+                  "address": "meaning://github.com/meaninggraph/core/employee?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                },
+                {
+                  "graph": "core",
+                  "concept": "person",
+                  "label": "Person",
+                  "address": "meaning://github.com/meaninggraph/core/person?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "EmployeeId",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "LastName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "FirstName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Title",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ReportsTo",
+              "type": "reference",
+              "references": "Employee",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "manager",
+                  "label": "Manager",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/datatug/chinookdb/manager?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "manager",
+                      "label": "Manager",
+                      "address": "meaning://github.com/meaninggraph/core/manager?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    }
+                  ],
+                  "values_of": {
+                    "graph": "chinook",
+                    "concept": "employee",
+                    "label": "Employee",
+                    "address": "meaning://github.com/datatug/chinookdb/employee?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                    "extends": [
+                      {
+                        "graph": "core",
+                        "concept": "employee",
+                        "label": "Employee",
+                        "address": "meaning://github.com/meaninggraph/core/employee?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      },
+                      {
+                        "graph": "core",
+                        "concept": "person",
+                        "label": "Person",
+                        "address": "meaning://github.com/meaninggraph/core/person?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "BirthDate",
+              "type": "datetime",
+              "meanings": []
+            },
+            {
+              "name": "HireDate",
+              "type": "datetime",
+              "meanings": []
+            },
+            {
+              "name": "Address",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "City",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "State",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Country",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "PostalCode",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Phone",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Fax",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Email",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Genre",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Genre",
+          "meanings": [
+            {
+              "graph": "chinook",
+              "concept": "genre",
+              "label": "Genre",
+              "role": "entity",
+              "address": "meaning://github.com/datatug/chinookdb/genre?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "GenreId",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "genre",
+                  "label": "Genre",
+                  "role": "display-name",
+                  "address": "meaning://github.com/datatug/chinookdb/genre?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Invoice",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Invoice",
+          "meanings": [
+            {
+              "graph": "chinook",
+              "concept": "invoice",
+              "label": "Invoice",
+              "role": "entity",
+              "address": "meaning://github.com/datatug/chinookdb/invoice?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "invoice",
+                  "label": "Invoice",
+                  "address": "meaning://github.com/meaninggraph/core/invoice?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "InvoiceId",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "CustomerId",
+              "type": "reference",
+              "references": "Customer",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "customer",
+                  "label": "Customer",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/datatug/chinookdb/customer?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "customer",
+                      "label": "Customer",
+                      "address": "meaning://github.com/meaninggraph/core/customer?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "InvoiceDate",
+              "type": "datetime",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "invoice-date",
+                  "label": "Invoice date",
+                  "role": "value",
+                  "address": "meaning://github.com/datatug/chinookdb/invoice-date?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "date",
+                      "label": "Date",
+                      "address": "meaning://github.com/meaninggraph/core/date?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "BillingAddress",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "BillingCity",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "BillingState",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "BillingCountry",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "billing-country",
+                  "label": "Country",
+                  "role": "value",
+                  "address": "meaning://github.com/datatug/chinookdb/billing-country?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": [],
+                  "values_of": {
+                    "graph": "core",
+                    "concept": "country",
+                    "label": "Country",
+                    "address": "meaning://github.com/meaninggraph/core/country?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7",
+                    "extends": []
+                  }
+                }
+              ]
+            },
+            {
+              "name": "BillingPostalCode",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Total",
+              "type": "decimal",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "invoice-total",
+                  "label": "Invoice total",
+                  "role": "value",
+                  "address": "meaning://github.com/datatug/chinookdb/invoice-total?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "invoice-total",
+                      "label": "Invoice total",
+                      "address": "meaning://github.com/meaninggraph/core/invoice-total?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    },
+                    {
+                      "graph": "core",
+                      "concept": "money-amount",
+                      "label": "Money amount",
+                      "address": "meaning://github.com/meaninggraph/core/money-amount?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    }
+                  ]
+                },
+                {
+                  "graph": "chinook",
+                  "concept": "music-sales",
+                  "label": "Music sales",
+                  "role": "value",
+                  "address": "meaning://github.com/datatug/chinookdb/music-sales?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "revenue",
+                      "label": "Revenue",
+                      "address": "meaning://github.com/meaninggraph/core/revenue?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "InvoiceLine",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/InvoiceLine",
+          "meanings": [
+            {
+              "graph": "chinook",
+              "concept": "invoice-line",
+              "label": "Invoice line",
+              "role": "entity",
+              "address": "meaning://github.com/datatug/chinookdb/invoice-line?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "invoice-line",
+                  "label": "Invoice line",
+                  "address": "meaning://github.com/meaninggraph/core/invoice-line?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "InvoiceLineId",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "InvoiceId",
+              "type": "reference",
+              "references": "Invoice",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "invoice",
+                  "label": "Invoice",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/datatug/chinookdb/invoice?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "invoice",
+                      "label": "Invoice",
+                      "address": "meaning://github.com/meaninggraph/core/invoice?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "TrackId",
+              "type": "reference",
+              "references": "Track",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "track",
+                  "label": "Track",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/datatug/chinookdb/track?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "UnitPrice",
+              "type": "decimal",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "unit-price",
+                  "label": "Unit price",
+                  "role": "value",
+                  "address": "meaning://github.com/datatug/chinookdb/unit-price?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "unit-price",
+                      "label": "Unit price",
+                      "address": "meaning://github.com/meaninggraph/core/unit-price?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    },
+                    {
+                      "graph": "core",
+                      "concept": "price",
+                      "label": "Price",
+                      "address": "meaning://github.com/meaninggraph/core/price?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    },
+                    {
+                      "graph": "core",
+                      "concept": "money-amount",
+                      "label": "Money amount",
+                      "address": "meaning://github.com/meaninggraph/core/money-amount?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Quantity",
+              "type": "int",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "quantity",
+                  "label": "Quantity",
+                  "role": "value",
+                  "address": "meaning://github.com/datatug/chinookdb/quantity?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "quantity",
+                      "label": "Quantity",
+                      "address": "meaning://github.com/meaninggraph/core/quantity?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "MediaType",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/MediaType",
+          "meanings": [
+            {
+              "graph": "chinook",
+              "concept": "media-type",
+              "label": "Media type",
+              "role": "entity",
+              "address": "meaning://github.com/datatug/chinookdb/media-type?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "MediaTypeId",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "media-type",
+                  "label": "Media type",
+                  "role": "display-name",
+                  "address": "meaning://github.com/datatug/chinookdb/media-type?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Playlist",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Playlist",
+          "meanings": [
+            {
+              "graph": "chinook",
+              "concept": "playlist",
+              "label": "Playlist",
+              "role": "entity",
+              "address": "meaning://github.com/datatug/chinookdb/playlist?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "PlaylistId",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "playlist",
+                  "label": "Playlist",
+                  "role": "display-name",
+                  "address": "meaning://github.com/datatug/chinookdb/playlist?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "PlaylistTrack",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/PlaylistTrack",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "PlaylistId",
+              "type": "reference",
+              "references": "Playlist",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "playlist",
+                  "label": "Playlist",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/datatug/chinookdb/playlist?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "TrackId",
+              "type": "reference",
+              "references": "Track",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Track",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Track",
+          "meanings": [
+            {
+              "graph": "chinook",
+              "concept": "track",
+              "label": "Track",
+              "role": "entity",
+              "address": "meaning://github.com/datatug/chinookdb/track?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "TrackId",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "track",
+                  "label": "Track",
+                  "role": "display-name",
+                  "address": "meaning://github.com/datatug/chinookdb/track?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "AlbumId",
+              "type": "reference",
+              "references": "Album",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "album",
+                  "label": "Album",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/datatug/chinookdb/album?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "MediaTypeId",
+              "type": "reference",
+              "references": "MediaType",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "media-type",
+                  "label": "Media type",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/datatug/chinookdb/media-type?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "GenreId",
+              "type": "reference",
+              "references": "Genre",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "genre",
+                  "label": "Genre",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/datatug/chinookdb/genre?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "Composer",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Milliseconds",
+              "type": "int",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "track-length",
+                  "label": "Track length",
+                  "role": "value",
+                  "address": "meaning://github.com/datatug/chinookdb/track-length?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "Bytes",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "UnitPrice",
+              "type": "decimal",
+              "meanings": [
+                {
+                  "graph": "chinook",
+                  "concept": "list-price",
+                  "label": "List price",
+                  "role": "value",
+                  "address": "meaning://github.com/datatug/chinookdb/list-price?ref=be96bf45fdfa13559b6627d281c1e30ce92ad38f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "price",
+                      "label": "Price",
+                      "address": "meaning://github.com/meaninggraph/core/price?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    },
+                    {
+                      "graph": "core",
+                      "concept": "money-amount",
+                      "label": "Money amount",
+                      "address": "meaning://github.com/meaninggraph/core/money-amount?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
