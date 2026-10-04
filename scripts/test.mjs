@@ -514,9 +514,9 @@ test('the manifest needs its required fields, and its url, id and graph must agr
   expectProblem(await problemsOf(world({ publisher: (files) => files.set('ovdb.yaml', ': : not yaml [') })), /ovdb\.yaml is not valid YAML/);
 });
 
-test('recordsets are exactly the ModelSpec entities', async () => {
+test('recordsets map one-to-one to ModelSpec entities', async () => {
   expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.recordsets = manifest.recordsets.filter((name) => name !== 'Genre'); }) })), /ovdb\.yaml: recordsets lacks ModelSpec entities: Genre/);
-  expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.recordsets.push('Ghost'); }) })), /ovdb\.yaml: recordsets names things that are not ModelSpec entities: Ghost/);
+  expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.recordsets.push('Ghost'); }) })), /ovdb\.yaml: recordsets names things that do not map to ModelSpec entities: Ghost/);
   expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.recordsets.push('Genre'); }) })), /ovdb\.yaml: recordsets lists a name twice/);
 });
 
@@ -1049,7 +1049,7 @@ test('a recordset url is built from names that cannot change what it points at: 
   const cases = [
     ['https://169.254.169.{name}/latest/meta-data', '254', /\{name\} in the path only/],
     ['https://metadata.google.{name}/computeMetadata/v1', 'internal', /\{name\} in the path only/],
-    ['https://cloud.openvaultdb.com/a/b/{name}/admin', '..', /entity name ".." must be an identifier/],
+    ['https://cloud.openvaultdb.com/a/b/{name}/admin', '..', /recordsets name "\.\." must be at most 256 characters and contain no dot, slash, backslash or control character/],
   ];
   for (const [template, entity, pattern] of cases) {
     const w = world({
@@ -1372,11 +1372,11 @@ test('a shared model is read at its pin: the registered module, the model file, 
 test('a shared model\'s recordsets are exactly its entities, unless the manifest lists a subset and says recordsets_partial: true', async () => {
   const listing = (names, partial) => hosterManifestEdit((manifest) => { manifest.recordsets = names; if (partial !== undefined) manifest.recordsets_partial = partial; });
   expectProblem(await sharedProblems(sharedWorld(listing(chinookEntities.filter((name) => name !== 'Genre')))), /ovdb\.yaml: recordsets lacks ModelSpec entities: Genre \(to list a subset of a shared model, list it explicitly and set recordsets_partial: true\)/);
-  expectProblem(await sharedProblems(sharedWorld(listing([...chinookEntities, 'Ghost']))), /ovdb\.yaml: recordsets names things that are not ModelSpec entities: Ghost/);
+  expectProblem(await sharedProblems(sharedWorld(listing([...chinookEntities, 'Ghost']))), /ovdb\.yaml: recordsets names things that do not map to ModelSpec entities: Ghost/);
   expectProblem(await sharedProblems(sharedWorld(listing([...chinookEntities, 'Genre']))), /ovdb\.yaml: recordsets lists a name twice/);
-  expectProblem(await sharedProblems(sharedWorld(listing(['Artist', 'Ghost'], true))), /recordsets names things that are not ModelSpec entities: Ghost/);
+  expectProblem(await sharedProblems(sharedWorld(listing(['Artist', 'Ghost'], true))), /recordsets names things that do not map to ModelSpec entities: Ghost/);
   expectProblem(await sharedProblems(sharedWorld(listing(chinookEntities, true))), /recordsets_partial is true, but recordsets lists every ModelSpec entity; remove recordsets_partial/);
-  expectProblem(await sharedProblems(sharedWorld(listing(['Album'], true))), /recordsets lists Album, which references Artist, but a partial list must also list every entity a listed entity references/);
+  expectProblem(await sharedProblems(sharedWorld(listing(['Album'], true))), /recordsets lists Album, which references ModelSpec entity Artist, but a partial list must also include its mapped recordset/);
   expectProblem(await sharedProblems(sharedWorld(listing(['Artist'], 'yes'))), /recordsets_partial must be true or false/);
   expectProblem(await sharedProblems(sharedWorld(listing([], true))), /recordsets must be a non-empty list of names/);
   // recordsets_partial: false is the same as leaving it out.
