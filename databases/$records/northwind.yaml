@@ -1,0 +1,14 @@
+format: ovdb-directory/draft-1
+title: Northwind small-business sample database
+description: >-
+  The classic Northwind sample database for customers, orders, products,
+  suppliers, shippers, territories and employees. The pinned SQLite build is
+  read-only; the native schema includes 13 tables and 17 views.
+status: draft
+url: https://northwind.demodb.dev/ovdb/dbs/northwind
+repository: https://github.com/demo-db/northwind
+commit: 3253072905253d3815dd5a3a2b94f8f257522424
+manifest: ovdb.yaml
+meaning_graph: northwind
+maintainers:
+  - trakhimenok

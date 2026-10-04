@@ -29,12 +29,12 @@ meaning:
   # Registered as `chinook` in github.com/meaninggraph/registry.
   graph:
     id: chinook
-    address: meaning://github.com/datatug/chinookdb
+    address: meaning://github.com/demo-db/chinook
 
 publisher:
-  name: DataTug
-  url: https://github.com/datatug
-  repository: https://github.com/datatug/chinookdb
+  name: DemoDB
+  url: https://github.com/demo-db
+  repository: https://github.com/demo-db/chinook
 
 # licences.data is the licence the Directory shows for the database: the data is the upstream
 # Chinook data (Copyright (c) 2008-2024 Luis Rocha), MIT. The model and the meaning file are

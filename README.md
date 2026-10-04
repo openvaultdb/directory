@@ -9,7 +9,8 @@ carry. The Directory website is a separate repository; it reads
 
 | Id | Canonical URL | Repository at commit | Status |
 |---|---|---|---|
-| `chinook` | `https://chinookdb.com/ovdb/dbs/chinook` | [datatug/chinookdb@f0c71b9](https://github.com/datatug/chinookdb/tree/f0c71b959bd082c3ec495df5fbecb4af014d6d12) | draft |
+| `chinook` | `https://chinookdb.com/ovdb/dbs/chinook` | [demo-db/chinook@184f9ee](https://github.com/demo-db/chinook/tree/184f9ee22101f8f56016c7963d18a406beffa013) | draft |
+| `northwind` | `https://northwind.demodb.dev/ovdb/dbs/northwind` | [demo-db/northwind@8e9755a](https://github.com/demo-db/northwind/tree/8e9755ae30bb99f15601a7dd3833199f59d37035) | draft |
 
 ## This repository is the source of truth
 
@@ -90,7 +91,7 @@ Keyed by GitHub handle, with a `name`.
 A publisher repository opts in with a root `OVDB.md` whose frontmatter is
 `ovdb: 1` and `publish: [./ovdb.yaml]`, an explicit list of manifest paths
 relative to the repository root, never a glob. The manifest (`ovdb-manifest/draft-1`,
-for example [`ovdb.yaml` of Chinook](https://github.com/datatug/chinookdb/blob/f0c71b959bd082c3ec495df5fbecb4af014d6d12/ovdb.yaml))
+for example [`ovdb.yaml` of Chinook](https://github.com/demo-db/chinook/blob/184f9ee22101f8f56016c7963d18a406beffa013/ovdb.yaml))
 declares the canonical `url`, the `deployment` (`url`, `engine`, `discovery` on
 the canonical origin, and an optional `recordset_page` template with `{name}`),
 an optional `homepage` (the publisher's own web page for the database, which a site
@@ -153,9 +154,9 @@ model files and no local meaning file, and both pins are required:
 
 ```yaml
 model:
-  address: modelspec://github.com/datatug/chinookdb/chinook?ref=<40 hex>
+  address: modelspec://github.com/demo-db/chinook/chinook?ref=<40 hex>
 meaning:
-  address: meaning://github.com/datatug/chinookdb?ref=<40 hex>
+  address: meaning://github.com/demo-db/chinook?ref=<40 hex>
   file: model/chinook.meaning.yaml    # the graph's file, in the graph's repository, that binds the model
   graph:
     id: chinook                       # the MeaningGraph registry id; equals the record's meaning_graph
@@ -214,7 +215,7 @@ listed:
    the same repository, the two pins are the same commit, and the path is the
    registry's `files.source`. When they live in different repositories a relative
    path cannot say which model is meant and is refused; the entry must be the
-   model's address instead (`chinook: modelspec://github.com/datatug/chinookdb/chinook`,
+   model's address instead (`chinook: modelspec://github.com/demo-db/chinook/chinook`,
    with `?ref=` only if it is the manifest's pin). Bindings are written
    `modelspec:///{module}.{Entity}`, or with the shared model's own address (and pin)
    spelled out; a binding to any other model is refused.
@@ -325,13 +326,13 @@ address at the commit that address pins, resolved through the MeaningGraph regis
     "title": "…", "description": "…", "status": "draft",
     "url": "https://chinookdb.com/ovdb/dbs/chinook",
     "deployment": { "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook", "engine": "sqlite" },
-    "homepage": "https://chinookdb.com/",
-    "repository": "https://github.com/datatug/chinookdb",
+    "homepage": "https://chinook.demodb.dev/",
+    "repository": "https://github.com/demo-db/chinook",
     "commit": "<40 hex>",
     "manifest": "ovdb.yaml",
     "licence": "MIT",
-    "model": { "name": "chinook", "path": "model/chinook.modelspec.hcl", "address": "modelspec://github.com/datatug/chinookdb/chinook" },
-    "meaning_graph": { "id": "chinook", "address": "meaning://github.com/datatug/chinookdb" },
+    "model": { "name": "chinook", "path": "model/chinook.modelspec.hcl", "address": "modelspec://github.com/demo-db/chinook/chinook" },
+    "meaning_graph": { "id": "chinook", "address": "meaning://github.com/demo-db/chinook" },
     "recordsets": [{
       "name": "Customer",
       "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Customer",
@@ -395,7 +396,7 @@ address at the commit that address pins, resolved through the MeaningGraph regis
     "concept": "customer-country",
     "label": "Customer country",
     "role": "value",
-    "address": "meaning://github.com/datatug/chinookdb/customer-country?ref=<40 hex>",
+    "address": "meaning://github.com/demo-db/chinook/customer-country?ref=<40 hex>",
     "extends": [],
     "values_of": {
       "graph": "core",
