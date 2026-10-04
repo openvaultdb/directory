@@ -1,0 +1,16 @@
+format: ovdb-directory/draft-1
+title: Microsoft Pubs publishing sample
+description: >-
+  The classic Microsoft Pubs sample database for authors, publications,
+  publishers, stores, sales and publisher-logo images. Its read-only SQLite
+  source preserves all eleven native tables, including two tables without
+  primary or unique keys.
+status: draft
+url: https://demodb.dev/pubs/
+repository: https://github.com/demo-db/pubs
+commit: 34501946b0478b7e2ae13c15b4c57019109b5edc
+manifest: ovdb.yaml
+database_manifest: ovdb-database.json
+meaning_graph: pubs
+maintainers:
+  - trakhimenok
