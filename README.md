@@ -9,8 +9,8 @@ carry. The Directory website is a separate repository; it reads
 
 | Id | Canonical URL | Repository at commit | Status |
 |---|---|---|---|
-| `chinook` | `https://chinookdb.com/ovdb/dbs/chinook` | [demo-db/chinook@184f9ee](https://github.com/demo-db/chinook/tree/184f9ee22101f8f56016c7963d18a406beffa013) | draft |
-| `northwind` | `https://northwind.demodb.dev/ovdb/dbs/northwind` | [demo-db/northwind@8e9755a](https://github.com/demo-db/northwind/tree/8e9755ae30bb99f15601a7dd3833199f59d37035) | draft |
+| `chinook` | `https://chinookdb.com/ovdb/dbs/chinook` | [demo-db/chinook@f11b119](https://github.com/demo-db/chinook/tree/f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b) | draft |
+| `northwind` | `https://northwind.demodb.dev/ovdb/dbs/northwind` | [demo-db/northwind@f585569](https://github.com/demo-db/northwind/tree/f5855699eafaba6f09b7f4897abdb2a304698b67) | draft |
 
 ## This repository is the source of truth
 
@@ -91,7 +91,7 @@ Keyed by GitHub handle, with a `name`.
 A publisher repository opts in with a root `OVDB.md` whose frontmatter is
 `ovdb: 1` and `publish: [./ovdb.yaml]`, an explicit list of manifest paths
 relative to the repository root, never a glob. The manifest (`ovdb-manifest/draft-1`,
-for example [`ovdb.yaml` of Chinook](https://github.com/demo-db/chinook/blob/184f9ee22101f8f56016c7963d18a406beffa013/ovdb.yaml))
+for example [`ovdb.yaml` of Chinook](https://github.com/demo-db/chinook/blob/f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b/ovdb.yaml))
 declares the canonical `url`, the `deployment` (`url`, `engine`, `discovery` on
 the canonical origin, and an optional `recordset_page` template with `{name}`),
 an optional `homepage` (the publisher's own web page for the database, which a site
