@@ -1,6 +1,6 @@
 {
   "format": "ovdb-directory/draft-1",
-  "checksum": "sha256:038e679272bafdae3f6cdb86ad43858c5e335af3a4445a1a31ba011576833a8f",
+  "checksum": "sha256:ce2fb2a14ef4ada79f186f23a5b4d97e85d8d76cd97ef718e1a4ad6aaedca9d7",
   "databases": [
     {
       "id": "https://demodb.dev/chinook/",
@@ -1634,6 +1634,667 @@
               "name": "RegionID",
               "type": "reference",
               "references": "Regions",
+              "meanings": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "https://demodb.dev/pubs/",
+      "recordId": "pubs",
+      "localId": "pubs",
+      "directoryPath": "/ovdb/demodb.dev/pubs/",
+      "serverId": "https://demodb.dev/ovdb",
+      "serverDbBaseUrl": "https://demodb.dev/ovdb/db/pubs/",
+      "apiUrl": "https://demodb.dev/ovdb/v1/databases/pubs",
+      "title": "Microsoft Pubs publishing sample",
+      "description": "The classic Microsoft Pubs sample database for authors, publications, publishers, stores, sales and publisher-logo images. Its read-only SQLite source preserves all eleven native tables, including two tables without primary or unique keys.",
+      "status": "draft",
+      "url": "https://demodb.dev/pubs/",
+      "deployment": {
+        "url": "https://cloud.openvaultdb.com/ovdb/dbs/pubs",
+        "engine": "sqlite"
+      },
+      "homepage": "https://pubs.demodb.dev/",
+      "repository": "https://github.com/demo-db/pubs",
+      "commit": "34501946b0478b7e2ae13c15b4c57019109b5edc",
+      "manifest": "ovdb.yaml",
+      "licence": "MIT",
+      "model": {
+        "name": "pubs",
+        "path": "model/pubs.modelspec.hcl",
+        "address": "modelspec://github.com/demo-db/pubs/pubs"
+      },
+      "meaning_graph": {
+        "id": "pubs",
+        "address": "meaning://github.com/demo-db/pubs"
+      },
+      "recordsets": [
+        {
+          "name": "authors",
+          "modelEntity": "authors",
+          "meanings": [
+            {
+              "graph": "pubs",
+              "concept": "author",
+              "label": "Author",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/pubs/author?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "person",
+                  "label": "Person",
+                  "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "au_id",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "au_lname",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "au_fname",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "phone",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "address",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "city",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "state",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "zip",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "contract",
+              "type": "int",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "discounts",
+          "modelEntity": "discounts",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "discounttype",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "stor_id",
+              "type": "reference",
+              "references": "stores",
+              "meanings": [
+                {
+                  "graph": "pubs",
+                  "concept": "store",
+                  "label": "Store",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/pubs/store?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "lowqty",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "highqty",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "discount",
+              "type": "decimal",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "employee",
+          "modelEntity": "employee",
+          "meanings": [
+            {
+              "graph": "pubs",
+              "concept": "employee",
+              "label": "Employee",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/pubs/employee?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "employee",
+                  "label": "Employee",
+                  "address": "meaning://github.com/meaninggraph/core/employee?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                },
+                {
+                  "graph": "core",
+                  "concept": "person",
+                  "label": "Person",
+                  "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "emp_id",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "fname",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "minit",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "lname",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "job_id",
+              "type": "reference",
+              "references": "jobs",
+              "meanings": []
+            },
+            {
+              "name": "job_lvl",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "pub_id",
+              "type": "reference",
+              "references": "publishers",
+              "meanings": [
+                {
+                  "graph": "pubs",
+                  "concept": "publisher",
+                  "label": "Publisher",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "organization",
+                      "label": "Organization",
+                      "address": "meaning://github.com/meaninggraph/core/organization?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "hire_date",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "jobs",
+          "modelEntity": "jobs",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "job_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "job_desc",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "min_lvl",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "max_lvl",
+              "type": "int",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "pub_info",
+          "modelEntity": "pub_info",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "pub_id",
+              "type": "reference",
+              "references": "publishers",
+              "meanings": [
+                {
+                  "graph": "pubs",
+                  "concept": "publisher",
+                  "label": "Publisher",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "organization",
+                      "label": "Organization",
+                      "address": "meaning://github.com/meaninggraph/core/organization?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "logo",
+              "type": "document",
+              "meanings": []
+            },
+            {
+              "name": "pr_info",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "publishers",
+          "modelEntity": "publishers",
+          "meanings": [
+            {
+              "graph": "pubs",
+              "concept": "publisher",
+              "label": "Publisher",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/pubs/publisher?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "organization",
+                  "label": "Organization",
+                  "address": "meaning://github.com/meaninggraph/core/organization?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "pub_id",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "pub_name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "city",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "state",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "country",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "roysched",
+          "modelEntity": "roysched",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "title_id",
+              "type": "reference",
+              "references": "titles",
+              "meanings": [
+                {
+                  "graph": "pubs",
+                  "concept": "book",
+                  "label": "Book",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/pubs/book?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "lorange",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "hirange",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "royalty",
+              "type": "int",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "sales",
+          "modelEntity": "sales",
+          "meanings": [
+            {
+              "graph": "pubs",
+              "concept": "sale",
+              "label": "Sale",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/pubs/sale?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "stor_id",
+              "type": "reference",
+              "references": "stores",
+              "meanings": [
+                {
+                  "graph": "pubs",
+                  "concept": "store",
+                  "label": "Store",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/pubs/store?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "ord_num",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ord_date",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "qty",
+              "type": "int",
+              "meanings": [
+                {
+                  "graph": "pubs",
+                  "concept": "sale-quantity",
+                  "label": "Sale quantity",
+                  "role": "value",
+                  "address": "meaning://github.com/demo-db/pubs/sale-quantity?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "payterms",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "title_id",
+              "type": "reference",
+              "references": "titles",
+              "meanings": [
+                {
+                  "graph": "pubs",
+                  "concept": "book",
+                  "label": "Book",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/pubs/book?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "extends": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "stores",
+          "modelEntity": "stores",
+          "meanings": [
+            {
+              "graph": "pubs",
+              "concept": "store",
+              "label": "Store",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/pubs/store?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "stor_id",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "stor_name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "stor_address",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "city",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "state",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "zip",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "titleauthor",
+          "modelEntity": "titleauthor",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "au_id",
+              "type": "reference",
+              "references": "authors",
+              "meanings": [
+                {
+                  "graph": "pubs",
+                  "concept": "author",
+                  "label": "Author",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/pubs/author?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "person",
+                      "label": "Person",
+                      "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "title_id",
+              "type": "reference",
+              "references": "titles",
+              "meanings": [
+                {
+                  "graph": "pubs",
+                  "concept": "book",
+                  "label": "Book",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/pubs/book?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "au_ord",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "royaltyper",
+              "type": "int",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "titles",
+          "modelEntity": "titles",
+          "meanings": [
+            {
+              "graph": "pubs",
+              "concept": "book",
+              "label": "Book",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/pubs/book?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "title_id",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "type",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "pub_id",
+              "type": "reference",
+              "references": "publishers",
+              "meanings": [
+                {
+                  "graph": "pubs",
+                  "concept": "publisher",
+                  "label": "Publisher",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "organization",
+                      "label": "Organization",
+                      "address": "meaning://github.com/meaninggraph/core/organization?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "price",
+              "type": "decimal",
+              "meanings": [
+                {
+                  "graph": "pubs",
+                  "concept": "book-price",
+                  "label": "Book price",
+                  "role": "value",
+                  "address": "meaning://github.com/demo-db/pubs/book-price?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "price",
+                      "label": "Price",
+                      "address": "meaning://github.com/meaninggraph/core/price?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    },
+                    {
+                      "graph": "core",
+                      "concept": "money-amount",
+                      "label": "Money amount",
+                      "address": "meaning://github.com/meaninggraph/core/money-amount?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "advance",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "royalty",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ytd_sales",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "notes",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "pubdate",
+              "type": "string",
               "meanings": []
             }
           ]

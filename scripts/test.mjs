@@ -877,6 +877,28 @@ test('the committed index.json has the documented shape and its own checksum', (
   const records = readDirectory(root).databases.map((record) => record.key).sort();
   assert.deepEqual(committed.databases.map((database) => database.recordId), records);
   assert.deepEqual(committed.databases.map((database) => database.id), readDirectory(root).databases.map((record) => record.data.url).sort());
+  const pubsRecord = readDirectory(root).databases.find((record) => record.key === 'pubs');
+  assert.ok(pubsRecord, 'the Pubs provider has a committed Directory record');
+  assert.deepEqual(
+    [pubsRecord.data.url, pubsRecord.data.repository, pubsRecord.data.commit, pubsRecord.data.manifest, pubsRecord.data.database_manifest, pubsRecord.data.meaning_graph],
+    ['https://demodb.dev/pubs/', 'https://github.com/demo-db/pubs', '34501946b0478b7e2ae13c15b4c57019109b5edc', 'ovdb.yaml', 'ovdb-database.json', 'pubs'],
+  );
+  const pubs = committed.databases.find((database) => database.recordId === 'pubs');
+  assert.ok(pubs, 'the Pubs database appears in the generated index');
+  assert.deepEqual([pubs.id, pubs.localId, pubs.directoryPath, pubs.serverDbBaseUrl, pubs.apiUrl], [
+    'https://demodb.dev/pubs/',
+    'pubs',
+    '/ovdb/demodb.dev/pubs/',
+    'https://demodb.dev/ovdb/db/pubs/',
+    'https://demodb.dev/ovdb/v1/databases/pubs',
+  ]);
+  assert.deepEqual(pubs.recordsets.map((recordset) => recordset.name).sort(), [
+    'authors', 'discounts', 'employee', 'jobs', 'pub_info', 'publishers',
+    'roysched', 'sales', 'stores', 'titleauthor', 'titles',
+  ]);
+  for (const name of ['discounts', 'roysched']) {
+    assert.ok(pubs.recordsets.some((recordset) => recordset.name === name), `${name} is present despite having no primary key`);
+  }
   assert.equal(readFileSync(path, 'utf8'), `${JSON.stringify(committed, null, 2)}\n`);
 });
 
