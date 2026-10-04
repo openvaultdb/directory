@@ -881,7 +881,7 @@ test('the committed index.json has the documented shape and its own checksum', (
   assert.ok(pubsRecord, 'the Pubs provider has a committed Directory record');
   assert.deepEqual(
     [pubsRecord.data.url, pubsRecord.data.repository, pubsRecord.data.commit, pubsRecord.data.manifest, pubsRecord.data.database_manifest, pubsRecord.data.meaning_graph],
-    ['https://demodb.dev/pubs/', 'https://github.com/demo-db/pubs', '34501946b0478b7e2ae13c15b4c57019109b5edc', 'ovdb.yaml', 'ovdb-database.json', 'pubs'],
+    ['https://demodb.dev/pubs/', 'https://github.com/demo-db/pubs', '6c06c5c7395b03ff1a02c2b1a21485add3e1b65b', 'ovdb.yaml', 'ovdb-database.json', 'pubs'],
   );
   const pubs = committed.databases.find((database) => database.recordId === 'pubs');
   assert.ok(pubs, 'the Pubs database appears in the generated index');
@@ -899,6 +899,22 @@ test('the committed index.json has the documented shape and its own checksum', (
   for (const name of ['discounts', 'roysched']) {
     assert.ok(pubs.recordsets.some((recordset) => recordset.name === name), `${name} is present despite having no primary key`);
   }
+  const sakilaRecord = readDirectory(root).databases.find((record) => record.key === 'sakila');
+  assert.ok(sakilaRecord, 'the Sakila provider has a committed Directory record');
+  assert.deepEqual(
+    [sakilaRecord.data.url, sakilaRecord.data.repository, sakilaRecord.data.commit, sakilaRecord.data.manifest, sakilaRecord.data.database_manifest, sakilaRecord.data.meaning_graph],
+    ['https://demodb.dev/sakila/', 'https://github.com/demo-db/sakila', '6567d30aec1592fe0917934a8bbe74ff70b04b01', 'ovdb.yaml', 'ovdb-database.json', 'sakila'],
+  );
+  const sakila = committed.databases.find((database) => database.recordId === 'sakila');
+  assert.ok(sakila, 'the Sakila database appears in the generated index');
+  assert.deepEqual([sakila.id, sakila.localId, sakila.directoryPath, sakila.serverDbBaseUrl, sakila.apiUrl], [
+    'https://demodb.dev/sakila/',
+    'sakila',
+    '/ovdb/demodb.dev/sakila/',
+    'https://demodb.dev/ovdb/db/sakila/',
+    'https://demodb.dev/ovdb/v1/databases/sakila',
+  ]);
+  assert.deepEqual(sakila.recordsets.map((recordset) => recordset.name), ['actor', 'address', 'category', 'city', 'country', 'customer', 'film', 'film_actor', 'film_category', 'film_text', 'inventory', 'language', 'payment', 'rental', 'staff', 'store']);
   assert.equal(readFileSync(path, 'utf8'), `${JSON.stringify(committed, null, 2)}\n`);
 });
 

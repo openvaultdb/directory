@@ -1,0 +1,14 @@
+format: ovdb-directory/draft-1
+title: Sakila video rental sample
+description: >-
+  MySQL's Sakila video rental sample, published as a read-only SQLite fixture
+  with native tables, views, keys, foreign keys, and BLOB values preserved.
+status: draft
+url: https://demodb.dev/sakila/
+repository: https://github.com/demo-db/sakila
+commit: 6567d30aec1592fe0917934a8bbe74ff70b04b01
+manifest: ovdb.yaml
+database_manifest: ovdb-database.json
+meaning_graph: sakila
+maintainers:
+  - trakhimenok

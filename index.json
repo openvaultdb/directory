@@ -1,6 +1,6 @@
 {
   "format": "ovdb-directory/draft-1",
-  "checksum": "sha256:ce2fb2a14ef4ada79f186f23a5b4d97e85d8d76cd97ef718e1a4ad6aaedca9d7",
+  "checksum": "sha256:a40f66f811e9606e47efbd9c29a067b2e19f749fb3d8274c3b20436f38a04865",
   "databases": [
     {
       "id": "https://demodb.dev/chinook/",
@@ -1658,7 +1658,7 @@
       },
       "homepage": "https://pubs.demodb.dev/",
       "repository": "https://github.com/demo-db/pubs",
-      "commit": "34501946b0478b7e2ae13c15b4c57019109b5edc",
+      "commit": "6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
       "manifest": "ovdb.yaml",
       "licence": "MIT",
       "model": {
@@ -1680,7 +1680,7 @@
               "concept": "author",
               "label": "Author",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/pubs/author?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+              "address": "meaning://github.com/demo-db/pubs/author?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
               "extends": [
                 {
                   "graph": "core",
@@ -1759,7 +1759,7 @@
                   "concept": "store",
                   "label": "Store",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/store?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "address": "meaning://github.com/demo-db/pubs/store?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
                   "extends": []
                 }
               ]
@@ -1790,7 +1790,7 @@
               "concept": "employee",
               "label": "Employee",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/pubs/employee?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+              "address": "meaning://github.com/demo-db/pubs/employee?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
               "extends": [
                 {
                   "graph": "core",
@@ -1849,7 +1849,7 @@
                   "concept": "publisher",
                   "label": "Publisher",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
                   "extends": [
                     {
                       "graph": "core",
@@ -1910,7 +1910,7 @@
                   "concept": "publisher",
                   "label": "Publisher",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
                   "extends": [
                     {
                       "graph": "core",
@@ -1943,7 +1943,7 @@
               "concept": "publisher",
               "label": "Publisher",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/pubs/publisher?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+              "address": "meaning://github.com/demo-db/pubs/publisher?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
               "extends": [
                 {
                   "graph": "core",
@@ -1997,7 +1997,7 @@
                   "concept": "book",
                   "label": "Book",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/book?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "address": "meaning://github.com/demo-db/pubs/book?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
                   "extends": []
                 }
               ]
@@ -2028,7 +2028,7 @@
               "concept": "sale",
               "label": "Sale",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/pubs/sale?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+              "address": "meaning://github.com/demo-db/pubs/sale?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
               "extends": []
             }
           ],
@@ -2043,7 +2043,7 @@
                   "concept": "store",
                   "label": "Store",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/store?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "address": "meaning://github.com/demo-db/pubs/store?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
                   "extends": []
                 }
               ]
@@ -2067,7 +2067,7 @@
                   "concept": "sale-quantity",
                   "label": "Sale quantity",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/pubs/sale-quantity?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "address": "meaning://github.com/demo-db/pubs/sale-quantity?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
                   "extends": []
                 }
               ]
@@ -2087,7 +2087,7 @@
                   "concept": "book",
                   "label": "Book",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/book?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "address": "meaning://github.com/demo-db/pubs/book?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
                   "extends": []
                 }
               ]
@@ -2103,7 +2103,7 @@
               "concept": "store",
               "label": "Store",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/pubs/store?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+              "address": "meaning://github.com/demo-db/pubs/store?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
               "extends": []
             }
           ],
@@ -2155,7 +2155,7 @@
                   "concept": "author",
                   "label": "Author",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/author?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "address": "meaning://github.com/demo-db/pubs/author?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
                   "extends": [
                     {
                       "graph": "core",
@@ -2177,7 +2177,7 @@
                   "concept": "book",
                   "label": "Book",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/book?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "address": "meaning://github.com/demo-db/pubs/book?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
                   "extends": []
                 }
               ]
@@ -2203,7 +2203,7 @@
               "concept": "book",
               "label": "Book",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/pubs/book?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+              "address": "meaning://github.com/demo-db/pubs/book?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
               "extends": []
             }
           ],
@@ -2233,7 +2233,7 @@
                   "concept": "publisher",
                   "label": "Publisher",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
                   "extends": [
                     {
                       "graph": "core",
@@ -2254,7 +2254,7 @@
                   "concept": "book-price",
                   "label": "Book price",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/pubs/book-price?ref=34501946b0478b7e2ae13c15b4c57019109b5edc",
+                  "address": "meaning://github.com/demo-db/pubs/book-price?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
                   "extends": [
                     {
                       "graph": "core",
@@ -2294,6 +2294,713 @@
             },
             {
               "name": "pubdate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "https://demodb.dev/sakila/",
+      "recordId": "sakila",
+      "localId": "sakila",
+      "directoryPath": "/ovdb/demodb.dev/sakila/",
+      "serverId": "https://demodb.dev/ovdb",
+      "serverDbBaseUrl": "https://demodb.dev/ovdb/db/sakila/",
+      "apiUrl": "https://demodb.dev/ovdb/v1/databases/sakila",
+      "title": "Sakila video rental sample",
+      "description": "MySQL's Sakila video rental sample, published as a read-only SQLite fixture with native tables, views, keys, foreign keys, and BLOB values preserved.",
+      "status": "draft",
+      "url": "https://demodb.dev/sakila/",
+      "deployment": {
+        "url": "https://cloud.openvaultdb.com/ovdb/dbs/sakila",
+        "engine": "sqlite"
+      },
+      "homepage": "https://sakila.demodb.dev/",
+      "repository": "https://github.com/demo-db/sakila",
+      "commit": "6567d30aec1592fe0917934a8bbe74ff70b04b01",
+      "manifest": "ovdb.yaml",
+      "licence": "BSD-3-Clause",
+      "model": {
+        "name": "sakila",
+        "path": "model/sakila.modelspec.hcl",
+        "address": "modelspec://github.com/demo-db/sakila/sakila"
+      },
+      "meaning_graph": {
+        "id": "sakila",
+        "address": "meaning://github.com/demo-db/sakila"
+      },
+      "recordsets": [
+        {
+          "name": "actor",
+          "modelEntity": "actor",
+          "meanings": [
+            {
+              "graph": "sakila",
+              "concept": "actor",
+              "label": "Actor",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/sakila/actor?ref=6567d30aec1592fe0917934a8bbe74ff70b04b01",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "person",
+                  "label": "Person",
+                  "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "actor_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "first_name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "last_name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "address",
+          "modelEntity": "address",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "address_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "address",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "address2",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "district",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "city_id",
+              "type": "reference",
+              "references": "city",
+              "meanings": []
+            },
+            {
+              "name": "postal_code",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "phone",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "location",
+              "type": "document",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "category",
+          "modelEntity": "category",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "category_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "city",
+          "modelEntity": "city",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "city_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "city",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "country_id",
+              "type": "reference",
+              "references": "country",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "country",
+          "modelEntity": "country",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "country_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "country",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "customer",
+          "modelEntity": "customer",
+          "meanings": [
+            {
+              "graph": "sakila",
+              "concept": "customer",
+              "label": "Customer",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/sakila/customer?ref=6567d30aec1592fe0917934a8bbe74ff70b04b01",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "customer",
+                  "label": "Customer",
+                  "address": "meaning://github.com/meaninggraph/core/customer?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "customer_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "store_id",
+              "type": "reference",
+              "references": "store",
+              "meanings": []
+            },
+            {
+              "name": "first_name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "last_name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "email",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "address_id",
+              "type": "reference",
+              "references": "address",
+              "meanings": []
+            },
+            {
+              "name": "active",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "create_date",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "film",
+          "modelEntity": "film",
+          "meanings": [
+            {
+              "graph": "sakila",
+              "concept": "film",
+              "label": "Film",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/sakila/film?ref=6567d30aec1592fe0917934a8bbe74ff70b04b01",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "film_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "release_year",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "language_id",
+              "type": "reference",
+              "references": "language",
+              "meanings": []
+            },
+            {
+              "name": "original_language_id",
+              "type": "reference",
+              "references": "language",
+              "meanings": []
+            },
+            {
+              "name": "rental_duration",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "rental_rate",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "length",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "replacement_cost",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "rating",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "special_features",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "film_actor",
+          "modelEntity": "film_actor",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "actor_id",
+              "type": "reference",
+              "references": "actor",
+              "meanings": []
+            },
+            {
+              "name": "film_id",
+              "type": "reference",
+              "references": "film",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "film_category",
+          "modelEntity": "film_category",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "film_id",
+              "type": "reference",
+              "references": "film",
+              "meanings": []
+            },
+            {
+              "name": "category_id",
+              "type": "reference",
+              "references": "category",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "film_text",
+          "modelEntity": "film_text",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "film_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "inventory",
+          "modelEntity": "inventory",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "inventory_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "film_id",
+              "type": "reference",
+              "references": "film",
+              "meanings": []
+            },
+            {
+              "name": "store_id",
+              "type": "reference",
+              "references": "store",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "language",
+          "modelEntity": "language",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "language_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "payment",
+          "modelEntity": "payment",
+          "meanings": [
+            {
+              "graph": "sakila",
+              "concept": "payment",
+              "label": "Payment",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/sakila/payment?ref=6567d30aec1592fe0917934a8bbe74ff70b04b01",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "payment_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "customer_id",
+              "type": "reference",
+              "references": "customer",
+              "meanings": []
+            },
+            {
+              "name": "staff_id",
+              "type": "reference",
+              "references": "staff",
+              "meanings": []
+            },
+            {
+              "name": "rental_id",
+              "type": "reference",
+              "references": "rental",
+              "meanings": []
+            },
+            {
+              "name": "amount",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "payment_date",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "rental",
+          "modelEntity": "rental",
+          "meanings": [
+            {
+              "graph": "sakila",
+              "concept": "rental",
+              "label": "Rental",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/sakila/rental?ref=6567d30aec1592fe0917934a8bbe74ff70b04b01",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "rental_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "rental_date",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "inventory_id",
+              "type": "reference",
+              "references": "inventory",
+              "meanings": []
+            },
+            {
+              "name": "customer_id",
+              "type": "reference",
+              "references": "customer",
+              "meanings": []
+            },
+            {
+              "name": "return_date",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "staff_id",
+              "type": "reference",
+              "references": "staff",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "staff",
+          "modelEntity": "staff",
+          "meanings": [
+            {
+              "graph": "sakila",
+              "concept": "employee",
+              "label": "Staff member",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/sakila/employee?ref=6567d30aec1592fe0917934a8bbe74ff70b04b01",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "employee",
+                  "label": "Employee",
+                  "address": "meaning://github.com/meaninggraph/core/employee?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                },
+                {
+                  "graph": "core",
+                  "concept": "person",
+                  "label": "Person",
+                  "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "staff_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "first_name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "last_name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "address_id",
+              "type": "reference",
+              "references": "address",
+              "meanings": []
+            },
+            {
+              "name": "picture",
+              "type": "document",
+              "meanings": []
+            },
+            {
+              "name": "email",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "store_id",
+              "type": "reference",
+              "references": "store",
+              "meanings": []
+            },
+            {
+              "name": "active",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "username",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "password",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "store",
+          "modelEntity": "store",
+          "meanings": [
+            {
+              "graph": "sakila",
+              "concept": "store",
+              "label": "Store",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/sakila/store?ref=6567d30aec1592fe0917934a8bbe74ff70b04b01",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "store_id",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "manager_staff_id",
+              "type": "reference",
+              "references": "staff",
+              "meanings": []
+            },
+            {
+              "name": "address_id",
+              "type": "reference",
+              "references": "address",
+              "meanings": []
+            },
+            {
+              "name": "last_update",
               "type": "string",
               "meanings": []
             }
