@@ -1,6 +1,6 @@
 {
   "format": "ovdb-directory/draft-1",
-  "checksum": "sha256:b0d5002b8f6fa4b4879e8c7faadbb4bd69451afc54c889b052f2a028251608d9",
+  "checksum": "sha256:95cdeb13455790a275e02c45ad33c193bb77f979e82a9edee387999383a8dc01",
   "databases": [
     {
       "id": "chinook",
@@ -29,6 +29,7 @@
       "recordsets": [
         {
           "name": "Album",
+          "modelEntity": "Album",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Album",
           "meanings": [
             {
@@ -79,6 +80,7 @@
         },
         {
           "name": "Artist",
+          "modelEntity": "Artist",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Artist",
           "meanings": [
             {
@@ -123,6 +125,7 @@
         },
         {
           "name": "Customer",
+          "modelEntity": "Customer",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Customer",
           "meanings": [
             {
@@ -257,6 +260,7 @@
         },
         {
           "name": "Employee",
+          "modelEntity": "Employee",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Employee",
           "meanings": [
             {
@@ -398,6 +402,7 @@
         },
         {
           "name": "Genre",
+          "modelEntity": "Genre",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Genre",
           "meanings": [
             {
@@ -433,6 +438,7 @@
         },
         {
           "name": "Invoice",
+          "modelEntity": "Invoice",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Invoice",
           "meanings": [
             {
@@ -587,6 +593,7 @@
         },
         {
           "name": "InvoiceLine",
+          "modelEntity": "InvoiceLine",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/InvoiceLine",
           "meanings": [
             {
@@ -706,6 +713,7 @@
         },
         {
           "name": "MediaType",
+          "modelEntity": "MediaType",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/MediaType",
           "meanings": [
             {
@@ -741,6 +749,7 @@
         },
         {
           "name": "Playlist",
+          "modelEntity": "Playlist",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Playlist",
           "meanings": [
             {
@@ -776,6 +785,7 @@
         },
         {
           "name": "PlaylistTrack",
+          "modelEntity": "PlaylistTrack",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/PlaylistTrack",
           "meanings": [],
           "fields": [
@@ -804,6 +814,7 @@
         },
         {
           "name": "Track",
+          "modelEntity": "Track",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Track",
           "meanings": [
             {
