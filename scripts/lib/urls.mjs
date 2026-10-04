@@ -16,9 +16,11 @@
 // connect to. Each URL must also be written the way that parser would write it,
 // so there is exactly one spelling of every URL that is checked and published:
 // no trailing dot or empty label in the host, no empty path segment, no dot
-// segment. There is also no port (not even :443) and no percent escape in the
-// path: with them one deployment would have many spellings (host:8443, ovdb%2Fdbs),
-// and the rule that a deployment is listed once compares text.
+// segment. There is also no port (not even :443) and no percent escape in a
+// manifest path: with them one deployment would have many spellings
+// (host:8443, ovdb%2Fdbs), and the rule that a deployment is listed once
+// compares text. A generated recordset URL may encode its one native name
+// component; `publicHttpsProblem` accepts only that exact canonical segment.
 
 // Names that are never public: local, internal and reserved naming zones.
 const privateSuffixes = [
@@ -40,6 +42,7 @@ const twoLabelSuffixes = new Set([
 ]);
 
 const hostLabel = /^(?!-)[a-z0-9-]{1,63}(?<!-)$/;
+export const encodePathSegment = (value) => encodeURIComponent(value).replace(/[!'()*]/g, (character) => `%${character.codePointAt(0).toString(16).toUpperCase()}`);
 
 // A problem with the host of `url` for a public mapping, or null.
 export function hostProblem(url) {
@@ -65,11 +68,12 @@ export function hostProblem(url) {
 // path: the host is lower-case letters, digits and hyphen in dot-separated labels (1 to 63
 // characters each, none starting or ending with a hyphen), at least two labels, at most 253
 // characters in all; the path is only A-Z a-z 0-9 . _ ~ / and - (and `{name}` in a
-// template), with no percent escape, no `//` and no `.` or `..` segment. So nothing that
+// template), with no percent escape, no `//` and no `.` or `..` segment. A generated
+// recordset URL may contain one percent-encoded native name component. So nothing that
 // could leave an HTML attribute or a URL (quote, apostrophe, ampersand, backtick, angle
 // bracket, brace, parenthesis, semicolon, comma, equals sign, space) is ever published.
 // A site that shows the value must still HTML-escape it.
-export function publicHttpsProblem(value, { template = false } = {}) {
+export function publicHttpsProblem(value, { template = false, encodedPathSegment } = {}) {
   if (typeof value !== 'string' || value.trim() === '') return 'is not a URL';
   if (value !== value.trim() || /[\u0000- \u007f\\]/.test(value)) return 'contains whitespace, control characters or a backslash';
   let probe = value;
@@ -90,7 +94,18 @@ export function publicHttpsProblem(value, { template = false } = {}) {
   // The parser drops the default port, so look at the text: any ":" in the authority is a port.
   if (probe.slice('https://'.length).split('/')[0].includes(':')) return 'must not name a port (not even :443): a published URL is reached on the default https port';
   if (url.pathname.includes('//')) return 'has an empty path segment (//)';
-  if (url.pathname.includes('%')) return 'must not contain a percent escape in the path (write the character itself, or leave it out)';
+  if (url.pathname.includes('%')) {
+    const segments = url.pathname.split('/');
+    const escaped = segments.filter((segment) => segment.includes('%'));
+    if (typeof encodedPathSegment !== 'string' || escaped.length !== 1 || escaped[0] !== encodedPathSegment) {
+      return 'must not contain a percent escape in the path (write the character itself, or leave it out)';
+    }
+    let decoded;
+    try { decoded = decodeURIComponent(encodedPathSegment); } catch { return 'has an invalid percent escape in the path'; }
+    if (encodePathSegment(decoded) !== encodedPathSegment || /[./\\\u0000-\u001f\u007f]/.test(decoded)) {
+      return 'has a non-canonical or unsafe encoded path segment';
+    }
+  }
   // The literal text must be the URL's own spelling, so that what is checked is
   // what is published (no %2e dot segments, no mixed-case host, no decoded host).
   if (url.href !== probe) return `is not written canonically (it would be ${url.href})`;
@@ -101,7 +116,7 @@ export function publicHttpsProblem(value, { template = false } = {}) {
   const path = rest.slice(slash);
   const labels = host.split('.');
   if (host.length > 253 || labels.length < 2 || !labels.every((label) => hostLabel.test(label))) return `host ${host} must be lower-case labels of ASCII letters, digits and hyphen (1 to 63 characters each, none starting or ending with a hyphen), at least two, separated by dots, at most 253 characters in all`;
-  if (!/^[A-Za-z0-9._~/-]*$/.test(path)) return 'path may only use A-Z a-z 0-9 . _ ~ / and - (no quote, apostrophe, ampersand, percent escape or other punctuation)';
+  if (!/^[A-Za-z0-9._~/%-]*$/.test(path)) return 'path may only use A-Z a-z 0-9 . _ ~ / and - or one canonical encoded native recordset name (no quote, apostrophe, ampersand or other punctuation)';
   if (path.split('/').some((segment) => segment === '.' || segment === '..')) return 'must not have a . or .. segment';
   return null;
 }

@@ -15,10 +15,10 @@ import { after, test } from 'node:test';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { addressOf, cacheRepoSound, defaultBranch, defaultCacheDir, git, gitEnv, historyPath, identity, install, onBranch, openCommit, repositoryKey, setGitProtocols } from './lib/git.mjs';
 import { runCheck, runIndex } from './lib/cli.mjs';
-import { hasOvdbMarker, publicHttpsProblem } from './lib/urls.mjs';
+import { encodePathSegment, hasOvdbMarker, publicHttpsProblem } from './lib/urls.mjs';
 import { buildIndex, checkDirectory, addressClaims, claimProblems, indexText, readDirectory, recordProblems, urlProblem } from './lib/directory.mjs';
 import { indexMeaningRegistry, loadMeaningRegistry } from './lib/meaning.mjs';
-import { indexModelRegistry, loadModelRegistry, modelRegistryDefaultUrl, parseModelSpec } from './lib/modelspec.mjs';
+import { indexModelRegistry, loadModelRegistry, modelRegistryDefaultUrl, parseModelRef, parseModelSpec } from './lib/modelspec.mjs';
 
 // The local repositories that stand in for https URLs are file:// URLs; git is allowed to read them.
 setGitProtocols('https:file');
@@ -218,6 +218,69 @@ test('index.json has the documented shape: recordsets and fields from the ModelS
   // Fields keep the ModelSpec's order; a field nothing is bound to has no meanings.
   assert.deepEqual(customer.fields.slice(0, 3).map((entry) => entry.name), ['CustomerId', 'FirstName', 'LastName']);
   assert.deepEqual(field(chinook, 'Customer', 'FirstName').meanings, []);
+});
+
+test('native spaced recordset names map to publishable ModelSpec entities and encode in recordset URLs', async () => {
+  const w = world({ publisher: (files) => {
+    modelEdit((doc) => {
+      doc.entities.OrderDetails = { key: ['OrderID', 'ProductID'], properties: {
+        OrderID: { type: 'int' }, ProductID: { type: 'int' }, UnitPrice: { type: 'decimal' },
+      } };
+    })(files);
+    manifestEdit((manifest) => {
+      manifest.recordsets.push('Order Details');
+      manifest.recordset_entities = { 'Order Details': 'OrderDetails' };
+      manifest.deployment.recordset_page = 'https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/{name}';
+    })(files);
+    meaningEdit((doc) => doc.concepts.push(
+      { id: 'order-detail', kind: 'entity', labels: { en: 'order detail' }, bindings: [{ model: 'modelspec:///chinook.OrderDetails', role: 'entity' }] },
+      { id: 'order-detail-price', kind: 'attribute', labels: { en: 'order detail price' }, bindings: [{ model: 'modelspec:///chinook.OrderDetails', property: 'UnitPrice', role: 'value' }] },
+    ))(files);
+  } });
+
+  const result = await index(w);
+  const orderDetails = result.databases[0].recordsets.find((recordset) => recordset.name === 'Order Details');
+  assert.ok(orderDetails);
+  assert.equal(orderDetails.modelEntity, 'OrderDetails');
+  assert.equal(orderDetails.url, 'https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Order%20Details');
+  assert.deepEqual(orderDetails.meanings.map((entry) => [entry.concept, entry.role]), [['order-detail', 'entity']]);
+  assert.deepEqual(orderDetails.fields.map((entry) => entry.name), ['OrderID', 'ProductID', 'UnitPrice']);
+  assert.deepEqual(orderDetails.fields[2].meanings.map((entry) => [entry.concept, entry.role]), [['order-detail-price', 'value']]);
+});
+
+test('recordset_entities is explicit, one-to-one, and resolves only real recordsets and ModelSpec entities', async () => {
+  const mapping = (change) => manifestEdit((manifest) => {
+    manifest.recordsets.push('Order Details');
+    manifest.recordset_entities = { 'Order Details': 'OrderDetails' };
+    change?.(manifest);
+  });
+  const model = modelEdit((doc) => { doc.entities.OrderDetails = { properties: { Id: { type: 'int' } } }; });
+  assert.deepEqual(await problemsOf(world({ publisher: (files) => { model(files); mapping() (files); } })), []);
+  expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordset_entities.Ghost = 'Missing'; })(files); } })), /recordset_entities names "Ghost", which is not in recordsets/);
+  expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordset_entities['Order Details'] = 'Missing'; })(files); } })), /recordsets names things that do not map to ModelSpec entities: Order Details/);
+  expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordsets.push('More Details'); manifest.recordset_entities['More Details'] = 'OrderDetails'; })(files); } })), /mappings must be one-to-one/);
+  expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordset_entities['Order Details'] = '../unsafe'; })(files); } })), /must be a ModelSpec entity identifier/);
+});
+
+test('ModelSpec names and references remain identifiers; encoded names cannot bypass the format', () => {
+  const parsed = parseModelSpec(JSON.stringify({ modelspec: '1.0-draft', module: { name: 'northwind' }, entities: {
+    OrderDetails: { properties: { UnitPrice: { type: 'decimal' } } },
+  } }));
+  assert.deepEqual(parsed.problems, []);
+  assert.equal(parsed.entities.get('OrderDetails').properties[0].name, 'UnitPrice');
+  assert.equal(parseModelRef('modelspec:///northwind.OrderDetails')?.name, 'OrderDetails');
+  for (const ref of [
+    'modelspec:///northwind.Order%2FDetails',
+    'modelspec:///northwind.Order%2EDetails',
+    'modelspec:///northwind.Order%2fDetails',
+    'modelspec:///northwind.Order%2520Details%20',
+  ]) assert.equal(parseModelRef(ref), null, ref);
+  for (const name of ['Order Details', 'Order/Details', 'Order\\Details', 'Order.Details', 'Order\nDetails']) {
+    const invalid = parseModelSpec(JSON.stringify({ modelspec: '1.0-draft', module: { name: 'northwind' }, entities: {
+      [name]: { properties: { Id: { type: 'int' } } },
+    } }));
+    assert.notDeepEqual(invalid.problems, [], JSON.stringify(name));
+  }
 });
 
 test('the licence is the data licence, and a recordset has a url only when the manifest gives a recordset_page template', async () => {
@@ -785,6 +848,12 @@ test('public URLs are https only, without credentials, query or fragment, and ne
     assert.equal(publicHttpsProblem(accepted), null, accepted);
   }
   assert.match(publicHttpsProblem('https://example.com/x', { template: true }), /\{name\} exactly once/);
+  const encodedName = encodePathSegment('Order Details');
+  assert.equal(encodedName, 'Order%20Details');
+  assert.equal(publicHttpsProblem(`https://cloud.openvaultdb.com/ovdb/${encodedName}`, { encodedPathSegment: encodedName }), null);
+  assert.match(publicHttpsProblem('https://cloud.openvaultdb.com/ovdb/%2f', { encodedPathSegment: '%2f' }) ?? '', /canonically|non-canonical/);
+  assert.match(publicHttpsProblem('https://cloud.openvaultdb.com/ovdb/%2F', { encodedPathSegment: '%2F' }) ?? '', /unsafe encoded path segment/);
+  assert.match(publicHttpsProblem('https://cloud.openvaultdb.com/ovdb/%2E%2E', { encodedPathSegment: '%2E%2E' }) ?? '', /canonically/);
   for (const template of ['https://169.254.169.{name}/latest', 'https://metadata.google.{name}/x', 'https://{name}.example.com/x', 'https://{name}@example.com/x', 'https://example.com:{name}/x', 'https://{name}']) {
     assert.match(publicHttpsProblem(template, { template: true }) ?? '', /\{name\} in the path only|exactly once|not a URL/, template);
   }

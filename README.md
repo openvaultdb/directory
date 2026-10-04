@@ -98,8 +98,8 @@ may show as a link to its website; a public https URL on any origin, at most 200
 characters, held to the rules for every URL below),
 the `model` (its files, or its address when it is published elsewhere; see
 [Two forms](#two-forms-own-model-or-shared-model)), the `meaning` file and its
-graph, the publisher, the `licences` (`data`, `model`, `meaning`) and the
-`recordsets`. Every path is relative to the repository root and must be a regular file tracked
+graph, the publisher, the `licences` (`data`, `model`, `meaning`), the
+`recordsets` and optional `recordset_entities` mapping. Every path is relative to the repository root and must be a regular file tracked
 at the pinned commit: no `..`, leading `/`, `.` or empty segment, no glob, and
 symbolic links are refused. The model's source (`model.hcl`) ends in
 `.modelspec.hcl`.
@@ -133,6 +133,18 @@ compared. Because of this, a manifest that names a `model.address` needs the Mod
 registry to be readable: if it cannot be read (after a timeout and one retry), the
 check fails with a problem that names the registry and the cause, as it does for the
 MeaningGraph registry; it never falls back to old data.
+
+ModelSpec entities and properties use publishable identifiers. A source collection may have a native name that is not an identifier, such as Northwind's `Order Details`. Keep that exact collection name in `recordsets` and map it to its ModelSpec entity:
+
+```yaml
+recordsets:
+  - Customers
+  - Order Details
+recordset_entities:
+  "Order Details": OrderDetails
+```
+
+`recordset_entities` maps native collection names to ModelSpec entity names. Names not listed in the mapping keep the existing same-name behavior. Each ModelSpec entity maps to exactly one recordset, and every entity of an own model must appear. Meaning bindings use the ModelSpec name (`modelspec:///northwind.OrderDetails`); Directory pages, API links and recordset URLs keep the native collection name (`Order Details`). The `{name}` in `deployment.recordset_page` is URL-encoded as one path component.
 
 **Shared model.** The model and the meaning graph are published in other
 repositories, and this manifest points at them instead of copying them, so that
@@ -364,13 +376,16 @@ address at the commit that address pins, resolved through the MeaningGraph regis
   and `model.commit` (the manifest's pin); both are absent when the model is in the
   database's own repository, so a link to the model's file for a shared-model
   database is `{model.repository}/blob/{model.commit}/{model.path}`.
-- `recordsets` are the ModelSpec entities, and their names are the collection
-  names the deployment serves. A recordset's `url` is the manifest's
+- `recordsets` are the native collection names the deployment serves. Each
+  recordset has `modelEntity`, the corresponding ModelSpec entity name (the
+  same value by default, or from `recordset_entities` when they differ). A
+  recordset's `url` is the manifest's
   `deployment.recordset_page` template with `{name}` filled in, and is absent
   when the manifest has no template: it is never built by appending to
   `deployment.url`.
 - A field's `type` is the ModelSpec property type. A property that references
-  another entity has `"type": "reference"` and `"references": "<Entity>"`.
+  another entity has `"type": "reference"` and `"references"` set to that
+  entity's native recordset name when it is listed.
 - `M` is a meaning, bound to a recordset (role `entity`) or to a field (any
   other `meaning/draft-1` binding role):
 
@@ -474,8 +489,9 @@ Two layers run in CI ([`.github/workflows/check.yml`](.github/workflows/check.ym
      read with its checksum verified) and lists the manifest's meaning file; for an
      own model it is registered for the same repository, with the same address
      (for a shared model, `meaning.address` is registered under that id);
-   - `recordsets` are exactly the ModelSpec entities (a shared model's manifest
-     may list a subset, explicitly, with `recordsets_partial: true`);
+   - `recordsets` map one-to-one to ModelSpec entities, by equal names or the
+     explicit `recordset_entities` mapping (a shared model's manifest may list a
+     subset, explicitly, with `recordsets_partial: true`);
    - an own model that names a registered `model.address` is the registered model
      (compared with the registry's `files.json`, or a warning when the commits
      differ);

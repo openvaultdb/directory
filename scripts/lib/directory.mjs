@@ -13,8 +13,8 @@ import { isAbsolute, join, posix, relative } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { addressOf, commitPattern, defaultBranch, defaultCacheDir, ensurePlainDirectory, isRepositoryPath, onBranch, openCommit, repositoryKey, repositoryHosts } from './git.mjs';
 import { createMeaningResolver, entryOf, graphIdProblem, graphsAtAddress, loadMeaningRegistry, meaningFilesOf, registryIdPattern, parseConceptRef, parseGraphAddress, labelOf, validateConcept } from './meaning.mjs';
-import { addressMatchesRecord, loadModelRegistry, modelsAtAddress, normalisedModelAddress, parseModelSpec, parseModelRef, parseModelAddress } from './modelspec.mjs';
-import { hasOvdbMarker, homepageProblem, publicHttpsProblem } from './urls.mjs';
+import { addressMatchesRecord, identifierPattern, loadModelRegistry, modelsAtAddress, normalisedModelAddress, parseModelSpec, parseModelRef, parseModelAddress } from './modelspec.mjs';
+import { encodePathSegment, hasOvdbMarker, homepageProblem, publicHttpsProblem } from './urls.mjs';
 
 export { repositoryHosts };
 export const directoryFormat = 'ovdb-directory/draft-1';
@@ -165,6 +165,10 @@ export function parseFrontmatter(text) {
 const isText = (value) => typeof value === 'string' && value.trim() !== '';
 const modelSourcePattern = /\.modelspec\.hcl$/;
 const spdxLike = (value) => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9.+-]{0,63}$/.test(value);
+const nativeRecordsetNameProblem = (value) => !isText(value) ? 'must be a non-empty name'
+  : value.length > 256 || /[./\\\u0000-\u001f\u007f]/.test(value)
+    ? 'must be at most 256 characters and contain no dot, slash, backslash or control character'
+    : null;
 
 // A manifest names its model one of two ways. With local files (`model.modelspec`, optionally
 // `model.hcl`) it is an own model: the model and the meaning file are in the publisher's own
@@ -233,6 +237,25 @@ export function manifestProblems(manifest) {
   }
   need(manifest.licences, 'data', 'licences.data', spdxLike);
   if (!Array.isArray(manifest.recordsets) || manifest.recordsets.length === 0 || !manifest.recordsets.every(isText)) problems.push('recordsets must be a non-empty list of names');
+  else for (const name of manifest.recordsets) {
+    const problem = nativeRecordsetNameProblem(name);
+    if (problem) problems.push(`recordsets name ${JSON.stringify(name)} ${problem}`);
+  }
+  if (manifest.recordset_entities !== undefined) {
+    const mapping = manifest.recordset_entities;
+    if (mapping === null || typeof mapping !== 'object' || Array.isArray(mapping)) problems.push('recordset_entities must map native recordset names to ModelSpec entity names');
+    else {
+      const usedEntities = new Map();
+      for (const [recordset, entity] of Object.entries(mapping)) {
+        if (!Array.isArray(manifest.recordsets) || !manifest.recordsets.includes(recordset)) problems.push(`recordset_entities names ${JSON.stringify(recordset)}, which is not in recordsets`);
+        const nameProblem = nativeRecordsetNameProblem(recordset);
+        if (nameProblem) problems.push(`recordset_entities key ${JSON.stringify(recordset)} ${nameProblem}`);
+        if (typeof entity !== 'string' || !identifierPattern.test(entity)) problems.push(`recordset_entities value for ${JSON.stringify(recordset)} must be a ModelSpec entity identifier`);
+        else if (usedEntities.has(entity)) problems.push(`recordset_entities maps both ${JSON.stringify(usedEntities.get(entity))} and ${JSON.stringify(recordset)} to ModelSpec entity ${entity}; mappings must be one-to-one`);
+        else usedEntities.set(entity, recordset);
+      }
+    }
+  }
   return problems;
 }
 
@@ -317,6 +340,9 @@ export async function analyseDatabase(record, context) {
   }
 
   const shared = manifestForm(manifest) === 'shared';
+  const modelEntityFor = (recordsetName) => manifest.recordset_entities && Object.hasOwn(manifest.recordset_entities, recordsetName)
+    ? manifest.recordset_entities[recordsetName]
+    : recordsetName;
   const ownKey = lowerKey(repositoryKey(data.repository));
   // What the two forms resolve, for the checks they share: the registry's record of the graph, the model
   // (module, entities) and where it is, the meaning file (parsed) and the commit of its graph that is read.
@@ -337,18 +363,23 @@ export async function analyseDatabase(record, context) {
     const listed = manifest.recordsets;
     if (new Set(listed).size !== listed.length) bad(`${data.manifest}: recordsets lists a name twice`);
     const entityNames = [...model.entities.keys()];
-    const lacking = entityNames.filter((name) => !listed.includes(name));
-    const extra = listed.filter((name) => !model.entities.has(name));
+    const mappedEntities = listed.map(modelEntityFor);
+    const lacking = entityNames.filter((name) => !mappedEntities.includes(name));
+    const extra = listed.filter((name, index) => !model.entities.has(mappedEntities[index]));
+    const duplicateMapping = new Set(mappedEntities).size !== mappedEntities.length;
     if (shared && manifest.recordsets_partial === true) {
       if (lacking.length === 0 && extra.length === 0) bad(`${data.manifest}: recordsets_partial is true, but recordsets lists every ModelSpec entity; remove recordsets_partial`);
       for (const name of listed) {
-        for (const property of model.entities.get(name)?.properties ?? []) {
-          if (property.references && !listed.includes(property.references)) bad(`${data.manifest}: recordsets lists ${name}, which references ${property.references}, but a partial list must also list every entity a listed entity references`);
+        const entityName = modelEntityFor(name);
+        for (const property of model.entities.get(entityName)?.properties ?? []) {
+          if (property.references && !mappedEntities.includes(property.references)) bad(`${data.manifest}: recordsets lists ${name}, which references ModelSpec entity ${property.references}, but a partial list must also include its mapped recordset`);
         }
       }
     } else if (lacking.length) bad(`${data.manifest}: recordsets lacks ModelSpec entities: ${lacking.join(', ')}${shared ? ' (to list a subset of a shared model, list it explicitly and set recordsets_partial: true)' : ''}`);
-    if (extra.length) bad(`${data.manifest}: recordsets names things that are not ModelSpec entities: ${extra.join(', ')}`);
-    return shared && manifest.recordsets_partial === true ? [...new Set(listed)].filter((name) => model.entities.has(name)) : entityNames;
+    if (extra.length) bad(`${data.manifest}: recordsets names things that do not map to ModelSpec entities: ${extra.join(', ')}`);
+    if (duplicateMapping) bad(`${data.manifest}: recordset_entities maps more than one native recordset to the same ModelSpec entity; mappings must be one-to-one`);
+    if (extra.length || duplicateMapping || new Set(listed).size !== listed.length || (!shared || manifest.recordsets_partial !== true) && lacking.length) return [];
+    return shared && manifest.recordsets_partial === true ? [...new Set(listed)].filter((name) => model.entities.has(modelEntityFor(name))) : [...listed];
   };
   let publishedNames;
 
@@ -593,7 +624,11 @@ export async function analyseDatabase(record, context) {
   const resolver = createMeaningResolver({ own, registry: context.meaningRegistry, urlFor, cacheDir, historyDir, fetched, branches });
 
   // Bindings tie concepts to recordsets and fields; each must name a real entity and property.
-  const recordsets = new Map(publishedNames.map((name) => [name, { name, meanings: [], fields: new Map(model.entities.get(name).properties.map((property) => [property.name, { ...property, meanings: [] }])) }]));
+  const recordsets = new Map(publishedNames.map((name) => {
+    const modelEntity = modelEntityFor(name);
+    return [name, { name, modelEntity, meanings: [], fields: new Map(model.entities.get(modelEntity).properties.map((property) => [property.name, { ...property, meanings: [] }])) }];
+  }));
+  const recordsetByModelEntity = new Map([...recordsets.values()].map((recordset) => [recordset.modelEntity, recordset.name]));
   const modelHomeKey = modelHome && lowerKey(repositoryKey(modelHome.repository));
   const resolved = new Map();
   const chainsOf = (concept) => {
@@ -613,7 +648,8 @@ export async function analyseDatabase(record, context) {
         }
       }
       if (ref.module !== model.module) { bad(`${where}: binding ${binding.model} names module ${ref.module}, but the ModelSpec at ${modelLabel} is module ${model.module}`); continue; }
-      const recordset = recordsets.get(ref.name);
+      const recordsetName = recordsetByModelEntity.get(ref.name);
+      const recordset = recordsetName === undefined ? undefined : recordsets.get(recordsetName);
       if (!recordset) {
         if (model.entities.has(ref.name)) continue; // an entity of the shared model that this database does not list (recordsets_partial)
         bad(`${where}: binding ${binding.model} names an entity that is not in the ModelSpec`);
@@ -648,10 +684,11 @@ export async function analyseDatabase(record, context) {
 
   // Every recordset url that is written is checked again with the full URL rules: the template was checked
   // with a stand-in name, and the real names must not change what it points at.
-  const recordsetUrl = (name) => (manifest.deployment.recordset_page ? manifest.deployment.recordset_page.replace('{name}', name) : undefined);
+  const recordsetUrl = (name) => (manifest.deployment.recordset_page ? manifest.deployment.recordset_page.replace('{name}', encodePathSegment(name)) : undefined);
   for (const name of publishedNames) {
     const url = recordsetUrl(name);
-    const problem = url === undefined ? null : publicHttpsProblem(url);
+    const encodedName = encodePathSegment(name);
+    const problem = url === undefined ? null : publicHttpsProblem(url, { encodedPathSegment: encodedName.includes('%') ? encodedName : undefined });
     if (problem) bad(`${data.manifest}: the recordset page of ${name}, ${url}, ${problem}`);
   }
   if (problems.length) return stop();
@@ -673,9 +710,10 @@ export async function analyseDatabase(record, context) {
     meaning_graph: { id: graph.id, address: graph.address },
     recordsets: [...recordsets.values()].sort(byName).map((recordset) => ({
       name: recordset.name,
+      modelEntity: recordset.modelEntity,
       ...(manifest.deployment.recordset_page ? { url: recordsetUrl(recordset.name) } : {}),
       meanings: sorted(recordset.meanings),
-      fields: [...recordset.fields.values()].map(({ name, type, references, meanings }) => ({ name, type, ...(references ? { references } : {}), meanings: sorted(meanings) })),
+      fields: [...recordset.fields.values()].map(({ name, type, references, meanings }) => ({ name, type, ...(references ? { references: recordsetByModelEntity.get(references) ?? references } : {}), meanings: sorted(meanings) })),
     })),
   };
   return { problems, warnings, entry, claims };
