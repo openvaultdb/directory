@@ -72,7 +72,7 @@ function startingConcept() {
 }
 
 const conceptUrl = (graph, concept) => `${meaningGraphBase}/graphs/${graph}/concepts/${concept}/`;
-const databaseUrl = (database, anchor) => `${directoryBase}/databases/${database.id}/${anchor ? `#${anchor}` : ''}`;
+const databaseUrl = (database, anchor) => `${directoryBase}${database.directoryPath ?? `/databases/${database.recordId ?? database.id}/`}${anchor ? `#${anchor}` : ''}`;
 const fieldAnchor = (recordset, field) => `field-${recordset}-${field}`;
 const recordsetAnchor = (recordset) => `recordset-${recordset}`;
 
@@ -217,6 +217,14 @@ test('journey 6a: the Directory lists every database in index.json as a real dat
     const card = await hasLink(page, databaseUrl(database), `the Directory home links to ${database.title}`);
     await expect(card).toContainText(new RegExp(escape(database.title), 'i'));
     expect(await itemText(card, '/databases/'), 'a real database is not labelled an example').not.toMatch(/example/i);
+    if (database.directoryPath && database.recordId) {
+      const oldPath = `/databases/${database.recordId}/`;
+      if (oldPath !== database.directoryPath) {
+        const response = await page.request.get(`${directoryBase}${oldPath}`, { maxRedirects: 0 });
+        expect(response.status(), `legacy route ${oldPath} permanently redirects`).toBe(308);
+        expect(response.headers().location, `legacy route ${oldPath} targets ${database.directoryPath}`).toBe(database.directoryPath);
+      }
+    }
   }
   // The existing cards stay, still labelled as examples (a site may say "sample"): at least three cards, each with something to say
   // beyond the label, not three uses of the word.

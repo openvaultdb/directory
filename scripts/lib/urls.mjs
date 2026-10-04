@@ -1,10 +1,9 @@
 // URL rules for what a manifest publishes (CC0-1.0).
 //
-// Two rules of the OVDB Directory's conventions:
-//
-// - A database's canonical URL is an https URL with `ovdb` as a complete path
-//   segment or as a subdomain.
-// - Public mappings are https-only and may not point at localhost,
+// Database identities are canonical, public https URLs. Their path is independent
+// of the publisher's server route and may be empty or contain safe segments.
+// Older Directory identities that put `ovdb` in the host or path remain accepted during migration. Public mappings
+// are https-only and may not point at localhost,
 //   private-network, link-local or cloud-metadata endpoints. The Directory
 //   checks this while indexing; clients must check it again, and must check the
 //   address a name resolves to (a public-looking name such as 127.0.0.1.nip.io
@@ -16,11 +15,10 @@
 // connect to. Each URL must also be written the way that parser would write it,
 // so there is exactly one spelling of every URL that is checked and published:
 // no trailing dot or empty label in the host, no empty path segment, no dot
-// segment. There is also no port (not even :443) and no percent escape in a
-// manifest path: with them one deployment would have many spellings
-// (host:8443, ovdb%2Fdbs), and the rule that a deployment is listed once
-// compares text. A generated recordset URL may encode its one native name
-// component; `publicHttpsProblem` accepts only that exact canonical segment.
+// segment. There is also no port (not even :443). Identity paths may contain
+// canonical percent-encoded segments; each is validated independently so an
+// encoded separator cannot alter the route. A generated recordset URL may
+// encode its one native name component.
 
 // Names that are never public: local, internal and reserved naming zones.
 const privateSuffixes = [
@@ -44,8 +42,31 @@ const twoLabelSuffixes = new Set([
 const hostLabel = /^(?!-)[a-z0-9-]{1,63}(?<!-)$/;
 export const encodePathSegment = (value) => encodeURIComponent(value).replace(/[!'()*]/g, (character) => `%${character.codePointAt(0).toString(16).toUpperCase()}`);
 
+// A global database identity is a canonical public URL. Preserve its encoded
+// spelling when mapping it into the Directory route; never decode and re-encode.
+export function globalDatabaseIdProblem(value) {
+  if (typeof value !== 'string' || value.trim() === '') return 'is not a URL';
+  let url;
+  try { url = new URL(value); } catch { return 'is not a URL'; }
+  const encodedPathSegments = url.pathname.split('/').filter((segment) => segment.includes('%'));
+  const problem = publicHttpsProblem(value, { encodedPathSegments, allowReservedExampleHost: true });
+  if (problem) return problem;
+  return null;
+}
+
+// The route is shared by Directory pages and cross-registry links. Global IDs
+// map to /ovdb/{host}{path}; the identity's encoded spelling is carried over
+// byte-for-byte from the canonical URL.
+export function directoryPagePath(globalId) {
+  const problem = globalDatabaseIdProblem(globalId);
+  if (problem) throw new TypeError(`invalid global database id ${JSON.stringify(globalId)}: ${problem}`);
+  const url = new URL(globalId);
+  const normalizedPath = url.pathname.endsWith('/') ? url.pathname : `${url.pathname}/`;
+  return `/ovdb/${url.host}${normalizedPath}`;
+}
+
 // A problem with the host of `url` for a public mapping, or null.
-export function hostProblem(url) {
+export function hostProblem(url, { allowReservedExampleHost = false } = {}) {
   const host = url.hostname.toLowerCase();
   if (host.startsWith('[') || host.includes(':')) return `${url.hostname} is an IP address; a public mapping names a host`;
   if (host.endsWith('.')) return `${url.hostname} ends with a dot; write the host without it`;
@@ -53,6 +74,7 @@ export function hostProblem(url) {
   if (/^\d+(\.\d+)*$/.test(host) || /^0x[0-9a-f]+$/.test(host)) return `${url.hostname} is an IP address; a public mapping names a host`;
   if (!host.includes('.')) return `${url.hostname} is a single-label name, not a public host`;
   for (const suffix of privateSuffixes) {
+    if (suffix === 'example' && allowReservedExampleHost) continue;
     if (host === suffix || host.endsWith(`.${suffix}`)) return `${url.hostname} is a local, internal or reserved name (.${suffix}), not a public host`;
   }
   return null;
@@ -73,7 +95,7 @@ export function hostProblem(url) {
 // could leave an HTML attribute or a URL (quote, apostrophe, ampersand, backtick, angle
 // bracket, brace, parenthesis, semicolon, comma, equals sign, space) is ever published.
 // A site that shows the value must still HTML-escape it.
-export function publicHttpsProblem(value, { template = false, encodedPathSegment } = {}) {
+export function publicHttpsProblem(value, { template = false, encodedPathSegment, encodedPathSegments, allowReservedExampleHost = false } = {}) {
   if (typeof value !== 'string' || value.trim() === '') return 'is not a URL';
   if (value !== value.trim() || /[\u0000- \u007f\\]/.test(value)) return 'contains whitespace, control characters or a backslash';
   let probe = value;
@@ -89,21 +111,25 @@ export function publicHttpsProblem(value, { template = false, encodedPathSegment
   if (url.username || url.password) return 'must not contain credentials (userinfo)';
   if (url.search || probe.includes('?')) return 'must not contain a query';
   if (url.hash || probe.includes('#')) return 'must not contain a fragment';
-  const problem = hostProblem(url);
+  const problem = hostProblem(url, { allowReservedExampleHost });
   if (problem) return problem;
   // The parser drops the default port, so look at the text: any ":" in the authority is a port.
   if (probe.slice('https://'.length).split('/')[0].includes(':')) return 'must not name a port (not even :443): a published URL is reached on the default https port';
-  if (url.pathname.includes('//')) return 'has an empty path segment (//)';
-  if (url.pathname.includes('%')) {
-    const segments = url.pathname.split('/');
-    const escaped = segments.filter((segment) => segment.includes('%'));
-    if (typeof encodedPathSegment !== 'string' || escaped.length !== 1 || escaped[0] !== encodedPathSegment) {
+  const authorityEnd = probe.indexOf('/', probe.indexOf('//') + 2);
+  const writtenPath = authorityEnd === -1 ? '' : probe.slice(authorityEnd);
+  if (writtenPath.includes('//')) return 'has an empty path segment (//)';
+  if (writtenPath.includes('%')) {
+    const escaped = writtenPath.split('/').filter((segment) => segment.includes('%'));
+    const allowedEscapes = encodedPathSegments ?? (typeof encodedPathSegment === 'string' ? [encodedPathSegment] : []);
+    if (escaped.length !== allowedEscapes.length || escaped.some((segment, index) => segment !== allowedEscapes[index])) {
       return 'must not contain a percent escape in the path (write the character itself, or leave it out)';
     }
-    let decoded;
-    try { decoded = decodeURIComponent(encodedPathSegment); } catch { return 'has an invalid percent escape in the path'; }
-    if (encodePathSegment(decoded) !== encodedPathSegment || /[./\\\u0000-\u001f\u007f]/.test(decoded)) {
-      return 'has a non-canonical or unsafe encoded path segment';
+    for (const encoded of escaped) {
+      let decoded;
+      try { decoded = decodeURIComponent(encoded); } catch { return 'has an invalid percent escape in the path'; }
+      if (encodePathSegment(decoded) !== encoded || decoded === '.' || decoded === '..' || /[/\\\u0000-\u001f\u007f]/.test(decoded)) {
+        return 'has a non-canonical or unsafe encoded path segment';
+      }
     }
   }
   // The literal text must be the URL's own spelling, so that what is checked is

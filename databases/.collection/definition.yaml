@@ -1,5 +1,5 @@
-# One record per registered OpenVaultDB database, keyed by its id
-# (databases/$records/<id>.yaml). Format ovdb-directory/draft-1; README.md
+# One record per registered OpenVaultDB database, keyed by its record alias
+# (databases/$records/<recordId>.yaml). Format ovdb-directory/draft-1; README.md
 # explains every column. inGitDB checks what is declared here (types,
 # required, enums, lengths, foreign keys); scripts/check.mjs checks what a
 # column definition cannot say (the id and URL shapes, unique URLs, and
@@ -48,6 +48,10 @@ columns:
     type: string
     required: true
     min_length: 1
+  # Optional public JSON descriptor; older publishers may expose only the YAML manifest.
+  database_manifest:
+    type: string
+    min_length: 1
   meaning_graph:
     type: string
     required: true
@@ -67,5 +71,6 @@ columns_order:
   - repository
   - commit
   - manifest
+  - database_manifest
   - meaning_graph
   - maintainers
