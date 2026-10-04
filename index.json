@@ -1,6 +1,6 @@
 {
   "format": "ovdb-directory/draft-1",
-  "checksum": "sha256:bba195d94263087e438f31e9f679d862a516db8a376410b75b4e0c60150ee17e",
+  "checksum": "sha256:96701ced60cdc70102a672d790f49605c9d2ea6cfd0714f1300f3ec5e89ba831",
   "databases": [
     {
       "id": "chinook",
@@ -14,7 +14,7 @@
       },
       "homepage": "https://chinook.demodb.dev/",
       "repository": "https://github.com/demo-db/chinook",
-      "commit": "184f9ee22101f8f56016c7963d18a406beffa013",
+      "commit": "f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
       "manifest": "ovdb.yaml",
       "licence": "MIT",
       "model": {
@@ -37,7 +37,7 @@
               "concept": "album",
               "label": "Album",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/album?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+              "address": "meaning://github.com/demo-db/chinook/album?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
               "extends": []
             }
           ],
@@ -56,7 +56,7 @@
                   "concept": "album",
                   "label": "Album",
                   "role": "display-name",
-                  "address": "meaning://github.com/demo-db/chinook/album?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/album?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -71,7 +71,7 @@
                   "concept": "artist",
                   "label": "Artist",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/artist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/artist?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -88,7 +88,7 @@
               "concept": "artist",
               "label": "Artist",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/artist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+              "address": "meaning://github.com/demo-db/chinook/artist?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
               "extends": []
             }
           ],
@@ -102,7 +102,7 @@
                   "concept": "artist",
                   "label": "Artist",
                   "role": "identifier",
-                  "address": "meaning://github.com/demo-db/chinook/artist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/artist?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -116,7 +116,7 @@
                   "concept": "artist",
                   "label": "Artist",
                   "role": "display-name",
-                  "address": "meaning://github.com/demo-db/chinook/artist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/artist?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -133,13 +133,13 @@
               "concept": "customer",
               "label": "Customer",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/customer?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+              "address": "meaning://github.com/demo-db/chinook/customer?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
               "extends": [
                 {
                   "graph": "core",
                   "concept": "customer",
                   "label": "Customer",
-                  "address": "meaning://github.com/meaninggraph/core/customer?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                  "address": "meaning://github.com/meaninggraph/core/customer?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                 }
               ]
             }
@@ -189,13 +189,13 @@
                   "concept": "customer-country",
                   "label": "Customer country",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/customer-country?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/customer-country?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": [],
                   "values_of": {
                     "graph": "core",
                     "concept": "country",
                     "label": "Country",
-                    "address": "meaning://github.com/meaninggraph/core/country?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7",
+                    "address": "meaning://github.com/meaninggraph/core/country?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97",
                     "extends": []
                   }
                 }
@@ -231,25 +231,25 @@
                   "concept": "support-rep",
                   "label": "Support representative",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/support-rep?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/support-rep?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": [],
                   "values_of": {
                     "graph": "chinook",
                     "concept": "employee",
                     "label": "Employee",
-                    "address": "meaning://github.com/demo-db/chinook/employee?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                    "address": "meaning://github.com/demo-db/chinook/employee?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                     "extends": [
                       {
                         "graph": "core",
                         "concept": "employee",
                         "label": "Employee",
-                        "address": "meaning://github.com/meaninggraph/core/employee?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                        "address": "meaning://github.com/meaninggraph/core/employee?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                       },
                       {
                         "graph": "core",
                         "concept": "person",
                         "label": "Person",
-                        "address": "meaning://github.com/meaninggraph/core/person?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                        "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                       }
                     ]
                   }
@@ -268,19 +268,19 @@
               "concept": "employee",
               "label": "Employee",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/employee?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+              "address": "meaning://github.com/demo-db/chinook/employee?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
               "extends": [
                 {
                   "graph": "core",
                   "concept": "employee",
                   "label": "Employee",
-                  "address": "meaning://github.com/meaninggraph/core/employee?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                  "address": "meaning://github.com/meaninggraph/core/employee?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                 },
                 {
                   "graph": "core",
                   "concept": "person",
                   "label": "Person",
-                  "address": "meaning://github.com/meaninggraph/core/person?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                  "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                 }
               ]
             }
@@ -316,32 +316,32 @@
                   "concept": "manager",
                   "label": "Manager",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/manager?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/manager?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": [
                     {
                       "graph": "core",
                       "concept": "manager",
                       "label": "Manager",
-                      "address": "meaning://github.com/meaninggraph/core/manager?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      "address": "meaning://github.com/meaninggraph/core/manager?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                     }
                   ],
                   "values_of": {
                     "graph": "chinook",
                     "concept": "employee",
                     "label": "Employee",
-                    "address": "meaning://github.com/demo-db/chinook/employee?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                    "address": "meaning://github.com/demo-db/chinook/employee?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                     "extends": [
                       {
                         "graph": "core",
                         "concept": "employee",
                         "label": "Employee",
-                        "address": "meaning://github.com/meaninggraph/core/employee?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                        "address": "meaning://github.com/meaninggraph/core/employee?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                       },
                       {
                         "graph": "core",
                         "concept": "person",
                         "label": "Person",
-                        "address": "meaning://github.com/meaninggraph/core/person?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                        "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                       }
                     ]
                   }
@@ -410,7 +410,7 @@
               "concept": "genre",
               "label": "Genre",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/genre?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+              "address": "meaning://github.com/demo-db/chinook/genre?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
               "extends": []
             }
           ],
@@ -429,7 +429,7 @@
                   "concept": "genre",
                   "label": "Genre",
                   "role": "display-name",
-                  "address": "meaning://github.com/demo-db/chinook/genre?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/genre?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -446,13 +446,13 @@
               "concept": "invoice",
               "label": "Invoice",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/invoice?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+              "address": "meaning://github.com/demo-db/chinook/invoice?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
               "extends": [
                 {
                   "graph": "core",
                   "concept": "invoice",
                   "label": "Invoice",
-                  "address": "meaning://github.com/meaninggraph/core/invoice?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                  "address": "meaning://github.com/meaninggraph/core/invoice?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                 }
               ]
             }
@@ -473,13 +473,13 @@
                   "concept": "customer",
                   "label": "Customer",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/customer?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/customer?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": [
                     {
                       "graph": "core",
                       "concept": "customer",
                       "label": "Customer",
-                      "address": "meaning://github.com/meaninggraph/core/customer?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      "address": "meaning://github.com/meaninggraph/core/customer?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                     }
                   ]
                 }
@@ -494,13 +494,13 @@
                   "concept": "invoice-date",
                   "label": "Invoice date",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/invoice-date?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/invoice-date?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": [
                     {
                       "graph": "core",
                       "concept": "date",
                       "label": "Date",
-                      "address": "meaning://github.com/meaninggraph/core/date?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      "address": "meaning://github.com/meaninggraph/core/date?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                     }
                   ]
                 }
@@ -530,13 +530,13 @@
                   "concept": "billing-country",
                   "label": "Country",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/billing-country?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/billing-country?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": [],
                   "values_of": {
                     "graph": "core",
                     "concept": "country",
                     "label": "Country",
-                    "address": "meaning://github.com/meaninggraph/core/country?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7",
+                    "address": "meaning://github.com/meaninggraph/core/country?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97",
                     "extends": []
                   }
                 }
@@ -556,19 +556,19 @@
                   "concept": "invoice-total",
                   "label": "Invoice total",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/invoice-total?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/invoice-total?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": [
                     {
                       "graph": "core",
                       "concept": "invoice-total",
                       "label": "Invoice total",
-                      "address": "meaning://github.com/meaninggraph/core/invoice-total?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      "address": "meaning://github.com/meaninggraph/core/invoice-total?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                     },
                     {
                       "graph": "core",
                       "concept": "money-amount",
                       "label": "Money amount",
-                      "address": "meaning://github.com/meaninggraph/core/money-amount?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      "address": "meaning://github.com/meaninggraph/core/money-amount?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                     }
                   ]
                 },
@@ -577,13 +577,13 @@
                   "concept": "music-sales",
                   "label": "Music sales",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/music-sales?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/music-sales?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": [
                     {
                       "graph": "core",
                       "concept": "revenue",
                       "label": "Revenue",
-                      "address": "meaning://github.com/meaninggraph/core/revenue?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      "address": "meaning://github.com/meaninggraph/core/revenue?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                     }
                   ]
                 }
@@ -601,13 +601,19 @@
               "concept": "invoice-line",
               "label": "Invoice line",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/invoice-line?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+              "address": "meaning://github.com/demo-db/chinook/invoice-line?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
               "extends": [
                 {
                   "graph": "core",
                   "concept": "invoice-line",
                   "label": "Invoice line",
-                  "address": "meaning://github.com/meaninggraph/core/invoice-line?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                  "address": "meaning://github.com/meaninggraph/core/invoice-line?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                },
+                {
+                  "graph": "core",
+                  "concept": "commercial-line-item",
+                  "label": "Commercial line item",
+                  "address": "meaning://github.com/meaninggraph/core/commercial-line-item?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                 }
               ]
             }
@@ -628,13 +634,13 @@
                   "concept": "invoice",
                   "label": "Invoice",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/invoice?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/invoice?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": [
                     {
                       "graph": "core",
                       "concept": "invoice",
                       "label": "Invoice",
-                      "address": "meaning://github.com/meaninggraph/core/invoice?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      "address": "meaning://github.com/meaninggraph/core/invoice?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                     }
                   ]
                 }
@@ -650,7 +656,7 @@
                   "concept": "track",
                   "label": "Track",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/track?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/track?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -664,25 +670,25 @@
                   "concept": "unit-price",
                   "label": "Unit price",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/unit-price?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/unit-price?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": [
                     {
                       "graph": "core",
                       "concept": "unit-price",
                       "label": "Unit price",
-                      "address": "meaning://github.com/meaninggraph/core/unit-price?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      "address": "meaning://github.com/meaninggraph/core/unit-price?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                     },
                     {
                       "graph": "core",
                       "concept": "price",
                       "label": "Price",
-                      "address": "meaning://github.com/meaninggraph/core/price?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      "address": "meaning://github.com/meaninggraph/core/price?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                     },
                     {
                       "graph": "core",
                       "concept": "money-amount",
                       "label": "Money amount",
-                      "address": "meaning://github.com/meaninggraph/core/money-amount?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      "address": "meaning://github.com/meaninggraph/core/money-amount?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                     }
                   ]
                 }
@@ -697,13 +703,13 @@
                   "concept": "quantity",
                   "label": "Quantity",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/quantity?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/quantity?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": [
                     {
                       "graph": "core",
                       "concept": "quantity",
                       "label": "Quantity",
-                      "address": "meaning://github.com/meaninggraph/core/quantity?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      "address": "meaning://github.com/meaninggraph/core/quantity?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                     }
                   ]
                 }
@@ -721,7 +727,7 @@
               "concept": "media-type",
               "label": "Media type",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/media-type?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+              "address": "meaning://github.com/demo-db/chinook/media-type?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
               "extends": []
             }
           ],
@@ -740,7 +746,7 @@
                   "concept": "media-type",
                   "label": "Media type",
                   "role": "display-name",
-                  "address": "meaning://github.com/demo-db/chinook/media-type?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/media-type?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -757,7 +763,7 @@
               "concept": "playlist",
               "label": "Playlist",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/playlist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+              "address": "meaning://github.com/demo-db/chinook/playlist?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
               "extends": []
             }
           ],
@@ -776,7 +782,7 @@
                   "concept": "playlist",
                   "label": "Playlist",
                   "role": "display-name",
-                  "address": "meaning://github.com/demo-db/chinook/playlist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/playlist?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -799,7 +805,7 @@
                   "concept": "playlist",
                   "label": "Playlist",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/playlist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/playlist?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -822,7 +828,7 @@
               "concept": "track",
               "label": "Track",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/track?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+              "address": "meaning://github.com/demo-db/chinook/track?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
               "extends": []
             }
           ],
@@ -841,7 +847,7 @@
                   "concept": "track",
                   "label": "Track",
                   "role": "display-name",
-                  "address": "meaning://github.com/demo-db/chinook/track?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/track?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -856,7 +862,7 @@
                   "concept": "album",
                   "label": "Album",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/album?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/album?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -871,7 +877,7 @@
                   "concept": "media-type",
                   "label": "Media type",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/media-type?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/media-type?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -886,7 +892,7 @@
                   "concept": "genre",
                   "label": "Genre",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/genre?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/genre?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -905,7 +911,7 @@
                   "concept": "track-length",
                   "label": "Track length",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/track-length?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/track-length?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": []
                 }
               ]
@@ -924,19 +930,19 @@
                   "concept": "list-price",
                   "label": "List price",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/list-price?ref=184f9ee22101f8f56016c7963d18a406beffa013",
+                  "address": "meaning://github.com/demo-db/chinook/list-price?ref=f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b",
                   "extends": [
                     {
                       "graph": "core",
                       "concept": "price",
                       "label": "Price",
-                      "address": "meaning://github.com/meaninggraph/core/price?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      "address": "meaning://github.com/meaninggraph/core/price?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                     },
                     {
                       "graph": "core",
                       "concept": "money-amount",
                       "label": "Money amount",
-                      "address": "meaning://github.com/meaninggraph/core/money-amount?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                      "address": "meaning://github.com/meaninggraph/core/money-amount?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                     }
                   ]
                 }
@@ -958,7 +964,7 @@
       },
       "homepage": "https://northwind.demodb.dev/",
       "repository": "https://github.com/demo-db/northwind",
-      "commit": "3253072905253d3815dd5a3a2b94f8f257522424",
+      "commit": "f5855699eafaba6f09b7f4897abdb2a304698b67",
       "manifest": "ovdb.yaml",
       "licence": "MIT",
       "model": {
@@ -1047,13 +1053,13 @@
               "concept": "customer",
               "label": "customer",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/northwind/customer?ref=3253072905253d3815dd5a3a2b94f8f257522424",
+              "address": "meaning://github.com/demo-db/northwind/customer?ref=f5855699eafaba6f09b7f4897abdb2a304698b67",
               "extends": [
                 {
                   "graph": "core",
                   "concept": "customer",
                   "label": "Customer",
-                  "address": "meaning://github.com/meaninggraph/core/customer?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                  "address": "meaning://github.com/meaninggraph/core/customer?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                 }
               ]
             }
@@ -1146,19 +1152,19 @@
               "concept": "employee",
               "label": "employee",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/northwind/employee?ref=3253072905253d3815dd5a3a2b94f8f257522424",
+              "address": "meaning://github.com/demo-db/northwind/employee?ref=f5855699eafaba6f09b7f4897abdb2a304698b67",
               "extends": [
                 {
                   "graph": "core",
                   "concept": "employee",
                   "label": "Employee",
-                  "address": "meaning://github.com/meaninggraph/core/employee?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                  "address": "meaning://github.com/meaninggraph/core/employee?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                 },
                 {
                   "graph": "core",
                   "concept": "person",
                   "label": "Person",
-                  "address": "meaning://github.com/meaninggraph/core/person?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                  "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                 }
               ]
             }
@@ -1267,13 +1273,19 @@
               "concept": "order-line",
               "label": "sales order line",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/northwind/order-line?ref=3253072905253d3815dd5a3a2b94f8f257522424",
+              "address": "meaning://github.com/demo-db/northwind/order-line?ref=f5855699eafaba6f09b7f4897abdb2a304698b67",
               "extends": [
                 {
                   "graph": "core",
-                  "concept": "invoice-line",
-                  "label": "Invoice line",
-                  "address": "meaning://github.com/meaninggraph/core/invoice-line?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                  "concept": "order-line",
+                  "label": "Order line",
+                  "address": "meaning://github.com/meaninggraph/core/order-line?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                },
+                {
+                  "graph": "core",
+                  "concept": "commercial-line-item",
+                  "label": "Commercial line item",
+                  "address": "meaning://github.com/meaninggraph/core/commercial-line-item?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                 }
               ]
             }
@@ -1318,13 +1330,13 @@
               "concept": "order",
               "label": "sales order",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/northwind/order?ref=3253072905253d3815dd5a3a2b94f8f257522424",
+              "address": "meaning://github.com/demo-db/northwind/order?ref=f5855699eafaba6f09b7f4897abdb2a304698b67",
               "extends": [
                 {
                   "graph": "core",
-                  "concept": "invoice",
-                  "label": "Invoice",
-                  "address": "meaning://github.com/meaninggraph/core/invoice?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                  "concept": "order",
+                  "label": "Order",
+                  "address": "meaning://github.com/meaninggraph/core/order?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
                 }
               ]
             }
@@ -1407,13 +1419,13 @@
                   "concept": "shipping-country",
                   "label": "shipping country",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/northwind/shipping-country?ref=3253072905253d3815dd5a3a2b94f8f257522424",
+                  "address": "meaning://github.com/demo-db/northwind/shipping-country?ref=f5855699eafaba6f09b7f4897abdb2a304698b67",
                   "extends": [],
                   "values_of": {
                     "graph": "core",
                     "concept": "country",
                     "label": "Country",
-                    "address": "meaning://github.com/meaninggraph/core/country?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7",
+                    "address": "meaning://github.com/meaninggraph/core/country?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97",
                     "extends": []
                   }
                 }

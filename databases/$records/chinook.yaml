@@ -8,7 +8,7 @@ description: >-
 status: draft
 url: https://chinookdb.com/ovdb/dbs/chinook
 repository: https://github.com/demo-db/chinook
-commit: 184f9ee22101f8f56016c7963d18a406beffa013
+commit: f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b
 manifest: ovdb.yaml
 meaning_graph: chinook
 maintainers:
