@@ -1,6 +1,6 @@
 {
   "format": "ovdb-directory/draft-1",
-  "checksum": "sha256:b0d5002b8f6fa4b4879e8c7faadbb4bd69451afc54c889b052f2a028251608d9",
+  "checksum": "sha256:bba195d94263087e438f31e9f679d862a516db8a376410b75b4e0c60150ee17e",
   "databases": [
     {
       "id": "chinook",
@@ -12,23 +12,24 @@
         "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook",
         "engine": "sqlite"
       },
-      "homepage": "https://chinookdb.com/",
-      "repository": "https://github.com/datatug/chinookdb",
-      "commit": "f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+      "homepage": "https://chinook.demodb.dev/",
+      "repository": "https://github.com/demo-db/chinook",
+      "commit": "184f9ee22101f8f56016c7963d18a406beffa013",
       "manifest": "ovdb.yaml",
       "licence": "MIT",
       "model": {
         "name": "chinook",
         "path": "model/chinook.modelspec.hcl",
-        "address": "modelspec://github.com/datatug/chinookdb/chinook"
+        "address": "modelspec://github.com/demo-db/chinook/chinook"
       },
       "meaning_graph": {
         "id": "chinook",
-        "address": "meaning://github.com/datatug/chinookdb"
+        "address": "meaning://github.com/demo-db/chinook"
       },
       "recordsets": [
         {
           "name": "Album",
+          "modelEntity": "Album",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Album",
           "meanings": [
             {
@@ -36,7 +37,7 @@
               "concept": "album",
               "label": "Album",
               "role": "entity",
-              "address": "meaning://github.com/datatug/chinookdb/album?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+              "address": "meaning://github.com/demo-db/chinook/album?ref=184f9ee22101f8f56016c7963d18a406beffa013",
               "extends": []
             }
           ],
@@ -55,7 +56,7 @@
                   "concept": "album",
                   "label": "Album",
                   "role": "display-name",
-                  "address": "meaning://github.com/datatug/chinookdb/album?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/album?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -70,7 +71,7 @@
                   "concept": "artist",
                   "label": "Artist",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/datatug/chinookdb/artist?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/artist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -79,6 +80,7 @@
         },
         {
           "name": "Artist",
+          "modelEntity": "Artist",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Artist",
           "meanings": [
             {
@@ -86,7 +88,7 @@
               "concept": "artist",
               "label": "Artist",
               "role": "entity",
-              "address": "meaning://github.com/datatug/chinookdb/artist?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+              "address": "meaning://github.com/demo-db/chinook/artist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
               "extends": []
             }
           ],
@@ -100,7 +102,7 @@
                   "concept": "artist",
                   "label": "Artist",
                   "role": "identifier",
-                  "address": "meaning://github.com/datatug/chinookdb/artist?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/artist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -114,7 +116,7 @@
                   "concept": "artist",
                   "label": "Artist",
                   "role": "display-name",
-                  "address": "meaning://github.com/datatug/chinookdb/artist?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/artist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -123,6 +125,7 @@
         },
         {
           "name": "Customer",
+          "modelEntity": "Customer",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Customer",
           "meanings": [
             {
@@ -130,7 +133,7 @@
               "concept": "customer",
               "label": "Customer",
               "role": "entity",
-              "address": "meaning://github.com/datatug/chinookdb/customer?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+              "address": "meaning://github.com/demo-db/chinook/customer?ref=184f9ee22101f8f56016c7963d18a406beffa013",
               "extends": [
                 {
                   "graph": "core",
@@ -186,7 +189,7 @@
                   "concept": "customer-country",
                   "label": "Customer country",
                   "role": "value",
-                  "address": "meaning://github.com/datatug/chinookdb/customer-country?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/customer-country?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": [],
                   "values_of": {
                     "graph": "core",
@@ -228,13 +231,13 @@
                   "concept": "support-rep",
                   "label": "Support representative",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/datatug/chinookdb/support-rep?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/support-rep?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": [],
                   "values_of": {
                     "graph": "chinook",
                     "concept": "employee",
                     "label": "Employee",
-                    "address": "meaning://github.com/datatug/chinookdb/employee?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                    "address": "meaning://github.com/demo-db/chinook/employee?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                     "extends": [
                       {
                         "graph": "core",
@@ -257,6 +260,7 @@
         },
         {
           "name": "Employee",
+          "modelEntity": "Employee",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Employee",
           "meanings": [
             {
@@ -264,7 +268,7 @@
               "concept": "employee",
               "label": "Employee",
               "role": "entity",
-              "address": "meaning://github.com/datatug/chinookdb/employee?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+              "address": "meaning://github.com/demo-db/chinook/employee?ref=184f9ee22101f8f56016c7963d18a406beffa013",
               "extends": [
                 {
                   "graph": "core",
@@ -312,7 +316,7 @@
                   "concept": "manager",
                   "label": "Manager",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/datatug/chinookdb/manager?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/manager?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": [
                     {
                       "graph": "core",
@@ -325,7 +329,7 @@
                     "graph": "chinook",
                     "concept": "employee",
                     "label": "Employee",
-                    "address": "meaning://github.com/datatug/chinookdb/employee?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                    "address": "meaning://github.com/demo-db/chinook/employee?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                     "extends": [
                       {
                         "graph": "core",
@@ -398,6 +402,7 @@
         },
         {
           "name": "Genre",
+          "modelEntity": "Genre",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Genre",
           "meanings": [
             {
@@ -405,7 +410,7 @@
               "concept": "genre",
               "label": "Genre",
               "role": "entity",
-              "address": "meaning://github.com/datatug/chinookdb/genre?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+              "address": "meaning://github.com/demo-db/chinook/genre?ref=184f9ee22101f8f56016c7963d18a406beffa013",
               "extends": []
             }
           ],
@@ -424,7 +429,7 @@
                   "concept": "genre",
                   "label": "Genre",
                   "role": "display-name",
-                  "address": "meaning://github.com/datatug/chinookdb/genre?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/genre?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -433,6 +438,7 @@
         },
         {
           "name": "Invoice",
+          "modelEntity": "Invoice",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Invoice",
           "meanings": [
             {
@@ -440,7 +446,7 @@
               "concept": "invoice",
               "label": "Invoice",
               "role": "entity",
-              "address": "meaning://github.com/datatug/chinookdb/invoice?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+              "address": "meaning://github.com/demo-db/chinook/invoice?ref=184f9ee22101f8f56016c7963d18a406beffa013",
               "extends": [
                 {
                   "graph": "core",
@@ -467,7 +473,7 @@
                   "concept": "customer",
                   "label": "Customer",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/datatug/chinookdb/customer?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/customer?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": [
                     {
                       "graph": "core",
@@ -488,7 +494,7 @@
                   "concept": "invoice-date",
                   "label": "Invoice date",
                   "role": "value",
-                  "address": "meaning://github.com/datatug/chinookdb/invoice-date?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/invoice-date?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": [
                     {
                       "graph": "core",
@@ -524,7 +530,7 @@
                   "concept": "billing-country",
                   "label": "Country",
                   "role": "value",
-                  "address": "meaning://github.com/datatug/chinookdb/billing-country?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/billing-country?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": [],
                   "values_of": {
                     "graph": "core",
@@ -550,7 +556,7 @@
                   "concept": "invoice-total",
                   "label": "Invoice total",
                   "role": "value",
-                  "address": "meaning://github.com/datatug/chinookdb/invoice-total?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/invoice-total?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": [
                     {
                       "graph": "core",
@@ -571,7 +577,7 @@
                   "concept": "music-sales",
                   "label": "Music sales",
                   "role": "value",
-                  "address": "meaning://github.com/datatug/chinookdb/music-sales?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/music-sales?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": [
                     {
                       "graph": "core",
@@ -587,6 +593,7 @@
         },
         {
           "name": "InvoiceLine",
+          "modelEntity": "InvoiceLine",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/InvoiceLine",
           "meanings": [
             {
@@ -594,7 +601,7 @@
               "concept": "invoice-line",
               "label": "Invoice line",
               "role": "entity",
-              "address": "meaning://github.com/datatug/chinookdb/invoice-line?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+              "address": "meaning://github.com/demo-db/chinook/invoice-line?ref=184f9ee22101f8f56016c7963d18a406beffa013",
               "extends": [
                 {
                   "graph": "core",
@@ -621,7 +628,7 @@
                   "concept": "invoice",
                   "label": "Invoice",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/datatug/chinookdb/invoice?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/invoice?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": [
                     {
                       "graph": "core",
@@ -643,7 +650,7 @@
                   "concept": "track",
                   "label": "Track",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/datatug/chinookdb/track?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/track?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -657,7 +664,7 @@
                   "concept": "unit-price",
                   "label": "Unit price",
                   "role": "value",
-                  "address": "meaning://github.com/datatug/chinookdb/unit-price?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/unit-price?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": [
                     {
                       "graph": "core",
@@ -690,7 +697,7 @@
                   "concept": "quantity",
                   "label": "Quantity",
                   "role": "value",
-                  "address": "meaning://github.com/datatug/chinookdb/quantity?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/quantity?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": [
                     {
                       "graph": "core",
@@ -706,6 +713,7 @@
         },
         {
           "name": "MediaType",
+          "modelEntity": "MediaType",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/MediaType",
           "meanings": [
             {
@@ -713,7 +721,7 @@
               "concept": "media-type",
               "label": "Media type",
               "role": "entity",
-              "address": "meaning://github.com/datatug/chinookdb/media-type?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+              "address": "meaning://github.com/demo-db/chinook/media-type?ref=184f9ee22101f8f56016c7963d18a406beffa013",
               "extends": []
             }
           ],
@@ -732,7 +740,7 @@
                   "concept": "media-type",
                   "label": "Media type",
                   "role": "display-name",
-                  "address": "meaning://github.com/datatug/chinookdb/media-type?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/media-type?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -741,6 +749,7 @@
         },
         {
           "name": "Playlist",
+          "modelEntity": "Playlist",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Playlist",
           "meanings": [
             {
@@ -748,7 +757,7 @@
               "concept": "playlist",
               "label": "Playlist",
               "role": "entity",
-              "address": "meaning://github.com/datatug/chinookdb/playlist?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+              "address": "meaning://github.com/demo-db/chinook/playlist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
               "extends": []
             }
           ],
@@ -767,7 +776,7 @@
                   "concept": "playlist",
                   "label": "Playlist",
                   "role": "display-name",
-                  "address": "meaning://github.com/datatug/chinookdb/playlist?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/playlist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -776,6 +785,7 @@
         },
         {
           "name": "PlaylistTrack",
+          "modelEntity": "PlaylistTrack",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/PlaylistTrack",
           "meanings": [],
           "fields": [
@@ -789,7 +799,7 @@
                   "concept": "playlist",
                   "label": "Playlist",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/datatug/chinookdb/playlist?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/playlist?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -804,6 +814,7 @@
         },
         {
           "name": "Track",
+          "modelEntity": "Track",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Track",
           "meanings": [
             {
@@ -811,7 +822,7 @@
               "concept": "track",
               "label": "Track",
               "role": "entity",
-              "address": "meaning://github.com/datatug/chinookdb/track?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+              "address": "meaning://github.com/demo-db/chinook/track?ref=184f9ee22101f8f56016c7963d18a406beffa013",
               "extends": []
             }
           ],
@@ -830,7 +841,7 @@
                   "concept": "track",
                   "label": "Track",
                   "role": "display-name",
-                  "address": "meaning://github.com/datatug/chinookdb/track?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/track?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -845,7 +856,7 @@
                   "concept": "album",
                   "label": "Album",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/datatug/chinookdb/album?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/album?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -860,7 +871,7 @@
                   "concept": "media-type",
                   "label": "Media type",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/datatug/chinookdb/media-type?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/media-type?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -875,7 +886,7 @@
                   "concept": "genre",
                   "label": "Genre",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/datatug/chinookdb/genre?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/genre?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -894,7 +905,7 @@
                   "concept": "track-length",
                   "label": "Track length",
                   "role": "value",
-                  "address": "meaning://github.com/datatug/chinookdb/track-length?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/track-length?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": []
                 }
               ]
@@ -913,7 +924,7 @@
                   "concept": "list-price",
                   "label": "List price",
                   "role": "value",
-                  "address": "meaning://github.com/datatug/chinookdb/list-price?ref=f0c71b959bd082c3ec495df5fbecb4af014d6d12",
+                  "address": "meaning://github.com/demo-db/chinook/list-price?ref=184f9ee22101f8f56016c7963d18a406beffa013",
                   "extends": [
                     {
                       "graph": "core",
@@ -930,6 +941,676 @@
                   ]
                 }
               ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "northwind",
+      "title": "Northwind small-business sample database",
+      "description": "The classic Northwind sample database for customers, orders, products, suppliers, shippers, territories and employees. The pinned SQLite build is read-only; the native schema includes 13 tables and 17 views.",
+      "status": "draft",
+      "url": "https://northwind.demodb.dev/ovdb/dbs/northwind",
+      "deployment": {
+        "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind",
+        "engine": "sqlite"
+      },
+      "homepage": "https://northwind.demodb.dev/",
+      "repository": "https://github.com/demo-db/northwind",
+      "commit": "3253072905253d3815dd5a3a2b94f8f257522424",
+      "manifest": "ovdb.yaml",
+      "licence": "MIT",
+      "model": {
+        "name": "northwind",
+        "path": "model/northwind.modelspec.hcl",
+        "address": "modelspec://github.com/demo-db/northwind/northwind"
+      },
+      "meaning_graph": {
+        "id": "northwind",
+        "address": "meaning://github.com/demo-db/northwind"
+      },
+      "recordsets": [
+        {
+          "name": "Categories",
+          "modelEntity": "Categories",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Categories",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "CategoryID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "CategoryName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Description",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Picture",
+              "type": "document",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "CustomerCustomerDemo",
+          "modelEntity": "CustomerCustomerDemo",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/CustomerCustomerDemo",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "CustomerID",
+              "type": "reference",
+              "references": "Customers",
+              "meanings": []
+            },
+            {
+              "name": "CustomerTypeID",
+              "type": "reference",
+              "references": "CustomerDemographics",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "CustomerDemographics",
+          "modelEntity": "CustomerDemographics",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/CustomerDemographics",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "CustomerTypeID",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "CustomerDesc",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Customers",
+          "modelEntity": "Customers",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Customers",
+          "meanings": [
+            {
+              "graph": "northwind",
+              "concept": "customer",
+              "label": "customer",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/northwind/customer?ref=3253072905253d3815dd5a3a2b94f8f257522424",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "customer",
+                  "label": "Customer",
+                  "address": "meaning://github.com/meaninggraph/core/customer?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "CustomerID",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "CompanyName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ContactName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ContactTitle",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Address",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "City",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Region",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "PostalCode",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Country",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Phone",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Fax",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "EmployeeTerritories",
+          "modelEntity": "EmployeeTerritories",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/EmployeeTerritories",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "EmployeeID",
+              "type": "reference",
+              "references": "Employees",
+              "meanings": []
+            },
+            {
+              "name": "TerritoryID",
+              "type": "reference",
+              "references": "Territories",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Employees",
+          "modelEntity": "Employees",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Employees",
+          "meanings": [
+            {
+              "graph": "northwind",
+              "concept": "employee",
+              "label": "employee",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/northwind/employee?ref=3253072905253d3815dd5a3a2b94f8f257522424",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "employee",
+                  "label": "Employee",
+                  "address": "meaning://github.com/meaninggraph/core/employee?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                },
+                {
+                  "graph": "core",
+                  "concept": "person",
+                  "label": "Person",
+                  "address": "meaning://github.com/meaninggraph/core/person?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "EmployeeID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "LastName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "FirstName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Title",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "TitleOfCourtesy",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "BirthDate",
+              "type": "date",
+              "meanings": []
+            },
+            {
+              "name": "HireDate",
+              "type": "date",
+              "meanings": []
+            },
+            {
+              "name": "Address",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "City",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Region",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "PostalCode",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Country",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "HomePhone",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Extension",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Photo",
+              "type": "document",
+              "meanings": []
+            },
+            {
+              "name": "Notes",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ReportsTo",
+              "type": "reference",
+              "references": "Employees",
+              "meanings": []
+            },
+            {
+              "name": "PhotoPath",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Order Details",
+          "modelEntity": "OrderDetails",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Order%20Details",
+          "meanings": [
+            {
+              "graph": "northwind",
+              "concept": "order-line",
+              "label": "sales order line",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/northwind/order-line?ref=3253072905253d3815dd5a3a2b94f8f257522424",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "invoice-line",
+                  "label": "Invoice line",
+                  "address": "meaning://github.com/meaninggraph/core/invoice-line?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "OrderID",
+              "type": "reference",
+              "references": "Orders",
+              "meanings": []
+            },
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Products",
+              "meanings": []
+            },
+            {
+              "name": "UnitPrice",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "Quantity",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Discount",
+              "type": "decimal",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Orders",
+          "modelEntity": "Orders",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Orders",
+          "meanings": [
+            {
+              "graph": "northwind",
+              "concept": "order",
+              "label": "sales order",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/northwind/order?ref=3253072905253d3815dd5a3a2b94f8f257522424",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "invoice",
+                  "label": "Invoice",
+                  "address": "meaning://github.com/meaninggraph/core/invoice?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "OrderID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "CustomerID",
+              "type": "reference",
+              "references": "Customers",
+              "meanings": []
+            },
+            {
+              "name": "EmployeeID",
+              "type": "reference",
+              "references": "Employees",
+              "meanings": []
+            },
+            {
+              "name": "OrderDate",
+              "type": "datetime",
+              "meanings": []
+            },
+            {
+              "name": "RequiredDate",
+              "type": "datetime",
+              "meanings": []
+            },
+            {
+              "name": "ShippedDate",
+              "type": "datetime",
+              "meanings": []
+            },
+            {
+              "name": "ShipVia",
+              "type": "reference",
+              "references": "Shippers",
+              "meanings": []
+            },
+            {
+              "name": "Freight",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ShipName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ShipAddress",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ShipCity",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ShipRegion",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ShipPostalCode",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ShipCountry",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "northwind",
+                  "concept": "shipping-country",
+                  "label": "shipping country",
+                  "role": "value",
+                  "address": "meaning://github.com/demo-db/northwind/shipping-country?ref=3253072905253d3815dd5a3a2b94f8f257522424",
+                  "extends": [],
+                  "values_of": {
+                    "graph": "core",
+                    "concept": "country",
+                    "label": "Country",
+                    "address": "meaning://github.com/meaninggraph/core/country?ref=cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7",
+                    "extends": []
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Products",
+          "modelEntity": "Products",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Products",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ProductName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "SupplierID",
+              "type": "reference",
+              "references": "Suppliers",
+              "meanings": []
+            },
+            {
+              "name": "CategoryID",
+              "type": "reference",
+              "references": "Categories",
+              "meanings": []
+            },
+            {
+              "name": "QuantityPerUnit",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "UnitPrice",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "UnitsInStock",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "UnitsOnOrder",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ReorderLevel",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Discontinued",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Regions",
+          "modelEntity": "Regions",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Regions",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "RegionID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "RegionDescription",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Shippers",
+          "modelEntity": "Shippers",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Shippers",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ShipperID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "CompanyName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Phone",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Suppliers",
+          "modelEntity": "Suppliers",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Suppliers",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "SupplierID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "CompanyName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ContactName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ContactTitle",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Address",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "City",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Region",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "PostalCode",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Country",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Phone",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Fax",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "HomePage",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Territories",
+          "modelEntity": "Territories",
+          "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Territories",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "TerritoryID",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "TerritoryDescription",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "RegionID",
+              "type": "reference",
+              "references": "Regions",
+              "meanings": []
             }
           ]
         }

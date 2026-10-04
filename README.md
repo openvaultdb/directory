@@ -9,7 +9,8 @@ carry. The Directory website is a separate repository; it reads
 
 | Id | Canonical URL | Repository at commit | Status |
 |---|---|---|---|
-| `chinook` | `https://chinookdb.com/ovdb/dbs/chinook` | [datatug/chinookdb@f0c71b9](https://github.com/datatug/chinookdb/tree/f0c71b959bd082c3ec495df5fbecb4af014d6d12) | draft |
+| `chinook` | `https://chinookdb.com/ovdb/dbs/chinook` | [demo-db/chinook@184f9ee](https://github.com/demo-db/chinook/tree/184f9ee22101f8f56016c7963d18a406beffa013) | draft |
+| `northwind` | `https://northwind.demodb.dev/ovdb/dbs/northwind` | [demo-db/northwind@8e9755a](https://github.com/demo-db/northwind/tree/8e9755ae30bb99f15601a7dd3833199f59d37035) | draft |
 
 ## This repository is the source of truth
 
@@ -90,7 +91,7 @@ Keyed by GitHub handle, with a `name`.
 A publisher repository opts in with a root `OVDB.md` whose frontmatter is
 `ovdb: 1` and `publish: [./ovdb.yaml]`, an explicit list of manifest paths
 relative to the repository root, never a glob. The manifest (`ovdb-manifest/draft-1`,
-for example [`ovdb.yaml` of Chinook](https://github.com/datatug/chinookdb/blob/f0c71b959bd082c3ec495df5fbecb4af014d6d12/ovdb.yaml))
+for example [`ovdb.yaml` of Chinook](https://github.com/demo-db/chinook/blob/184f9ee22101f8f56016c7963d18a406beffa013/ovdb.yaml))
 declares the canonical `url`, the `deployment` (`url`, `engine`, `discovery` on
 the canonical origin, and an optional `recordset_page` template with `{name}`),
 an optional `homepage` (the publisher's own web page for the database, which a site
@@ -98,8 +99,8 @@ may show as a link to its website; a public https URL on any origin, at most 200
 characters, held to the rules for every URL below),
 the `model` (its files, or its address when it is published elsewhere; see
 [Two forms](#two-forms-own-model-or-shared-model)), the `meaning` file and its
-graph, the publisher, the `licences` (`data`, `model`, `meaning`) and the
-`recordsets`. Every path is relative to the repository root and must be a regular file tracked
+graph, the publisher, the `licences` (`data`, `model`, `meaning`), the
+`recordsets` and optional `recordset_entities` mapping. Every path is relative to the repository root and must be a regular file tracked
 at the pinned commit: no `..`, leading `/`, `.` or empty segment, no glob, and
 symbolic links are refused. The model's source (`model.hcl`) ends in
 `.modelspec.hcl`.
@@ -134,6 +135,18 @@ registry to be readable: if it cannot be read (after a timeout and one retry), t
 check fails with a problem that names the registry and the cause, as it does for the
 MeaningGraph registry; it never falls back to old data.
 
+ModelSpec entities and properties use publishable identifiers. A source collection may have a native name that is not an identifier, such as Northwind's `Order Details`. Keep that exact collection name in `recordsets` and map it to its ModelSpec entity:
+
+```yaml
+recordsets:
+  - Customers
+  - Order Details
+recordset_entities:
+  "Order Details": OrderDetails
+```
+
+`recordset_entities` maps native collection names to ModelSpec entity names. Names not listed in the mapping keep the existing same-name behavior. Each ModelSpec entity maps to exactly one recordset, and every entity of an own model must appear. Meaning bindings use the ModelSpec name (`modelspec:///northwind.OrderDetails`); Directory pages, API links and recordset URLs keep the native collection name (`Order Details`). The `{name}` in `deployment.recordset_page` is URL-encoded as one path component.
+
 **Shared model.** The model and the meaning graph are published in other
 repositories, and this manifest points at them instead of copying them, so that
 every hoster of the same model is a database of that model. There are no local
@@ -141,9 +154,9 @@ model files and no local meaning file, and both pins are required:
 
 ```yaml
 model:
-  address: modelspec://github.com/datatug/chinookdb/chinook?ref=<40 hex>
+  address: modelspec://github.com/demo-db/chinook/chinook?ref=<40 hex>
 meaning:
-  address: meaning://github.com/datatug/chinookdb?ref=<40 hex>
+  address: meaning://github.com/demo-db/chinook?ref=<40 hex>
   file: model/chinook.meaning.yaml    # the graph's file, in the graph's repository, that binds the model
   graph:
     id: chinook                       # the MeaningGraph registry id; equals the record's meaning_graph
@@ -202,7 +215,7 @@ listed:
    the same repository, the two pins are the same commit, and the path is the
    registry's `files.source`. When they live in different repositories a relative
    path cannot say which model is meant and is refused; the entry must be the
-   model's address instead (`chinook: modelspec://github.com/datatug/chinookdb/chinook`,
+   model's address instead (`chinook: modelspec://github.com/demo-db/chinook/chinook`,
    with `?ref=` only if it is the manifest's pin). Bindings are written
    `modelspec:///{module}.{Entity}`, or with the shared model's own address (and pin)
    spelled out; a binding to any other model is refused.
@@ -313,13 +326,13 @@ address at the commit that address pins, resolved through the MeaningGraph regis
     "title": "…", "description": "…", "status": "draft",
     "url": "https://chinookdb.com/ovdb/dbs/chinook",
     "deployment": { "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook", "engine": "sqlite" },
-    "homepage": "https://chinookdb.com/",
-    "repository": "https://github.com/datatug/chinookdb",
+    "homepage": "https://chinook.demodb.dev/",
+    "repository": "https://github.com/demo-db/chinook",
     "commit": "<40 hex>",
     "manifest": "ovdb.yaml",
     "licence": "MIT",
-    "model": { "name": "chinook", "path": "model/chinook.modelspec.hcl", "address": "modelspec://github.com/datatug/chinookdb/chinook" },
-    "meaning_graph": { "id": "chinook", "address": "meaning://github.com/datatug/chinookdb" },
+    "model": { "name": "chinook", "path": "model/chinook.modelspec.hcl", "address": "modelspec://github.com/demo-db/chinook/chinook" },
+    "meaning_graph": { "id": "chinook", "address": "meaning://github.com/demo-db/chinook" },
     "recordsets": [{
       "name": "Customer",
       "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Customer",
@@ -364,13 +377,16 @@ address at the commit that address pins, resolved through the MeaningGraph regis
   and `model.commit` (the manifest's pin); both are absent when the model is in the
   database's own repository, so a link to the model's file for a shared-model
   database is `{model.repository}/blob/{model.commit}/{model.path}`.
-- `recordsets` are the ModelSpec entities, and their names are the collection
-  names the deployment serves. A recordset's `url` is the manifest's
+- `recordsets` are the native collection names the deployment serves. Each
+  recordset has `modelEntity`, the corresponding ModelSpec entity name (the
+  same value by default, or from `recordset_entities` when they differ). A
+  recordset's `url` is the manifest's
   `deployment.recordset_page` template with `{name}` filled in, and is absent
   when the manifest has no template: it is never built by appending to
   `deployment.url`.
 - A field's `type` is the ModelSpec property type. A property that references
-  another entity has `"type": "reference"` and `"references": "<Entity>"`.
+  another entity has `"type": "reference"` and `"references"` set to that
+  entity's native recordset name when it is listed.
 - `M` is a meaning, bound to a recordset (role `entity`) or to a field (any
   other `meaning/draft-1` binding role):
 
@@ -380,7 +396,7 @@ address at the commit that address pins, resolved through the MeaningGraph regis
     "concept": "customer-country",
     "label": "Customer country",
     "role": "value",
-    "address": "meaning://github.com/datatug/chinookdb/customer-country?ref=<40 hex>",
+    "address": "meaning://github.com/demo-db/chinook/customer-country?ref=<40 hex>",
     "extends": [],
     "values_of": {
       "graph": "core",
@@ -474,8 +490,9 @@ Two layers run in CI ([`.github/workflows/check.yml`](.github/workflows/check.ym
      read with its checksum verified) and lists the manifest's meaning file; for an
      own model it is registered for the same repository, with the same address
      (for a shared model, `meaning.address` is registered under that id);
-   - `recordsets` are exactly the ModelSpec entities (a shared model's manifest
-     may list a subset, explicitly, with `recordsets_partial: true`);
+   - `recordsets` map one-to-one to ModelSpec entities, by equal names or the
+     explicit `recordset_entities` mapping (a shared model's manifest may list a
+     subset, explicitly, with `recordsets_partial: true`);
    - an own model that names a registered `model.address` is the registered model
      (compared with the registry's `files.json`, or a warning when the commits
      differ);

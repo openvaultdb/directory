@@ -15,10 +15,10 @@ import { after, test } from 'node:test';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { addressOf, cacheRepoSound, defaultBranch, defaultCacheDir, git, gitEnv, historyPath, identity, install, onBranch, openCommit, repositoryKey, setGitProtocols } from './lib/git.mjs';
 import { runCheck, runIndex } from './lib/cli.mjs';
-import { hasOvdbMarker, publicHttpsProblem } from './lib/urls.mjs';
+import { encodePathSegment, hasOvdbMarker, publicHttpsProblem } from './lib/urls.mjs';
 import { buildIndex, checkDirectory, addressClaims, claimProblems, indexText, readDirectory, recordProblems, urlProblem } from './lib/directory.mjs';
 import { indexMeaningRegistry, loadMeaningRegistry } from './lib/meaning.mjs';
-import { indexModelRegistry, loadModelRegistry, modelRegistryDefaultUrl, parseModelSpec } from './lib/modelspec.mjs';
+import { indexModelRegistry, loadModelRegistry, modelRegistryDefaultUrl, parseModelRef, parseModelSpec } from './lib/modelspec.mjs';
 
 // The local repositories that stand in for https URLs are file:// URLs; git is allowed to read them.
 setGitProtocols('https:file');
@@ -29,10 +29,10 @@ after(() => rmSync(scratch, { recursive: true, force: true }));
 let count = 0;
 const fresh = (name) => { const dir = join(scratch, `${name}-${count++}`); mkdirSync(dir, { recursive: true }); return dir; };
 
-const chinookUrl = 'https://github.com/datatug/chinookdb';
+const chinookUrl = 'https://github.com/demo-db/chinook';
 const coreUrl = 'https://github.com/meaninggraph/core';
 const coreAddress = 'meaning://github.com/meaninggraph/core';
-const chinookAddress = 'meaning://github.com/datatug/chinookdb';
+const chinookAddress = 'meaning://github.com/demo-db/chinook';
 // The commit of core that scripts/fixtures/chinookdb pins; tests replace it with the local core commit.
 const fixtureCorePin = 'cb97dbcd9e951b00e7d46cb2e0c4e120c24c8db7';
 
@@ -126,6 +126,11 @@ function world({ publisher, core: editCore, record: editRecord, registry, direct
   const publisherOrigin = origin(files, { name: 'chinookdb', ...publisherOptions });
   const dir = fresh('directory');
   for (const name of ['.ingitdb', 'databases', 'maintainers']) cpSync(join(root, name), join(dir, name), { recursive: true });
+  // Each synthetic world owns only the record this test creates. Copying live
+  // records makes every unit test depend on the current catalogue and its
+  // registries, rather than the explicitly constructed local stand-ins.
+  const recordsDir = join(dir, 'databases', '$records');
+  for (const name of readdirSync(recordsDir)) if (name !== 'chinook.yaml') rmSync(join(recordsDir, name), { recursive: true, force: true });
   const record = { ...realRecord, commit: publisherOrigin.commit };
   editRecord?.(record);
   writeFileSync(join(dir, 'databases', '$records', 'chinook.yaml'), stringifyYaml(record));
@@ -218,6 +223,69 @@ test('index.json has the documented shape: recordsets and fields from the ModelS
   // Fields keep the ModelSpec's order; a field nothing is bound to has no meanings.
   assert.deepEqual(customer.fields.slice(0, 3).map((entry) => entry.name), ['CustomerId', 'FirstName', 'LastName']);
   assert.deepEqual(field(chinook, 'Customer', 'FirstName').meanings, []);
+});
+
+test('native spaced recordset names map to publishable ModelSpec entities and encode in recordset URLs', async () => {
+  const w = world({ publisher: (files) => {
+    modelEdit((doc) => {
+      doc.entities.OrderDetails = { key: ['OrderID', 'ProductID'], properties: {
+        OrderID: { type: 'int' }, ProductID: { type: 'int' }, UnitPrice: { type: 'decimal' },
+      } };
+    })(files);
+    manifestEdit((manifest) => {
+      manifest.recordsets.push('Order Details');
+      manifest.recordset_entities = { 'Order Details': 'OrderDetails' };
+      manifest.deployment.recordset_page = 'https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/{name}';
+    })(files);
+    meaningEdit((doc) => doc.concepts.push(
+      { id: 'order-detail', kind: 'entity', labels: { en: 'order detail' }, bindings: [{ model: 'modelspec:///chinook.OrderDetails', role: 'entity' }] },
+      { id: 'order-detail-price', kind: 'attribute', labels: { en: 'order detail price' }, bindings: [{ model: 'modelspec:///chinook.OrderDetails', property: 'UnitPrice', role: 'value' }] },
+    ))(files);
+  } });
+
+  const result = await index(w);
+  const orderDetails = result.databases[0].recordsets.find((recordset) => recordset.name === 'Order Details');
+  assert.ok(orderDetails);
+  assert.equal(orderDetails.modelEntity, 'OrderDetails');
+  assert.equal(orderDetails.url, 'https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Order%20Details');
+  assert.deepEqual(orderDetails.meanings.map((entry) => [entry.concept, entry.role]), [['order-detail', 'entity']]);
+  assert.deepEqual(orderDetails.fields.map((entry) => entry.name), ['OrderID', 'ProductID', 'UnitPrice']);
+  assert.deepEqual(orderDetails.fields[2].meanings.map((entry) => [entry.concept, entry.role]), [['order-detail-price', 'value']]);
+});
+
+test('recordset_entities is explicit, one-to-one, and resolves only real recordsets and ModelSpec entities', async () => {
+  const mapping = (change) => manifestEdit((manifest) => {
+    manifest.recordsets.push('Order Details');
+    manifest.recordset_entities = { 'Order Details': 'OrderDetails' };
+    change?.(manifest);
+  });
+  const model = modelEdit((doc) => { doc.entities.OrderDetails = { properties: { Id: { type: 'int' } } }; });
+  assert.deepEqual(await problemsOf(world({ publisher: (files) => { model(files); mapping() (files); } })), []);
+  expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordset_entities.Ghost = 'Missing'; })(files); } })), /recordset_entities names "Ghost", which is not in recordsets/);
+  expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordset_entities['Order Details'] = 'Missing'; })(files); } })), /recordsets names things that do not map to ModelSpec entities: Order Details/);
+  expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordsets.push('More Details'); manifest.recordset_entities['More Details'] = 'OrderDetails'; })(files); } })), /mappings must be one-to-one/);
+  expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordset_entities['Order Details'] = '../unsafe'; })(files); } })), /must be a ModelSpec entity identifier/);
+});
+
+test('ModelSpec names and references remain identifiers; encoded names cannot bypass the format', () => {
+  const parsed = parseModelSpec(JSON.stringify({ modelspec: '1.0-draft', module: { name: 'northwind' }, entities: {
+    OrderDetails: { properties: { UnitPrice: { type: 'decimal' } } },
+  } }));
+  assert.deepEqual(parsed.problems, []);
+  assert.equal(parsed.entities.get('OrderDetails').properties[0].name, 'UnitPrice');
+  assert.equal(parseModelRef('modelspec:///northwind.OrderDetails')?.name, 'OrderDetails');
+  for (const ref of [
+    'modelspec:///northwind.Order%2FDetails',
+    'modelspec:///northwind.Order%2EDetails',
+    'modelspec:///northwind.Order%2fDetails',
+    'modelspec:///northwind.Order%2520Details%20',
+  ]) assert.equal(parseModelRef(ref), null, ref);
+  for (const name of ['Order Details', 'Order/Details', 'Order\\Details', 'Order.Details', 'Order\nDetails']) {
+    const invalid = parseModelSpec(JSON.stringify({ modelspec: '1.0-draft', module: { name: 'northwind' }, entities: {
+      [name]: { properties: { Id: { type: 'int' } } },
+    } }));
+    assert.notDeepEqual(invalid.problems, [], JSON.stringify(name));
+  }
 });
 
 test('the licence is the data licence, and a recordset has a url only when the manifest gives a recordset_page template', async () => {
@@ -343,22 +411,22 @@ test('a models entry is joined to the meaning file\'s directory: ../x.hcl from m
 // ---- the model's address ----
 
 test('model.address, when the manifest has one, is validated and emitted; databases that share it are of the same model', async () => {
-  const own = 'modelspec://github.com/datatug/chinookdb/chinook';
+  const own = 'modelspec://github.com/demo-db/chinook/chinook';
   const [withAddress] = (await index(world({ publisher: manifestEdit((manifest) => { manifest.model.address = own; }) }))).databases;
   assert.deepEqual(withAddress.model, { name: 'chinook', path: 'model/chinook.modelspec.hcl', address: own });
   const [without] = (await index(world())).databases;
   assert.ok(!('address' in without.model), 'absent when the manifest has none');
   const refused = [
-    ['modelspec://github.com/datatug/chinookdb', /model\.address must be modelspec:\/\/\{host\}\/\{org\}\/\{repo\}\/\{module\}/],
-    ['modelspec://github.com/datatug/chinookdb/chinook/extra', /model\.address must be modelspec/],
+    ['modelspec://github.com/demo-db/chinook', /model\.address must be modelspec:\/\/\{host\}\/\{org\}\/\{repo\}\/\{module\}/],
+    ['modelspec://github.com/demo-db/chinook/chinook/extra', /model\.address must be modelspec/],
     ['modelspec:///chinook', /model\.address must be modelspec/],
-    ['https://github.com/datatug/chinookdb/chinook', /model\.address must be modelspec/],
-    ['modelspec://github.com/datatug/chinookdb/chinook?ref=abc', /model\.address must be modelspec/],
-    ['modelspec://github.com/datatug/chinookdb/chinook#x', /model\.address must be modelspec/],
-    ['modelspec://evil.example/datatug/chinookdb/chinook', /must name a repository on github\.com/],
-    ['modelspec://github.com/DataTug/ChinookDB/chinook', /must be written in lower case/],
-    ['modelspec://github.com/someone/else/chinook', /names github\.com\/someone\/else, but the model's files are in github\.com\/datatug\/chinookdb/],
-    ['modelspec://github.com/datatug/chinookdb/other', /names module other, but the ModelSpec at model\/chinook\.modelspec\.json is module chinook/],
+    ['https://github.com/demo-db/chinook/chinook', /model\.address must be modelspec/],
+    ['modelspec://github.com/demo-db/chinook/chinook?ref=abc', /model\.address must be modelspec/],
+    ['modelspec://github.com/demo-db/chinook/chinook#x', /model\.address must be modelspec/],
+    ['modelspec://evil.example/demo-db/chinook/chinook', /must name a repository on github\.com/],
+    ['modelspec://github.com/Demo-DB/Chinook/chinook', /must be written in lower case/],
+    ['modelspec://github.com/someone/else/chinook', /names github\.com\/someone\/else, but the model's files are in github\.com\/demo-db\/chinook/],
+    ['modelspec://github.com/demo-db/chinook/other', /names module other, but the ModelSpec at model\/chinook\.modelspec\.json is module chinook/],
     [`${own}?ref=${'a'.repeat(40)}`, /must not carry \?ref= when the model's files are in the same repository/],
   ];
   for (const [address, pattern] of refused) {
@@ -420,7 +488,7 @@ test('a commit that is not on the default branch fails, even though the host wou
   // The side commit really is fetchable from the repository; it is just not main's.
   assert.doesNotThrow(() => openCommit(w.publisher.url, w.publisher.sideCommit, w.cacheDir));
   writeFileSync(join(w.dir, 'databases', '$records', 'chinook.yaml'), stringifyYaml({ ...realRecord, commit: w.publisher.sideCommit }));
-  expectProblem(await problemsOf(w), /^databases\/\$records\/chinook\.yaml: commit [0-9a-f]{40} is not in the history of main, the default branch of https:\/\/github\.com\/datatug\/chinookdb \(a commit only a fork or another branch has\)/);
+  expectProblem(await problemsOf(w), /^databases\/\$records\/chinook\.yaml: commit [0-9a-f]{40} is not in the history of main, the default branch of https:\/\/github\.com\/demo-db\/chinook \(a commit only a fork or another branch has\)/);
 });
 
 test('OVDB.md must exist, parse, opt in and list the manifest by explicit path', async () => {
@@ -451,9 +519,9 @@ test('the manifest needs its required fields, and its url, id and graph must agr
   expectProblem(await problemsOf(world({ publisher: (files) => files.set('ovdb.yaml', ': : not yaml [') })), /ovdb\.yaml is not valid YAML/);
 });
 
-test('recordsets are exactly the ModelSpec entities', async () => {
+test('recordsets map one-to-one to ModelSpec entities', async () => {
   expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.recordsets = manifest.recordsets.filter((name) => name !== 'Genre'); }) })), /ovdb\.yaml: recordsets lacks ModelSpec entities: Genre/);
-  expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.recordsets.push('Ghost'); }) })), /ovdb\.yaml: recordsets names things that are not ModelSpec entities: Ghost/);
+  expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.recordsets.push('Ghost'); }) })), /ovdb\.yaml: recordsets names things that do not map to ModelSpec entities: Ghost/);
   expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.recordsets.push('Genre'); }) })), /ovdb\.yaml: recordsets lists a name twice/);
 });
 
@@ -472,8 +540,8 @@ test('a ModelSpec that is not JSON, or has no entities, fails', async () => {
 
 test('the meaning graph must be registered in the MeaningGraph registry, for this repository', async () => {
   expectProblem(await problemsOf(world({ registry: (graphs) => graphs.splice(0, 1) })), /meaning_graph chinook is not registered in the MeaningGraph registry \(the test registry\)/);
-  expectProblem(await problemsOf(world({ registry: (graphs) => { graphs[0].repository = 'https://github.com/someone/else'; graphs[0].address = 'meaning://github.com/someone/else'; } })), /meaning_graph chinook is registered for https:\/\/github\.com\/someone\/else, not for https:\/\/github\.com\/datatug\/chinookdb/);
-  expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.meaning.graph.address = 'meaning://github.com/datatug/other'; }) })), /meaning\.graph\.address is meaning:\/\/github\.com\/datatug\/other, but the MeaningGraph registry registers chinook as meaning:\/\/github\.com\/datatug\/chinookdb/);
+  expectProblem(await problemsOf(world({ registry: (graphs) => { graphs[0].repository = 'https://github.com/someone/else'; graphs[0].address = 'meaning://github.com/someone/else'; } })), /meaning_graph chinook is registered for https:\/\/github\.com\/someone\/else, not for https:\/\/github\.com\/demo-db\/chinook/);
+  expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.meaning.graph.address = 'meaning://github.com/datatug/other'; }) })), /meaning\.graph\.address is meaning:\/\/github\.com\/datatug\/other, but the MeaningGraph registry registers chinook as meaning:\/\/github\.com\/demo-db\/chinook/);
   expectProblem(await problemsOf(world({ registry: (graphs) => { graphs[0].meaning_files = ['other.meaning.yaml']; } })), /meaning\.file model\/chinook\.meaning\.yaml is not one of the meaning files the MeaningGraph registry lists for chinook/);
 });
 
@@ -545,27 +613,27 @@ test('the record as committed is well formed', () => {
 
 test('records that are not well formed are refused before any git command runs', async () => {
   const refused = [
-    'http://github.com/datatug/chinookdb',
-    'git@github.com:datatug/chinookdb.git',
-    'ssh://git@github.com/datatug/chinookdb',
-    'https://github.com/datatug/chinookdb.git',
-    'https://github.com/datatug/chinookdb.GIT',
-    'https://github.com/datatug/chinookdb/',
+    'http://github.com/demo-db/chinook',
+    'git@github.com:demo-db/chinook.git',
+    'ssh://git@github.com/demo-db/chinook',
+    'https://github.com/demo-db/chinook.git',
+    'https://github.com/demo-db/chinook.GIT',
+    'https://github.com/demo-db/chinook/',
     'https://github.com/datatug',
-    'https://github.com/datatug/chinookdb/tree/main',
+    'https://github.com/demo-db/chinook/tree/main',
     'https://github.com/datatug/..',
     'https://github.com/./chinookdb',
-    'https://www.github.com/datatug/chinookdb',
-    'https://user@github.com/datatug/chinookdb',
-    'https://github.com:443/datatug/chinookdb',
-    'https://127.0.0.1/datatug/chinookdb',
-    'https://evil.example/datatug/chinookdb',
-    'https://github.com/datatug/chinookdb?x=1',
+    'https://www.github.com/demo-db/chinook',
+    'https://user@github.com/demo-db/chinook',
+    'https://github.com:443/demo-db/chinook',
+    'https://127.0.0.1/demo-db/chinook',
+    'https://evil.example/demo-db/chinook',
+    'https://github.com/demo-db/chinook?x=1',
     'https://github.com/datatug/chinook db',
     'https://github.com/datatug/chinook;touch-pwned',
     'https://github.com/datatug/$(touch-pwned)',
     '--upload-pack=touch pwned',
-    '-ohttps://github.com/datatug/chinookdb',
+    '-ohttps://github.com/demo-db/chinook',
     'file:///tmp/x',
     '',
     42,
@@ -576,8 +644,8 @@ test('records that are not well formed are refused before any git command runs',
     assert.equal(repositoryKey(repository), null, `${repository} is not a repository`);
     assert.equal(addressOf(repository), null);
   }
-  assert.equal(repositoryKey('https://github.com/datatug/chinookdb'), 'github.com/datatug/chinookdb');
-  assert.equal(addressOf('https://github.com/datatug/chinookdb'), chinookAddress);
+  assert.equal(repositoryKey('https://github.com/demo-db/chinook'), 'github.com/demo-db/chinook');
+  assert.equal(addressOf('https://github.com/demo-db/chinook'), chinookAddress);
 });
 
 test('a record with a shell-shaped or option-shaped value never reaches git', async () => {
@@ -735,7 +803,7 @@ test('concept ids are validated and a concept without one is reported, in this d
 });
 
 test('addresses use the canonical spelling the MeaningGraph registry registers, whatever case the record writes the repository in', async () => {
-  const variant = 'https://github.com/DataTug/ChinookDB';
+  const variant = 'https://github.com/Demo-DB/Chinook';
   const w = world({ record: (record) => { record.repository = variant; }, publisher: manifestEdit((manifest) => { delete manifest.publisher.repository; }) });
   w.urls.set(variant, w.publisher.url);
   const [chinook] = (await index(w)).databases;
@@ -785,6 +853,12 @@ test('public URLs are https only, without credentials, query or fragment, and ne
     assert.equal(publicHttpsProblem(accepted), null, accepted);
   }
   assert.match(publicHttpsProblem('https://example.com/x', { template: true }), /\{name\} exactly once/);
+  const encodedName = encodePathSegment('Order Details');
+  assert.equal(encodedName, 'Order%20Details');
+  assert.equal(publicHttpsProblem(`https://cloud.openvaultdb.com/ovdb/${encodedName}`, { encodedPathSegment: encodedName }), null);
+  assert.match(publicHttpsProblem('https://cloud.openvaultdb.com/ovdb/%2f', { encodedPathSegment: '%2f' }) ?? '', /canonically|non-canonical/);
+  assert.match(publicHttpsProblem('https://cloud.openvaultdb.com/ovdb/%2F', { encodedPathSegment: '%2F' }) ?? '', /unsafe encoded path segment/);
+  assert.match(publicHttpsProblem('https://cloud.openvaultdb.com/ovdb/%2E%2E', { encodedPathSegment: '%2E%2E' }) ?? '', /canonically/);
   for (const template of ['https://169.254.169.{name}/latest', 'https://metadata.google.{name}/x', 'https://{name}.example.com/x', 'https://{name}@example.com/x', 'https://example.com:{name}/x', 'https://{name}']) {
     assert.match(publicHttpsProblem(template, { template: true }) ?? '', /\{name\} in the path only|exactly once|not a URL/, template);
   }
@@ -980,7 +1054,7 @@ test('a recordset url is built from names that cannot change what it points at: 
   const cases = [
     ['https://169.254.169.{name}/latest/meta-data', '254', /\{name\} in the path only/],
     ['https://metadata.google.{name}/computeMetadata/v1', 'internal', /\{name\} in the path only/],
-    ['https://cloud.openvaultdb.com/a/b/{name}/admin', '..', /entity name ".." must be an identifier/],
+    ['https://cloud.openvaultdb.com/a/b/{name}/admin', '..', /recordsets name "\.\." must be at most 256 characters and contain no dot, slash, backslash or control character/],
   ];
   for (const [template, entity, pattern] of cases) {
     const w = world({
@@ -1054,7 +1128,7 @@ test('malformed meaning data is a problem, never an exception that ends the run'
 
 const hosterUrl = 'https://github.com/acme/chinook-hosting';
 const hosterFile = 'databases/$records/chinook-acme.yaml';
-const modelAddr = 'modelspec://github.com/datatug/chinookdb/chinook';
+const modelAddr = 'modelspec://github.com/demo-db/chinook/chinook';
 const meaningOnlyUrl = 'https://github.com/acme/chinook-meaning';
 const meaningOnlyAddress = 'meaning://github.com/acme/chinook-meaning';
 
@@ -1205,34 +1279,34 @@ test('a pin that differs from the one a registry registers is a warning, not a p
 test('a shared model\'s address must be registered in the ModelSpec registry, in the written form, and pinned', async () => {
   expectProblem(await sharedProblems(sharedWorld({ models: (models) => models.splice(0, 1) })), new RegExp(`${hosterFile.replace('$', '\\$')}: ovdb\\.yaml: model\\.address ${modelAddr.replaceAll('/', '\\/')} is not registered in the ModelSpec registry \\(the test ModelSpec registry\\)`));
   // The module is case-sensitive: another case is another module, which is not registered.
-  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.model.address = `modelspec://github.com/datatug/chinookdb/Chinook?ref=${w.publisher.commit}`; }))), /model\.address modelspec:\/\/github\.com\/datatug\/chinookdb\/Chinook is not registered/);
-  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.model.address = `modelspec://github.com/datatug/chinookdb/other?ref=${w.publisher.commit}`; }))), /model\.address modelspec:\/\/github\.com\/datatug\/chinookdb\/other is not registered/);
+  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.model.address = `modelspec://github.com/demo-db/chinook/Chinook?ref=${w.publisher.commit}`; }))), /model\.address modelspec:\/\/github\.com\/demo-db\/chinook\/Chinook is not registered/);
+  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.model.address = `modelspec://github.com/demo-db/chinook/other?ref=${w.publisher.commit}`; }))), /model\.address modelspec:\/\/github\.com\/demo-db\/chinook\/other is not registered/);
   // The repository part is written in lower case.
-  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.model.address = `modelspec://github.com/DataTug/ChinookDB/chinook?ref=${w.publisher.commit}`; }))), /model\.address .* must be written in lower case \(host, organisation and repository; the module name is case-sensitive\)/);
-  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.model.address = `modelspec://evil.example/datatug/chinookdb/chinook?ref=${w.publisher.commit}`; }))), /model\.address .* must name a repository on github\.com/);
+  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.model.address = `modelspec://github.com/Demo-DB/Chinook/chinook?ref=${w.publisher.commit}`; }))), /model\.address .* must be written in lower case \(host, organisation and repository; the module name is case-sensitive\)/);
+  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.model.address = `modelspec://evil.example/demo-db/chinook/chinook?ref=${w.publisher.commit}`; }))), /model\.address .* must name a repository on github\.com/);
   // The pin is required, and is a full commit id.
   expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.model.address = modelAddr; }))), /ovdb\.yaml: model\.address must carry \?ref=<40 hex> when the model is in another repository/);
   for (const ref of ['main', 'abc123', 'A'.repeat(40)]) {
     expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.model.address = `${modelAddr}?ref=${ref}`; }))), /model\.address must be modelspec:\/\/\{host\}\/\{org\}\/\{repo\}\/\{module\}\?ref=<40 hex>/);
   }
   // A commit that does not exist is not in the history of the default branch.
-  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.model.address = `${modelAddr}?ref=${'0'.repeat(40)}`; }))), /model\.address pins commit 0{40}, which is not in the history of main, the default branch of https:\/\/github\.com\/datatug\/chinookdb/);
+  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.model.address = `${modelAddr}?ref=${'0'.repeat(40)}`; }))), /model\.address pins commit 0{40}, which is not in the history of main, the default branch of https:\/\/github\.com\/demo-db\/chinook/);
   // The registry's own record has to be well formed.
-  expectProblem(await sharedProblems(sharedWorld({ models: (models) => { models[0].repository = 'https://github.com/someone/else'; } })), /the ModelSpec registry's record for modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook is not well formed/);
+  expectProblem(await sharedProblems(sharedWorld({ models: (models) => { models[0].repository = 'https://github.com/someone/else'; } })), /the ModelSpec registry's record for modelspec:\/\/github\.com\/demo-db\/chinook\/chinook is not well formed/);
   expectProblem(await sharedProblems(sharedWorld({ models: (models) => { models[0].files.source = 'model/chinook.modelspec.json'; } })), /is not well formed \(files\.source must be a \.modelspec\.hcl path/);
 });
 
 test('a shared meaning graph must be registered in the MeaningGraph registry, under the record\'s graph id, and pinned', async () => {
-  expectProblem(await sharedProblems(sharedWorld({ chinook: { registry: (graphs) => graphs.splice(0, 1) } })), /ovdb\.yaml: meaning\.address meaning:\/\/github\.com\/datatug\/chinookdb is not registered in the MeaningGraph registry \(the test registry\)/);
+  expectProblem(await sharedProblems(sharedWorld({ chinook: { registry: (graphs) => graphs.splice(0, 1) } })), /ovdb\.yaml: meaning\.address meaning:\/\/github\.com\/demo-db\/chinook is not registered in the MeaningGraph registry \(the test registry\)/);
   expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.meaning.address = `meaning://github.com/nobody/graph?ref=${w.publisher.commit}`; }))), /meaning\.address meaning:\/\/github\.com\/nobody\/graph is not registered/);
-  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.meaning.address = `meaning://github.com/DataTug/ChinookDB?ref=${w.publisher.commit}`; }))), /meaning\.address .* must be written in lower case/);
+  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.meaning.address = `meaning://github.com/Demo-DB/Chinook?ref=${w.publisher.commit}`; }))), /meaning\.address .* must be written in lower case/);
   expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.meaning.address = chinookAddress; }))), /ovdb\.yaml: meaning\.address must carry \?ref=<40 hex>/);
   expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.meaning.address = `${chinookAddress}?ref=main`; }))), /meaning\.address must be meaning:\/\/\{host\}\/\{org\}\/\{repo\}\?ref=<40 hex>/);
-  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.meaning.address = `${chinookAddress}?ref=${'0'.repeat(40)}`; }))), /meaning\.address pins commit 0{40}, which is not in the history of main, the default branch of https:\/\/github\.com\/datatug\/chinookdb/);
+  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.meaning.address = `${chinookAddress}?ref=${'0'.repeat(40)}`; }))), /meaning\.address pins commit 0{40}, which is not in the history of main, the default branch of https:\/\/github\.com\/demo-db\/chinook/);
   // The record's graph id is the registry's id for the address.
-  expectProblem(await sharedProblems(sharedWorld({ record: (record) => { record.meaning_graph = 'core'; }, manifest: (manifest) => { manifest.meaning.graph.id = 'core'; } })), /meaning\.address names meaning:\/\/github\.com\/datatug\/chinookdb, which the MeaningGraph registry registers as chinook, but the record's meaning_graph is core/);
+  expectProblem(await sharedProblems(sharedWorld({ record: (record) => { record.meaning_graph = 'core'; }, manifest: (manifest) => { manifest.meaning.graph.id = 'core'; } })), /meaning\.address names meaning:\/\/github\.com\/demo-db\/chinook, which the MeaningGraph registry registers as chinook, but the record's meaning_graph is core/);
   expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.meaning.graph.id = 'core'; }))), /ovdb\.yaml: meaning\.graph\.id is core, but the record's meaning_graph is chinook/);
-  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.meaning.graph.address = 'meaning://github.com/datatug/other'; }))), /meaning\.graph\.address is meaning:\/\/github\.com\/datatug\/other, but meaning\.address names meaning:\/\/github\.com\/datatug\/chinookdb/);
+  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.meaning.graph.address = 'meaning://github.com/datatug/other'; }))), /meaning\.graph\.address is meaning:\/\/github\.com\/datatug\/other, but meaning\.address names meaning:\/\/github\.com\/demo-db\/chinook/);
   // meaning.file is one the registry lists for the graph; and it is required.
   expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.meaning.file = 'model/other.meaning.yaml'; }))), /meaning\.file model\/other\.meaning\.yaml is not one of the meaning files the MeaningGraph registry lists for chinook/);
   expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { delete manifest.meaning.file; }))), /ovdb\.yaml: meaning\.file \(the file of the graph, in the graph's repository, that binds the model\) is required/);
@@ -1244,7 +1318,7 @@ test('a pinned commit that is only on a side branch is refused for the model and
   const modelSide = sharedWorld({ chinook, manifest: (manifest, w) => { manifest.model.address = `${modelAddr}?ref=${w.publisher.sideCommit}`; } });
   assert.doesNotThrow(() => openCommit(modelSide.publisher.url, modelSide.publisher.sideCommit, modelSide.cacheDir));
   const refused = await sharedProblems(modelSide);
-  expectProblem(refused, /ovdb\.yaml: model\.address pins commit [0-9a-f]{40}, which is not in the history of main, the default branch of https:\/\/github\.com\/datatug\/chinookdb \(a commit only a fork or another branch has\)/);
+  expectProblem(refused, /ovdb\.yaml: model\.address pins commit [0-9a-f]{40}, which is not in the history of main, the default branch of https:\/\/github\.com\/demo-db\/chinook \(a commit only a fork or another branch has\)/);
   assert.ok(!refused.some((problem) => /meaning\.address pins/.test(problem)), 'only the model pin is off the branch');
   expectProblem(await sharedProblems(sharedWorld({ chinook, manifest: (manifest, w) => { manifest.meaning.address = `${chinookAddress}?ref=${w.publisher.sideCommit}`; } })), /ovdb\.yaml: meaning\.address pins commit [0-9a-f]{40}, which is not in the history of main/);
   await assert.rejects(() => buildIndex(sharedOptions(modelSide)), /cannot build index\.json/);
@@ -1255,7 +1329,7 @@ test('the two forms do not mix: local model files with a foreign address, a shar
   const foreign = 'modelspec://github.com/acme/other/chinook';
   for (const address of [foreign, `${foreign}?ref=${'a'.repeat(40)}`]) {
     const problems = await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.model.address = address; }) }));
-    expectProblem(problems, /model\.address names github\.com\/acme\/other, but the model's files are in github\.com\/datatug\/chinookdb; a manifest with its own model files addresses its own repository\. To use a model published in another repository, remove the local model files and the local meaning file and pin model\.address and meaning\.address instead/);
+    expectProblem(problems, /model\.address names github\.com\/acme\/other, but the model's files are in github\.com\/demo-db\/chinook; a manifest with its own model files addresses its own repository\. To use a model published in another repository, remove the local model files and the local meaning file and pin model\.address and meaning\.address instead/);
   }
   // Own model files with a pinned meaning address: the meaning is local too.
   expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.meaning.address = `${chinookAddress}?ref=${'a'.repeat(40)}`; }) })), /ovdb\.yaml: meaning\.address is only for a shared model/);
@@ -1269,7 +1343,7 @@ test('the two forms do not mix: local model files with a foreign address, a shar
   // Licences: the model's and the meaning's come from the registries; a repeated value must agree.
   const licensed = await sharedIndex(sharedWorld(hosterManifestEdit((manifest) => { manifest.licences.model = 'MIT'; })));
   assert.equal(licensed.databases.length, 2);
-  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.licences.model = 'Apache-2.0'; }))), /licences\.model is Apache-2\.0, but the ModelSpec registry records "MIT" for modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook/);
+  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.licences.model = 'Apache-2.0'; }))), /licences\.model is Apache-2\.0, but the ModelSpec registry records "MIT" for modelspec:\/\/github\.com\/demo-db\/chinook\/chinook/);
   expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.licences.meaning = 'CC0-1.0'; }))), /licences\.meaning is CC0-1\.0, but the MeaningGraph registry records undefined for chinook/);
   expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { delete manifest.licences.data; }))), /ovdb\.yaml: licences\.data is required/);
 });
@@ -1278,11 +1352,11 @@ test('a shared model is read at its pin: the registered module, the model file, 
   // The model file at the pin is another module than the registry registers.
   const json = JSON.parse(fixtureChinook.get('model/chinook.modelspec.json'));
   json.module.name = 'other';
-  expectProblem(await sharedProblems(sharedWorld({ chinook: { publisher: (files) => files.set('model/chinook.modelspec.json', JSON.stringify(json)) } })), /model\/chinook\.modelspec\.json of github\.com\/datatug\/chinookdb is module other, but the ModelSpec registry registers modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook as module chinook/);
-  expectProblem(await sharedProblems(sharedWorld({ chinook: { publisher: (files) => files.set('model/chinook.modelspec.json', '{') } })), /model\/chinook\.modelspec\.json of github\.com\/datatug\/chinookdb: is not JSON/);
+  expectProblem(await sharedProblems(sharedWorld({ chinook: { publisher: (files) => files.set('model/chinook.modelspec.json', JSON.stringify(json)) } })), /model\/chinook\.modelspec\.json of github\.com\/demo-db\/chinook is module other, but the ModelSpec registry registers modelspec:\/\/github\.com\/demo-db\/chinook\/chinook as module chinook/);
+  expectProblem(await sharedProblems(sharedWorld({ chinook: { publisher: (files) => files.set('model/chinook.modelspec.json', '{') } })), /model\/chinook\.modelspec\.json of github\.com\/demo-db\/chinook: is not JSON/);
   expectProblem(await sharedProblems(sharedWorld({ chinook: { publisher: (files) => files.delete('model/chinook.modelspec.json') } })), /the registered model model\/chinook\.modelspec\.json does not exist at commit/);
-  expectProblem(await sharedProblems(sharedWorld({ chinook: { publisher: (files) => files.delete('model/chinook.modelspec.hcl') } })), /the model source model\/chinook\.modelspec\.hcl of github\.com\/datatug\/chinookdb does not exist at commit/);
-  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.model.name = 'other'; }))), /model\.name is other, but the ModelSpec at model\/chinook\.modelspec\.json of github\.com\/datatug\/chinookdb is module chinook/);
+  expectProblem(await sharedProblems(sharedWorld({ chinook: { publisher: (files) => files.delete('model/chinook.modelspec.hcl') } })), /the model source model\/chinook\.modelspec\.hcl of github\.com\/demo-db\/chinook does not exist at commit/);
+  expectProblem(await sharedProblems(sharedWorld(hosterManifestEdit((manifest) => { manifest.model.name = 'other'; }))), /model\.name is other, but the ModelSpec at model\/chinook\.modelspec\.json of github\.com\/demo-db\/chinook is module chinook/);
   // The meaning file does not say which model it binds, or says another one.
   expectProblem(await sharedProblems(sharedWorld({ chinook: { publisher: meaningEdit((doc) => { delete doc.models; }) } })), /models must name the ModelSpec module chinook with a relative path that stays inside the repository .* or with its modelspec:\/\/ address, got undefined/);
   expectProblem(await sharedProblems(sharedWorld({ chinook: { publisher: meaningEdit((doc) => { doc.models.chinook = 'chinook.modelspec.json'; }) } })), /the chinook model model\/chinook\.modelspec\.json must be a \.modelspec\.hcl file/);
@@ -1290,12 +1364,12 @@ test('a shared model is read at its pin: the registered module, the model file, 
   const other = sharedWorld({
     chinook: { publisher: (files) => { files.set('model/other.modelspec.hcl', files.get('model/chinook.modelspec.hcl')); meaningEdit((doc) => { doc.models.chinook = 'other.modelspec.hcl'; })(files); } },
   });
-  expectProblem(await sharedProblems(other), /model\/chinook\.meaning\.yaml: the chinook model is model\/other\.modelspec\.hcl, but the ModelSpec registry lists model\/chinook\.modelspec\.hcl as the source of modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook/);
+  expectProblem(await sharedProblems(other), /model\/chinook\.meaning\.yaml: the chinook model is model\/other\.modelspec\.hcl, but the ModelSpec registry lists model\/chinook\.modelspec\.hcl as the source of modelspec:\/\/github\.com\/demo-db\/chinook\/chinook/);
   // Bindings: the shared model's module; no other model (a binding that spells out the model's address is for a meaning graph in another repository, below).
   const binding = (model, property, role = 'value') => ({ chinook: { publisher: meaningEdit((doc) => { doc.concepts.push({ id: 'extra', kind: 'attribute', labels: { en: 'Extra' }, description: 'x', bindings: [{ model, ...(property ? { property } : {}), role }] }); }) } });
-  expectProblem(await sharedProblems(sharedWorld(binding('modelspec:///other.Customer', 'Country'))), /names module other, but the ModelSpec at model\/chinook\.modelspec\.json of github\.com\/datatug\/chinookdb is module chinook/);
-  expectProblem(await sharedProblems(sharedWorld(binding('modelspec://github.com/x/y/chinook.Customer', 'Country'))), /binding modelspec:\/\/github\.com\/x\/y\/chinook\.Customer names a model other than the shared model modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook/);
-  expectProblem(await sharedProblems(sharedWorld(binding(`modelspec://github.com/datatug/chinookdb/chinook.Customer?ref=${'b'.repeat(40)}`, 'Country'))), /names a model other than the shared model/);
+  expectProblem(await sharedProblems(sharedWorld(binding('modelspec:///other.Customer', 'Country'))), /names module other, but the ModelSpec at model\/chinook\.modelspec\.json of github\.com\/demo-db\/chinook is module chinook/);
+  expectProblem(await sharedProblems(sharedWorld(binding('modelspec://github.com/x/y/chinook.Customer', 'Country'))), /binding modelspec:\/\/github\.com\/x\/y\/chinook\.Customer names a model other than the shared model modelspec:\/\/github\.com\/demo-db\/chinook\/chinook/);
+  expectProblem(await sharedProblems(sharedWorld(binding(`modelspec://github.com/demo-db/chinook/chinook.Customer?ref=${'b'.repeat(40)}`, 'Country'))), /names a model other than the shared model/);
   expectProblem(await sharedProblems(sharedWorld(binding('modelspec:///chinook.Ghost', undefined, 'entity'))), /binding modelspec:\/\/\/chinook\.Ghost names an entity that is not in the ModelSpec/);
   expectProblem(await sharedProblems(sharedWorld(binding('modelspec:///chinook.Customer', 'Nope'))), /names property "Nope", which Customer does not have in the ModelSpec/);
 });
@@ -1303,11 +1377,11 @@ test('a shared model is read at its pin: the registered module, the model file, 
 test('a shared model\'s recordsets are exactly its entities, unless the manifest lists a subset and says recordsets_partial: true', async () => {
   const listing = (names, partial) => hosterManifestEdit((manifest) => { manifest.recordsets = names; if (partial !== undefined) manifest.recordsets_partial = partial; });
   expectProblem(await sharedProblems(sharedWorld(listing(chinookEntities.filter((name) => name !== 'Genre')))), /ovdb\.yaml: recordsets lacks ModelSpec entities: Genre \(to list a subset of a shared model, list it explicitly and set recordsets_partial: true\)/);
-  expectProblem(await sharedProblems(sharedWorld(listing([...chinookEntities, 'Ghost']))), /ovdb\.yaml: recordsets names things that are not ModelSpec entities: Ghost/);
+  expectProblem(await sharedProblems(sharedWorld(listing([...chinookEntities, 'Ghost']))), /ovdb\.yaml: recordsets names things that do not map to ModelSpec entities: Ghost/);
   expectProblem(await sharedProblems(sharedWorld(listing([...chinookEntities, 'Genre']))), /ovdb\.yaml: recordsets lists a name twice/);
-  expectProblem(await sharedProblems(sharedWorld(listing(['Artist', 'Ghost'], true))), /recordsets names things that are not ModelSpec entities: Ghost/);
+  expectProblem(await sharedProblems(sharedWorld(listing(['Artist', 'Ghost'], true))), /recordsets names things that do not map to ModelSpec entities: Ghost/);
   expectProblem(await sharedProblems(sharedWorld(listing(chinookEntities, true))), /recordsets_partial is true, but recordsets lists every ModelSpec entity; remove recordsets_partial/);
-  expectProblem(await sharedProblems(sharedWorld(listing(['Album'], true))), /recordsets lists Album, which references Artist, but a partial list must also list every entity a listed entity references/);
+  expectProblem(await sharedProblems(sharedWorld(listing(['Album'], true))), /recordsets lists Album, which references ModelSpec entity Artist, but a partial list must also include its mapped recordset/);
   expectProblem(await sharedProblems(sharedWorld(listing(['Artist'], 'yes'))), /recordsets_partial must be true or false/);
   expectProblem(await sharedProblems(sharedWorld(listing([], true))), /recordsets must be a non-empty list of names/);
   // recordsets_partial: false is the same as leaving it out.
@@ -1329,7 +1403,7 @@ test('a meaning graph in another repository than the model must say which model 
   const separate = (declared) => ({ meaningRepo: (w) => ({ files: new Map([['chinook.meaning.yaml', meaningText(declared).replaceAll('PIN', w.corePin)]]), file: 'chinook.meaning.yaml' }) });
   // A relative path can only name a file of the meaning graph's own repository: it does not say which model is bound.
   const ambiguous = await sharedProblems(sharedWorld(separate('chinook.modelspec.hcl')));
-  expectProblem(ambiguous, /chinook\.meaning\.yaml: the meaning graph is in github\.com\/acme\/chinook-meaning and the model modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook in github\.com\/datatug\/chinookdb, and the models entry for module chinook is the relative path chinook\.modelspec\.hcl, which can only name a file of the meaning graph's own repository; the meaning file does not say which model it binds\. Name the model in the meaning file by address/);
+  expectProblem(ambiguous, /chinook\.meaning\.yaml: the meaning graph is in github\.com\/acme\/chinook-meaning and the model modelspec:\/\/github\.com\/demo-db\/chinook\/chinook in github\.com\/demo-db\/chinook, and the models entry for module chinook is the relative path chinook\.modelspec\.hcl, which can only name a file of the meaning graph's own repository; the meaning file does not say which model it binds\. Name the model in the meaning file by address/);
   await assert.rejects(() => buildIndex(sharedOptions(sharedWorld(separate('chinook.modelspec.hcl')))), /cannot build index\.json[\s\S]*does not say which model it binds/);
   // By address it does, and the database is listed under the shared model with the graph's own pin.
   const named = sharedWorld(separate(modelAddr));
@@ -1342,8 +1416,8 @@ test('a meaning graph in another repository than the model must say which model 
   assert.equal(field(acme, 'Customer', 'Country').meanings[0].address, `${meaningOnlyAddress}/customer-country?ref=${meaningPin}`);
   assert.deepEqual(acme.recordsets.map((recordset) => recordset.name), chinookEntities);
   // A pin on the address is fine when it is the manifest's pin; another model, another pin, or no address at all is not.
-  expectProblem(await sharedProblems(sharedWorld(separate('modelspec://github.com/acme/other/chinook'))), /the models entry for module chinook names modelspec:\/\/github\.com\/acme\/other\/chinook, but ovdb\.yaml pins the model modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook/);
-  expectProblem(await sharedProblems(sharedWorld(separate('modelspec://github.com/datatug/chinookdb/other'))), /the models entry for module chinook names modelspec:\/\/github\.com\/datatug\/chinookdb\/other, but ovdb\.yaml pins/);
+  expectProblem(await sharedProblems(sharedWorld(separate('modelspec://github.com/acme/other/chinook'))), /the models entry for module chinook names modelspec:\/\/github\.com\/acme\/other\/chinook, but ovdb\.yaml pins the model modelspec:\/\/github\.com\/demo-db\/chinook\/chinook/);
+  expectProblem(await sharedProblems(sharedWorld(separate('modelspec://github.com/demo-db/chinook/other'))), /the models entry for module chinook names modelspec:\/\/github\.com\/demo-db\/chinook\/other, but ovdb\.yaml pins/);
   expectProblem(await sharedProblems(sharedWorld(separate(`${modelAddr}?ref=${'c'.repeat(40)}`))), /the models entry for module chinook pins commit c{40}, but ovdb\.yaml pins [0-9a-f]{40}/);
   expectProblem(await sharedProblems(sharedWorld(separate('modelspec://not-an-address'))), /the models entry "modelspec:\/\/not-an-address" for module chinook is not a modelspec:\/\/\{host\}\/\{org\}\/\{repo\}\/\{module\} address/);
   expectProblem(await sharedProblems(sharedWorld(separate('chinook.modelspec.json'))), /the chinook model chinook\.modelspec\.json must be a \.modelspec\.hcl file/);
@@ -1355,13 +1429,13 @@ test('a meaning graph in another repository than the model must say which model 
       return { files: new Map([['chinook.meaning.yaml', stringifyYaml(doc)]]), file: 'chinook.meaning.yaml' };
     },
   });
-  for (const spelling of [() => 'modelspec://github.com/datatug/chinookdb/chinook.Customer', (w) => `modelspec://github.com/datatug/chinookdb/chinook.Customer?ref=${w.publisher.commit}`]) {
+  for (const spelling of [() => 'modelspec://github.com/demo-db/chinook/chinook.Customer', (w) => `modelspec://github.com/demo-db/chinook/chinook.Customer?ref=${w.publisher.commit}`]) {
     const bound = binds(spelling);
     assert.deepEqual(await sharedProblems(bound), []);
     assert.deepEqual(field((await sharedIndex(bound)).databases[1], 'Customer', 'State').meanings.map((meaning) => meaning.concept), ['extra']);
   }
   expectProblem(await sharedProblems(binds(() => 'modelspec://github.com/datatug/other/chinook.Customer')), /names a model other than the shared model/);
-  expectProblem(await sharedProblems(binds(() => `modelspec://github.com/datatug/chinookdb/chinook.Customer?ref=${'d'.repeat(40)}`)), /names a model other than the shared model/);
+  expectProblem(await sharedProblems(binds(() => `modelspec://github.com/demo-db/chinook/chinook.Customer?ref=${'d'.repeat(40)}`)), /names a model other than the shared model/);
   // The pin of the same address that the manifest gives is accepted.
   const samePin = sharedWorld({ ...separate(modelAddr), meaningRepo: (w) => ({ files: new Map([['chinook.meaning.yaml', meaningText(`${modelAddr}?ref=${w.publisher.commit}`).replaceAll('PIN', w.corePin)]]), file: 'chinook.meaning.yaml' }) });
   assert.deepEqual(await sharedProblems(samePin), []);
@@ -1616,7 +1690,7 @@ test('the registries\' paths hold at the registry\'s own commit: at another pin 
     manifest: (manifest, w) => { newer = w.publisher.more(new Map([['model/v2/chinook.modelspec.hcl', fixtureChinook.get('model/chinook.modelspec.hcl')]])); },
     models: (models) => { models[0].commit = newer; models[0].files.source = 'model/v2/chinook.modelspec.hcl'; },
   });
-  expectProblem(await sharedProblems(sourceMoved), /the model source model\/v2\/chinook\.modelspec\.hcl of github\.com\/datatug\/chinookdb does not exist at commit [0-9a-f]{40} \(the ModelSpec registry names this path for its own commit [0-9a-f]{40}; this manifest pins/);
+  expectProblem(await sharedProblems(sourceMoved), /the model source model\/v2\/chinook\.modelspec\.hcl of github\.com\/demo-db\/chinook does not exist at commit [0-9a-f]{40} \(the ModelSpec registry names this path for its own commit [0-9a-f]{40}; this manifest pins/);
   const meaningMoved = sharedWorld({
     manifest: (manifest, w) => { newer = w.publisher.more(new Map([['model/v2/chinook.meaning.yaml', fixtureChinook.get('model/chinook.meaning.yaml')]])); w.meaningRegistry = meaningIndex({ chinook: newer, core: w.core.commit, edit: (graphs) => { graphs[0].meaning_files = ['model/v2/chinook.meaning.yaml']; } }); },
   });
@@ -1629,23 +1703,23 @@ test('the registries\' paths hold at the registry\'s own commit: at another pin 
 });
 
 test('a graph the MeaningGraph registry registers with capitals is found by its lower-case address; the manifest is still written in lower case', async () => {
-  const capitals = 'https://github.com/DataTug/ChinookDB';
-  const registered = (graphs) => { graphs[0].address = 'meaning://github.com/DataTug/ChinookDB'; graphs[0].repository = capitals; };
-  const world_ = (extra = {}) => sharedWorld({ chinook: { registry: registered, publisher: manifestEdit((manifest) => { manifest.meaning.graph.address = 'meaning://github.com/DataTug/ChinookDB'; }) }, ...extra, manifest: (manifest, w) => { w.urls.set(capitals, w.publisher.url); extra.manifest?.(manifest, w); } });
+  const capitals = 'https://github.com/Demo-DB/Chinook';
+  const registered = (graphs) => { graphs[0].address = 'meaning://github.com/Demo-DB/Chinook'; graphs[0].repository = capitals; };
+  const world_ = (extra = {}) => sharedWorld({ chinook: { registry: registered, publisher: manifestEdit((manifest) => { manifest.meaning.graph.address = 'meaning://github.com/Demo-DB/Chinook'; }) }, ...extra, manifest: (manifest, w) => { w.urls.set(capitals, w.publisher.url); extra.manifest?.(manifest, w); } });
   const found = world_();
   assert.deepEqual(await sharedProblems(found), []);
   const acme = (await sharedIndex(found)).databases.find((database) => database.id === 'chinook-acme');
-  assert.deepEqual(acme.meaning_graph, { id: 'chinook', address: 'meaning://github.com/DataTug/ChinookDB' }, 'the index spells the graph as the registry does');
-  assert.equal(field(acme, 'Customer', 'Country').meanings[0].address, `meaning://github.com/DataTug/ChinookDB/customer-country?ref=${found.publisher.commit}`);
+  assert.deepEqual(acme.meaning_graph, { id: 'chinook', address: 'meaning://github.com/Demo-DB/Chinook' }, 'the index spells the graph as the registry does');
+  assert.equal(field(acme, 'Customer', 'Country').meanings[0].address, `meaning://github.com/Demo-DB/Chinook/customer-country?ref=${found.publisher.commit}`);
   // One rule: the manifest writes host, organisation and repository in lower case, whatever the registry does.
-  expectProblem(await sharedProblems(world_({ manifest: (manifest, w) => { manifest.meaning.address = `meaning://github.com/DataTug/ChinookDB?ref=${w.publisher.commit}`; } })), /meaning\.address meaning:\/\/github\.com\/DataTug\/ChinookDB\?ref=[0-9a-f]{40} must be written in lower case \(host, organisation and repository\)$/);
+  expectProblem(await sharedProblems(world_({ manifest: (manifest, w) => { manifest.meaning.address = `meaning://github.com/Demo-DB/Chinook?ref=${w.publisher.commit}`; } })), /meaning\.address meaning:\/\/github\.com\/Demo-DB\/Chinook\?ref=[0-9a-f]{40} must be written in lower case \(host, organisation and repository\)$/);
   // meaning.graph.address, when given, is the registry's spelling of the unpinned address.
-  expectProblem(await sharedProblems(world_({ manifest: (manifest) => { manifest.meaning.graph.address = 'meaning://github.com/datatug/chinookdb'; } })), /meaning\.graph\.address is meaning:\/\/github\.com\/datatug\/chinookdb, but meaning\.address names meaning:\/\/github\.com\/DataTug\/ChinookDB; leave meaning\.graph\.address out or make it the unpinned address as the registry spells it/);
-  assert.deepEqual(await sharedProblems(world_({ manifest: (manifest) => { manifest.meaning.graph.address = 'meaning://github.com/DataTug/ChinookDB'; } })), []);
+  expectProblem(await sharedProblems(world_({ manifest: (manifest) => { manifest.meaning.graph.address = 'meaning://github.com/demo-db/chinook'; } })), /meaning\.graph\.address is meaning:\/\/github\.com\/demo-db\/chinook, but meaning\.address names meaning:\/\/github\.com\/Demo-DB\/Chinook; leave meaning\.graph\.address out or make it the unpinned address as the registry spells it/);
+  assert.deepEqual(await sharedProblems(world_({ manifest: (manifest) => { manifest.meaning.graph.address = 'meaning://github.com/Demo-DB/Chinook'; } })), []);
   // A registry that lists one repository twice, in two cases, does not say which record is the graph's.
-  expectProblem(await sharedProblems(sharedWorld({ chinook: { registry: (graphs) => graphs.push({ ...graphs[0], id: 'chinook-twice', address: 'meaning://github.com/DATATUG/chinookdb' }) } })), /meaning\.address meaning:\/\/github\.com\/datatug\/chinookdb matches 2 records of the MeaningGraph registry \(chinook, chinook-twice\), which differ only in case/);
+  expectProblem(await sharedProblems(sharedWorld({ chinook: { registry: (graphs) => graphs.push({ ...graphs[0], id: 'chinook-twice', address: 'meaning://github.com/DEMO-DB/chinook' }) } })), /meaning\.address meaning:\/\/github\.com\/demo-db\/chinook matches 2 records of the MeaningGraph registry \(chinook, chinook-twice\), which differ only in case/);
   // The message about a meaning address no longer talks about module names.
-  const messages = await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.meaning.address = `meaning://github.com/DataTug/ChinookDB?ref=${w.publisher.commit}`; })));
+  const messages = await sharedProblems(sharedWorld(hosterManifestEdit((manifest, w) => { manifest.meaning.address = `meaning://github.com/Demo-DB/Chinook?ref=${w.publisher.commit}`; })));
   assert.ok(messages.some((message) => /meaning\.address .* must be written in lower case \(host, organisation and repository\)$/.test(message)), messages.join('\n'));
   assert.ok(!messages.some((message) => /meaning\.address.*module name/.test(message)));
 });
@@ -1663,7 +1737,7 @@ test('an own model that names a registered address is the registered model: its 
   assert.deepEqual(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit }) }), []);
   // files.json is another file with another model: the two are not the same model.
   const other = world({ publisher: (files) => { const json = JSON.parse(files.get('model/chinook.modelspec.json')); delete json.entities.Genre; files.set('model/registered.modelspec.json', JSON.stringify(json)); manifestEdit((manifest) => { manifest.model.address = modelAddr; })(files); } });
-  expectProblem(await problemsOf(other, { modelRegistry: modelIndex({ commit: other.publisher.commit, edit: (models) => { models[0].files.json = 'model/registered.modelspec.json'; } }) }), /ovdb\.yaml: model\/chinook\.modelspec\.json is not the model the ModelSpec registry registers as modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook: it differs from model\/registered\.modelspec\.json, the registry's files\.json, at [0-9a-f]{40} \(the order of entities, properties and other keys counts\); databases that share a model\.address are databases of the same model/);
+  expectProblem(await problemsOf(other, { modelRegistry: modelIndex({ commit: other.publisher.commit, edit: (models) => { models[0].files.json = 'model/registered.modelspec.json'; } }) }), /ovdb\.yaml: model\/chinook\.modelspec\.json is not the model the ModelSpec registry registers as modelspec:\/\/github\.com\/demo-db\/chinook\/chinook: it differs from model\/registered\.modelspec\.json, the registry's files\.json, at [0-9a-f]{40} \(the order of entities, properties and other keys counts\); databases that share a model\.address are databases of the same model/);
   // White space does not matter, the order does: the order of an entity's properties is the order of a recordset's fields in
   // index.json, so two listings under one model.address must not be able to publish different orders.
   const reversedFiles = (mutate) => (files) => { const json = JSON.parse(files.get('model/chinook.modelspec.json')); mutate(json); files.set('model/registered.modelspec.json', JSON.stringify(json)); manifestEdit((manifest) => { manifest.model.address = modelAddr; })(files); };
@@ -1671,16 +1745,16 @@ test('an own model that names a registered address is the registered model: its 
   const reversedEntities = (json) => { json.entities = Object.fromEntries(Object.entries(json.entities).reverse()); };
   for (const mutate of [reversedProperties, reversedEntities]) {
     const flipped = world({ publisher: reversedFiles(mutate) });
-    expectProblem(await problemsOf(flipped, { modelRegistry: modelIndex({ commit: flipped.publisher.commit, edit: (models) => { models[0].files.json = 'model/registered.modelspec.json'; } }) }), /is not the model the ModelSpec registry registers as modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook: it differs from model\/registered\.modelspec\.json, the registry's files\.json, at [0-9a-f]{40} \(the order of entities, properties and other keys counts\)/);
+    expectProblem(await problemsOf(flipped, { modelRegistry: modelIndex({ commit: flipped.publisher.commit, edit: (models) => { models[0].files.json = 'model/registered.modelspec.json'; } }) }), /is not the model the ModelSpec registry registers as modelspec:\/\/github\.com\/demo-db\/chinook\/chinook: it differs from model\/registered\.modelspec\.json, the registry's files\.json, at [0-9a-f]{40} \(the order of entities, properties and other keys counts\)/);
   }
   const unchanged = world({ publisher: reversedFiles(() => {}) });
   assert.deepEqual(await problemsOf(unchanged, { modelRegistry: modelIndex({ commit: unchanged.publisher.commit, edit: (models) => { models[0].files.json = 'model/registered.modelspec.json'; } }) }), []);
   const reordered = world({ publisher: (files) => { files.set('model/registered.modelspec.json', JSON.stringify(JSON.parse(files.get('model/chinook.modelspec.json')), null, 4)); manifestEdit((manifest) => { manifest.model.address = modelAddr; })(files); } });
   assert.deepEqual(await problemsOf(reordered, { modelRegistry: modelIndex({ commit: reordered.publisher.commit, edit: (models) => { models[0].files.json = 'model/registered.modelspec.json'; } }) }), []);
   // The registry's file is missing, or not JSON, or its record is not well formed.
-  expectProblem(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit, edit: (models) => { models[0].files.json = 'model/nowhere.json'; } }) }), /the model the ModelSpec registry registers as model\/nowhere\.json does not exist at commit [0-9a-f]{40} \(its files\.json for modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook\)/);
-  expectProblem(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit, edit: (models) => { models[0].files.json = 'OVDB.md'; } }) }), /OVDB\.md, the files\.json of modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook in the ModelSpec registry, is not JSON/);
-  expectProblem(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit, edit: (models) => { delete models[0].files; } }) }), /the ModelSpec registry's record for modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook is not well formed \(files\.json must be a path inside the repository\)/);
+  expectProblem(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit, edit: (models) => { models[0].files.json = 'model/nowhere.json'; } }) }), /the model the ModelSpec registry registers as model\/nowhere\.json does not exist at commit [0-9a-f]{40} \(its files\.json for modelspec:\/\/github\.com\/demo-db\/chinook\/chinook\)/);
+  expectProblem(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit, edit: (models) => { models[0].files.json = 'OVDB.md'; } }) }), /OVDB\.md, the files\.json of modelspec:\/\/github\.com\/demo-db\/chinook\/chinook in the ModelSpec registry, is not JSON/);
+  expectProblem(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit, edit: (models) => { delete models[0].files; } }) }), /the ModelSpec registry's record for modelspec:\/\/github\.com\/demo-db\/chinook\/chinook is not well formed \(files\.json must be a path inside the repository\)/);
   expectProblem(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit, edit: (models) => { models[0].repository = 'https://github.com/someone/else'; } }) }), /is not well formed \(its repository and module must give that address\)/);
   // Another commit: not compared, and said so; the record is still listed.
   const behind = named();
@@ -1719,7 +1793,7 @@ test('warnings: a refused pin is not "read", a registry commit that is not a str
   assert.equal(await runIndex(sharedOptions(w), written.io), 0);
   assert.deepEqual(written.lines.out, ['wrote index.json']);
   assert.equal(written.lines.err.length, 2);
-  assert.match(written.lines.err[0], /^warning: databases\/\$records\/chinook-acme\.yaml: model\.address pins [0-9a-f]{40}, but the ModelSpec registry registers modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook at [0-9a-f]{40}; the pinned commit is read$/);
+  assert.match(written.lines.err[0], /^warning: databases\/\$records\/chinook-acme\.yaml: model\.address pins [0-9a-f]{40}, but the ModelSpec registry registers modelspec:\/\/github\.com\/demo-db\/chinook\/chinook at [0-9a-f]{40}; the pinned commit is read$/);
   assert.match(written.lines.err[1], /^warning: databases\/\$records\/chinook-acme\.yaml: meaning\.address pins [0-9a-f]{40}, but the MeaningGraph registry registers chinook at [0-9a-f]{40}; the pinned commit is read$/);
   assert.equal(readFileSync(join(w.dir, 'index.json'), 'utf8').includes('"chinook-acme"'), true);
   const checkedRun = capture();
@@ -2262,16 +2336,16 @@ test('an optional homepage is accepted in both forms, held to the URL rules, and
 
 test('the registries are searched ignoring case: a model registered with capitals, a graph reached from a meaning file in another case', async () => {
   // The ModelSpec registry spells the repository with capitals: the manifest's lower-case address finds it.
-  const capitals = (models) => { models[0].address = 'modelspec://github.com/DataTug/ChinookDB/chinook'; models[0].repository = 'https://github.com/DataTug/ChinookDB'; };
-  const found = sharedWorld({ manifest: (manifest, w) => { w.urls.set('https://github.com/DataTug/ChinookDB', w.publisher.url); }, models: capitals });
+  const capitals = (models) => { models[0].address = 'modelspec://github.com/Demo-DB/Chinook/chinook'; models[0].repository = 'https://github.com/Demo-DB/Chinook'; };
+  const found = sharedWorld({ manifest: (manifest, w) => { w.urls.set('https://github.com/Demo-DB/Chinook', w.publisher.url); }, models: capitals });
   assert.deepEqual(await sharedProblems(found), []);
   const acme = (await sharedIndex(found)).databases.find((database) => database.id === 'chinook-acme');
   assert.equal(acme.model.address, modelAddr, 'the index spells the model address in lower case, the module as written');
   // Still a problem when the record is not that repository's, and when the registry lists the model twice.
-  expectProblem(await sharedProblems(sharedWorld({ models: (models) => { models[0].address = 'modelspec://github.com/DataTug/ChinookDB/chinook'; models[0].repository = 'https://github.com/someone/else'; } })), /is not well formed \(its repository and module must give that address\)/);
-  expectProblem(await sharedProblems(sharedWorld({ models: (models) => { models.push({ ...models[0], id: 'chinook-twice', address: 'modelspec://github.com/DATATUG/chinookdb/chinook' }); } })), /model\.address modelspec:\/\/github\.com\/datatug\/chinookdb\/chinook matches 2 records of the ModelSpec registry \(.*\), which differ only in case/);
+  expectProblem(await sharedProblems(sharedWorld({ models: (models) => { models[0].address = 'modelspec://github.com/Demo-DB/Chinook/chinook'; models[0].repository = 'https://github.com/someone/else'; } })), /is not well formed \(its repository and module must give that address\)/);
+  expectProblem(await sharedProblems(sharedWorld({ models: (models) => { models.push({ ...models[0], id: 'chinook-twice', address: 'modelspec://github.com/DEMO-DB/chinook/chinook' }); } })), /model\.address modelspec:\/\/github\.com\/demo-db\/chinook\/chinook matches 2 records of the ModelSpec registry \(.*\), which differ only in case/);
   // Another case of the module is another module.
-  expectProblem(await sharedProblems(sharedWorld({ models: (models) => { models[0].address = 'modelspec://github.com/datatug/chinookdb/Chinook'; } })), /is not registered in the ModelSpec registry/);
+  expectProblem(await sharedProblems(sharedWorld({ models: (models) => { models[0].address = 'modelspec://github.com/demo-db/chinook/Chinook'; } })), /is not registered in the ModelSpec registry/);
   // A meaning file that reaches core by an address in another case than the registry's: found, with one rule for every lookup.
   const core = world({
     registry: (graphs) => { graphs[1].address = 'meaning://github.com/MeaningGraph/Core'; graphs[1].repository = 'https://github.com/MeaningGraph/Core'; },
