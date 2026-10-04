@@ -342,10 +342,16 @@ test('native spaced recordset names map to publishable ModelSpec entities and en
       doc.entities.OrderDetails = { key: ['OrderID', 'ProductID'], properties: {
         OrderID: { type: 'int' }, ProductID: { type: 'int' }, UnitPrice: { type: 'decimal' },
       } };
+      doc.entities.SchemaQualifiedEmployee = { key: ['BusinessEntityID'], properties: {
+        BusinessEntityID: { type: 'int' },
+      } };
     })(files);
     manifestEdit((manifest) => {
-      manifest.recordsets.push('Order Details');
-      manifest.recordset_entities = { 'Order Details': 'OrderDetails' };
+      manifest.recordsets.push('Order Details', 'HumanResources.Employee');
+      manifest.recordset_entities = {
+        'Order Details': 'OrderDetails',
+        'HumanResources.Employee': 'SchemaQualifiedEmployee',
+      };
       manifest.deployment.recordset_page = 'https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/{name}';
     })(files);
     meaningEdit((doc) => doc.concepts.push(
@@ -362,6 +368,11 @@ test('native spaced recordset names map to publishable ModelSpec entities and en
   assert.deepEqual(orderDetails.meanings.map((entry) => [entry.concept, entry.role]), [['order-detail', 'entity']]);
   assert.deepEqual(orderDetails.fields.map((entry) => entry.name), ['OrderID', 'ProductID', 'UnitPrice']);
   assert.deepEqual(orderDetails.fields[2].meanings.map((entry) => [entry.concept, entry.role]), [['order-detail-price', 'value']]);
+  const employee = result.databases[0].recordsets.find((recordset) => recordset.name === 'HumanResources.Employee');
+  assert.ok(employee);
+  assert.equal(employee.modelEntity, 'SchemaQualifiedEmployee');
+  assert.equal(employee.url, 'https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/HumanResources.Employee');
+  assert.deepEqual(employee.fields.map((entry) => entry.name), ['BusinessEntityID']);
 });
 
 test('recordset_entities is explicit, one-to-one, and resolves only real recordsets and ModelSpec entities', async () => {
@@ -918,6 +929,45 @@ test('the committed index.json has the documented shape and its own checksum', (
   assert.equal(readFileSync(path, 'utf8'), `${JSON.stringify(committed, null, 2)}\n`);
 });
 
+test('AdventureWorks and Employees Directory records pin their exact public providers', () => {
+  const expected = [
+    {
+      recordId: 'adventureworks',
+      url: 'https://demodb.dev/adventureworks/',
+      repository: 'https://github.com/demo-db/adventureworks',
+      commit: 'cd8dcdf2079fe31480ad6d6c024b8c17cb91beea',
+      meaningGraph: 'adventureworks',
+      title: 'AdventureWorks OLTP',
+    },
+    {
+      recordId: 'employees',
+      url: 'https://demodb.dev/employees/',
+      repository: 'https://github.com/demo-db/employees',
+      commit: '2455bb327aa8444ec496d36e2fe6dcacfc58dc0a',
+      meaningGraph: 'employees',
+      title: 'Employees (browser edition)',
+    },
+  ];
+
+  for (const source of expected) {
+    const path = join(root, 'databases', '$records', `${source.recordId}.yaml`);
+    const record = parseYaml(readFileSync(path, 'utf8'));
+    assert.deepEqual({
+      recordId: source.recordId,
+      url: record.url,
+      repository: record.repository,
+      commit: record.commit,
+      meaningGraph: record.meaning_graph,
+      title: record.title,
+    }, source);
+    assert.equal(record.format, 'ovdb-directory/draft-1');
+    assert.equal(record.status, 'draft', 'query access is not yet verified for these samples');
+    assert.equal(record.manifest, 'ovdb.yaml');
+    assert.equal(record.database_manifest, 'ovdb-database.json');
+    assert.deepEqual(record.maintainers, ['trakhimenok']);
+  }
+});
+
 // ---- chains, ids, spelling ----
 
 const chainFile = (length) => stringifyYaml({
@@ -1058,7 +1108,10 @@ test('global database identities derive a safe Directory path without decoding e
     'https://demodb.dev/a/../northwind/',
     'https://demodb.dev/a/./northwind/',
     'https://demodb.dev/%2e%2e/',
+    'https://demodb.dev/%252e%252e/',
+    'https://demodb.dev/%25252e%25252e/',
     'https://demodb.dev/a%2Fb/',
+    'https://demodb.dev/a%252Fb/',
     'https://demodb.dev/a%5Cb/',
     'https://demodb.dev/a%00b/',
     'https://demodb.dev/a//northwind/',
@@ -1243,7 +1296,7 @@ test('a recordset url is built from names that cannot change what it points at: 
   const cases = [
     ['https://169.254.169.{name}/latest/meta-data', '254', /\{name\} in the path only/],
     ['https://metadata.google.{name}/computeMetadata/v1', 'internal', /\{name\} in the path only/],
-    ['https://cloud.openvaultdb.com/a/b/{name}/admin', '..', /recordsets name "\.\." must be at most 256 characters and contain no dot, slash, backslash or control character/],
+    ['https://cloud.openvaultdb.com/a/b/{name}/admin', '..', /recordsets name "\.\." must be at most 256 characters and contain no slash, backslash or control character, and cannot be a dot path segment/],
   ];
   for (const [template, entity, pattern] of cases) {
     const w = world({

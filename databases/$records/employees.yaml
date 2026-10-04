@@ -1,0 +1,15 @@
+format: ovdb-directory/draft-1
+title: Employees (browser edition)
+description: >-
+  A reproducible, foreign-key-closed browser edition of the MySQL Employees
+  sample, retaining 1,024 selected employees and their associated employment
+  history across six native tables and both source views.
+status: draft
+url: https://demodb.dev/employees/
+repository: https://github.com/demo-db/employees
+commit: 2455bb327aa8444ec496d36e2fe6dcacfc58dc0a
+manifest: ovdb.yaml
+database_manifest: ovdb-database.json
+meaning_graph: employees
+maintainers:
+  - trakhimenok

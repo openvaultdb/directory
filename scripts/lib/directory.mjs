@@ -179,8 +179,8 @@ const isText = (value) => typeof value === 'string' && value.trim() !== '';
 const modelSourcePattern = /\.modelspec\.hcl$/;
 const spdxLike = (value) => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9.+-]{0,63}$/.test(value);
 const nativeRecordsetNameProblem = (value) => !isText(value) ? 'must be a non-empty name'
-  : value.length > 256 || /[./\\\u0000-\u001f\u007f]/.test(value)
-    ? 'must be at most 256 characters and contain no dot, slash, backslash or control character'
+  : value.length > 256 || value === '.' || value === '..' || /[\/\\\u0000-\u001f\u007f]/.test(value)
+    ? 'must be at most 256 characters and contain no slash, backslash or control character, and cannot be a dot path segment'
     : null;
 
 // A manifest names its model one of two ways. With local files (`model.modelspec`, optionally
