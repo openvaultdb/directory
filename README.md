@@ -7,10 +7,10 @@ with the [MeaningGraph](https://github.com/meaninggraph/registry) concepts they
 carry. The Directory website is a separate repository; it reads
 [`index.json`](index.json) from here and holds no list of its own.
 
-| Id | Canonical URL | Repository at commit | Status |
+| Record ID | Canonical database identity | Repository at commit | Status |
 |---|---|---|---|
-| `chinook` | `https://chinookdb.com/ovdb/dbs/chinook` | [demo-db/chinook@f11b119](https://github.com/demo-db/chinook/tree/f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b) | draft |
-| `northwind` | `https://northwind.demodb.dev/ovdb/dbs/northwind` | [demo-db/northwind@f585569](https://github.com/demo-db/northwind/tree/f5855699eafaba6f09b7f4897abdb2a304698b67) | draft |
+| `chinook` | `https://demodb.dev/chinook/` | [demo-db/chinook@26e852c](https://github.com/demo-db/chinook/tree/26e852cca00101f53a84ef8ee1f1ae389067f5cf) | draft |
+| `northwind` | `https://demodb.dev/northwind/` | [demo-db/northwind@e747265](https://github.com/demo-db/northwind/tree/e74726515c3833620b54b7a50d1d273276dd23c1) | draft |
 
 ## This repository is the source of truth
 
@@ -66,19 +66,28 @@ A draft: it may change before `ovdb-directory/1`.
 
 ### `databases`: one record per database
 
-The file name is the id: `databases/$records/chinook.yaml` registers `chinook`.
+The file name is the Directory record id: `databases/$records/chinook.yaml` gives
+the stable `recordId` `chinook`; the public identity is the record's `url`. The
+index keeps the provider's `localId` separate, since multiple publishers may
+reuse the same server-local name.
+
+The website page path for a global identity is `/ovdb/{hostname}{path}/`; for
+example, `https://demodb.dev/northwind/` is listed at
+`https://directory.openvaultdb.com/ovdb/demodb.dev/northwind/`. The former
+`/databases/{recordId}/` route remains a permanent redirect after migration.
 
 | Column | Required | Meaning |
 |---|---|---|
-| (key) | yes | Lower-case letters, digits and single hyphens, at most 80 characters. Equals the manifest's `id`. |
+| (key) | yes | Stable Directory record ID: lower-case letters, digits and single hyphens, at most 80 characters. It remains the compatibility alias; a JSON descriptor's `localId` is the manifest's `id`. |
 | `format` | yes | `ovdb-directory/draft-1`. |
 | `title` | yes | A short name. |
 | `description` | yes | What the database holds, in a few sentences. |
 | `status` | yes | `draft`, `published` or `deprecated`. |
-| `url` | yes | The canonical identity: the database's connection URL, an https URL without credentials, query, fragment or trailing slash. It stays the same if the deployment moves. Equals the manifest's `url`. |
+| `url` | yes | The canonical global database identity: a public https URL without credentials, query or fragment. Its host and safe path are independent of the server API route. Equals the manifest's `url` and, when present, the published JSON descriptor's `id`. |
 | `repository` | yes | The publisher repository's https URL on an allowed host (today only `github.com`), as `https://github.com/{org}/{repo}`: no `.git`, trailing slash, `.` or `..` segments. |
 | `commit` | yes | Full 40-character commit id of the current reviewed version, in the history of the repository's default branch. |
 | `manifest` | yes | The manifest's path in the repository, relative to the repository root. The publisher's `OVDB.md` must list it. |
+| `database_manifest` | no | Path to the publisher's `ovdb-database/draft-1` JSON descriptor. `OVDB.md` must list it; when present it supplies `localId`, `serverId`, `serverDbBaseUrl` and `apiUrl`. Legacy YAML-only publishers remain supported. |
 | `meaning_graph` | yes | The record key of the database's meaning graph in the MeaningGraph registry (`meaninggraph/registry`). |
 | `maintainers` | yes | GitHub handles; each one has a `maintainers` record. |
 
@@ -255,19 +264,19 @@ proxy in front of another publisher's deployment: that is the reviewer's questio
 registration pull request is opened.
 
 The canonical `url` is on an origin that the publisher is expected to control, and
-the check cannot prove it. The only rule is that `deployment.discovery` is on the
-same origin as `url`; the Directory does not fetch the discovery document, so it
-does not see who answers there. Whether a publisher controls the origin of its
-canonical `url` is therefore the reviewer's question when a registration pull
-request is opened, and a client that relies on the identity must fetch the discovery
-document and check that it lists the `url`.
+the check cannot prove it. A legacy YAML-only publisher keeps `deployment.discovery`
+on the same origin as `url`; a publisher with the public JSON descriptor places it
+on the `serverId` origin. The Directory does not fetch the discovery document, so
+it does not see who answers there. A client that relies on the identity must fetch
+the discovery document and check that it lists the `url`.
 
 ### What the index guarantees about every URL it publishes
 
 Every URL a manifest publishes or reads (`url`, `deployment.url`, `deployment.discovery`,
-`deployment.recordset_page`, `publisher.url`, `homepage`), and the `url` of a record, is
-checked on the text as written, never on what a URL parser makes of it. In `index.json`
-(`url`, `deployment.url`, each recordset's `url`, `homepage`) every one of them is:
+`deployment.recordset_page`, `publisher.url`, `homepage`), the descriptor's server URLs,
+and the `url` of a record, is checked on the text as written, never on what a URL parser
+makes of it. In `index.json` (`id`, `url`, `deployment.url`, server URLs, each recordset's
+`url`, `homepage`) every one of them is:
 
 - `https`, with no user information, no port (not even `:443`), no query and no fragment;
 - a host of two or more dot-separated labels, each 1 to 63 characters of lower-case ASCII
@@ -275,7 +284,8 @@ checked on the text as written, never on what a URL parser makes of it. In `inde
   characters in all; not an IP address (in any spelling), `localhost`, a single-label name
   or a local, internal or reserved name (`.local`, `.internal`, `.lan`, `.svc`, `.home`,
   `.test`, `.example`, `.invalid`, `.onion`, …);
-- a path of only `A-Z a-z 0-9 . _ ~ / -`: no percent escape, no `//`, no `.` or `..`
+- a path of only `A-Z a-z 0-9 . _ ~ / -`, with canonical encoded segments allowed only in
+  a global database identity: no `//`, no `.` or `..`
   segment, and no quote, apostrophe, ampersand, backtick, angle bracket, brace,
   parenthesis, semicolon, comma, equals sign, space or other punctuation;
 - written in one canonical spelling (no trailing dot or empty label in the host).
@@ -289,19 +299,17 @@ name is ASCII), or that the name does not resolve to a private address
 (`127.0.0.1.nip.io`). A site that shows a URL must still HTML-escape it, whatever it
 guarantees, and clients must check the address they connect to.
 
-The canonical `url` also has `ovdb` as a complete path segment or as
-a subdomain: a host label left of the registered name, which is the last two
-labels, or the last three under a two-label suffix such as `co.uk`. So
-`https://acme.com/ovdb/sales`, `https://ovdb.acme.com/sales` and
-`https://x.ovdb.acme.co.uk/sales` count; `https://ovdb.com/sales`,
-`https://ovdb.co.uk/sales` (where `ovdb` is the registered name itself) and
-`https://acme.com/ovdbx/sales` do not. The list of two-label suffixes is short (17
-common ones, kept by hand in scripts/lib/urls.mjs, not the public suffix list): a
-suffix is added by a reviewed change when a publisher needs it, so
-`https://ovdb.co.il/sales`, `https://ovdb.com.sg/sales`, `https://ovdb.github.io/sales`
-and `https://ovdb.pages.dev/sales` count as having `ovdb` as a subdomain today, although
-`ovdb` is the registered name, or a publisher's own site, there. The marker is a naming
-convention, not a proof of ownership.
+The canonical `url` is a public HTTPS database identity. Its path may be empty or
+contain multiple safe segments, independently of the server's API path. Each segment
+is checked for traversal and encoded separators; the Directory route preserves the
+canonical encoded spelling and adds a trailing slash only to the UI path. For example,
+`https://example.org/db/northwind/` maps to `/ovdb/example.org/db/northwind/`, while
+`https://northwind.example.com/` maps to `/ovdb/northwind.example.com/`.
+
+The old OVDB host/path marker remains available as a legacy classification helper. Its
+short two-label suffix list (17 common ones, kept by hand in scripts/lib/urls.mjs, not
+the public suffix list) is used only to decide whether an old URL contains that marker;
+it does not restrict new canonical database identities.
 
 Names that reach `index.json` are checked too: ModelSpec entity, property and
 module names are identifiers (`[A-Za-z_][A-Za-z0-9_]*`, since recordset names are
@@ -322,9 +330,15 @@ address at the commit that address pins, resolved through the MeaningGraph regis
   "format": "ovdb-directory/draft-1",
   "checksum": "sha256:…",
   "databases": [{
-    "id": "chinook",
+    "id": "https://demodb.dev/chinook/",
+    "recordId": "chinook",
+    "localId": "chinook",
+    "directoryPath": "/ovdb/demodb.dev/chinook/",
+    "serverId": "https://demodb.dev/ovdb",
+    "serverDbBaseUrl": "https://demodb.dev/ovdb/db/chinook/",
+    "apiUrl": "https://demodb.dev/ovdb/v1/databases/chinook",
     "title": "…", "description": "…", "status": "draft",
-    "url": "https://chinookdb.com/ovdb/dbs/chinook",
+    "url": "https://demodb.dev/chinook/",
     "deployment": { "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook", "engine": "sqlite" },
     "homepage": "https://chinook.demodb.dev/",
     "repository": "https://github.com/demo-db/chinook",
@@ -352,6 +366,12 @@ address at the commit that address pins, resolved through the MeaningGraph regis
   differently (`&`, `<`, `>`) gives a different hash. Databases are sorted by
   `id`, recordsets by name; fields keep the ModelSpec's order; meanings are
   sorted by concept and role.
+- `id` is the canonical global database identity from `url`; `recordId` is the
+  Directory registry filename key and remains available for legacy route redirects.
+  `localId` comes from the JSON descriptor when present, and otherwise retains the
+  existing legacy record key. `directoryPath` is derived as `/ovdb/{host}{path}/`,
+  normalizing a UI trailing slash while preserving the original identity. The
+  optional server fields come from the descriptor and are absent for YAML-only publishers.
 - `homepage` is the manifest's `homepage`, and is absent when the manifest has none
   (a client shows no website link then). It is not on the canonical `url`'s origin
   by rule, so it says nothing about who controls that origin. It is at most 200
@@ -561,16 +581,18 @@ from a fixture, like the MeaningGraph registry's. It covers:
   a graph id from the registry that is not a plain id (lower-case words joined by hyphens),
   an index URL that is not https, and registry reads that time out, are tried twice and
   name the registry when they fail.
-- **Across records:** two databases with the same `url`, `deployment.url` or
-  `recordset_page` template, an address under another database's `url` or `deployment.url`,
+- **Across records:** two databases with the same global `url`, per-database
+  `serverDbBaseUrl` or `apiUrl`, duplicate computed Directory routes, or the same
+  `deployment.url` or `recordset_page` template. Distinct descriptors may share a
+  discovery URL only when their `serverId` and discovery origin agree. An address under another database's `url` or `deployment.url`,
   and a port or percent escape that would make a second spelling of one; an own model that is not the registered one, or has its
   properties in another order.
 - **URLs and names:** a manifest URL that is http, has credentials, a query or a
   fragment, names an IP address in any spelling, `localhost` or an internal host,
   has `{name}` in the host, or is written in a second spelling, has a port or a percent
   escape; any URL field (and `homepage`) that has a quote, an apostrophe, an ampersand, a
-  backtick or any character outside the plain set, a long `homepage`; a canonical
-  `url` without `ovdb`; names and values that are not identifiers or plain strings.
+  backtick or any character outside the plain set, a long `homepage`; names and values
+  that are not identifiers or plain strings.
 - **Output:** the warnings and the errors reach what `npm run check` and
   `npm run index` print.
 - **The git cache:** a planted hook (in `hooks/` or defined in configuration),

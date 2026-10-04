@@ -5,10 +5,11 @@ description: >-
   suppliers, shippers, territories and employees. The pinned SQLite build is
   read-only; the native schema includes 13 tables and 17 views.
 status: draft
-url: https://northwind.demodb.dev/ovdb/dbs/northwind
+url: https://demodb.dev/northwind/
 repository: https://github.com/demo-db/northwind
-commit: f5855699eafaba6f09b7f4897abdb2a304698b67
+commit: e74726515c3833620b54b7a50d1d273276dd23c1
 manifest: ovdb.yaml
+database_manifest: ovdb-database.json
 meaning_graph: northwind
 maintainers:
   - trakhimenok

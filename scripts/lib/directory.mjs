@@ -14,7 +14,7 @@ import { parse as parseYaml } from 'yaml';
 import { addressOf, commitPattern, defaultBranch, defaultCacheDir, ensurePlainDirectory, isRepositoryPath, onBranch, openCommit, repositoryKey, repositoryHosts } from './git.mjs';
 import { createMeaningResolver, entryOf, graphIdProblem, graphsAtAddress, loadMeaningRegistry, meaningFilesOf, registryIdPattern, parseConceptRef, parseGraphAddress, labelOf, validateConcept } from './meaning.mjs';
 import { addressMatchesRecord, identifierPattern, loadModelRegistry, modelsAtAddress, normalisedModelAddress, parseModelSpec, parseModelRef, parseModelAddress } from './modelspec.mjs';
-import { encodePathSegment, hasOvdbMarker, homepageProblem, publicHttpsProblem } from './urls.mjs';
+import { directoryPagePath, encodePathSegment, globalDatabaseIdProblem, hasOvdbMarker, homepageProblem, publicHttpsProblem } from './urls.mjs';
 
 export { repositoryHosts };
 export const directoryFormat = 'ovdb-directory/draft-1';
@@ -49,10 +49,11 @@ export function readDirectory(root) {
   return { databases: databases.records, maintainers: maintainers.records, problems: [...databases.problems, ...maintainers.problems] };
 }
 
-// A problem with `value` as a database's canonical url, or null: a public https
-// URL (urls.mjs) without a trailing slash, with `ovdb` as a complete path segment
-// or as a subdomain (see hasOvdbMarker).
+// A problem with `value` as a database's canonical identity, or null. New global
+// identities use one path segment and a trailing slash; older OVDB-marked URLs
+// remain valid while records migrate.
 export function urlProblem(value) {
+  if (globalDatabaseIdProblem(value) === null) return null;
   const problem = publicHttpsProblem(value);
   if (problem) return problem;
   if (value.endsWith('/')) return 'must not have a trailing slash';
@@ -71,6 +72,7 @@ export const wellFormed = (record) => Boolean(record) && repositoryKey(record.da
 export function recordProblems({ databases, maintainers }) {
   const problems = [];
   const urls = new Map();
+  const paths = new Map();
   const handles = new Set(maintainers.map((maintainer) => maintainer.key));
   for (const { key, file, data } of databases) {
     if (!registryIdPattern.test(key) || key.length > 80) problems.push(`${file}: id "${key}" must be lower-case letters, digits and single hyphens, at most 80 characters`);
@@ -80,7 +82,10 @@ export function recordProblems({ databases, maintainers }) {
     if (!repositoryKey(data.repository)) problems.push(`${file}: repository must be an https URL of a repository on ${[...repositoryHosts.keys()].join(', ')}, such as https://github.com/{org}/{repo} (no trailing slash, .git, "." or ".." segments)`);
     if (urlProblem(data.url)) problems.push(`${file}: url ${urlProblem(data.url)}`);
     else urls.set(data.url.toLowerCase(), [...(urls.get(data.url.toLowerCase()) ?? []), { key, file, value: data.url }]);
+    const directoryPath = globalDatabaseIdProblem(data.url) === null ? directoryPagePath(data.url) : `/databases/${key}/`;
+    paths.set(directoryPath.toLowerCase(), [...(paths.get(directoryPath.toLowerCase()) ?? []), { key, file }]);
     if (!isRepositoryPath(data.manifest)) problems.push(`${file}: manifest must be a relative path inside the repository (no "..", no glob)`);
+    if (data.database_manifest !== undefined && !isRepositoryPath(data.database_manifest)) problems.push(`${file}: database_manifest must be a relative path inside the repository (no "..", no glob)`);
     if (typeof data.meaning_graph !== 'string' || !registryIdPattern.test(data.meaning_graph)) problems.push(`${file}: meaning_graph must be a MeaningGraph registry id`);
     for (const handle of data.maintainers ?? []) {
       if (!handles.has(handle)) problems.push(`${file}: maintainer ${handle} has no record in maintainers/`);
@@ -88,6 +93,9 @@ export function recordProblems({ databases, maintainers }) {
   }
   for (const owners of urls.values()) {
     if (owners.length > 1) problems.push(`${owners.at(-1).file}: url ${owners.at(-1).value} is registered under ${owners.length} ids (${owners.map((owner) => owner.key).join(', ')}, compared ignoring case); a database is registered once`);
+  }
+  for (const owners of paths.values()) {
+    if (owners.length > 1) problems.push(`${owners.at(-1).file}: Directory path is shared by ${owners.length} database identities (${owners.map((owner) => owner.key).join(', ')}); each database must have a unique Directory path`);
   }
   return problems;
 }
@@ -131,6 +139,11 @@ export function claimProblems(claimed) {
     if (byKey.size < 2) continue;
     const list = [...byKey.values()];
     if (list.every(({ fields }) => fields.length === 1 && fields[0] === 'url')) continue;
+    const discoverySharesOneServer = list.every(({ claim, fields }) => fields.length === 1 && fields[0] === 'deployment.discovery' && typeof claim.serverId === 'string' && publicHttpsProblem(claim.serverId) === null)
+      && new Set(list.map(({ claim }) => claim.serverId)).size === 1
+      && new Set(list.map(({ claim }) => new URL(claim.serverId).origin)).size === 1
+      && list.every(({ claim }) => new URL(claim.serverId).origin === new URL(value).origin);
+    if (discoverySharesOneServer) continue;
     const last = list.at(-1).claim;
     problems.push(`${last.file}: ${last.manifest}: ${value} is claimed by ${list.length} databases (${list.map(({ claim, fields }) => `${claim.key} as ${fields.join(' and ')}`).join('; ')}; compared ignoring case and a trailing slash); a deployment is listed once, because a second listing of the same deployment is not a second hoster`);
   }
@@ -177,7 +190,7 @@ const nativeRecordsetNameProblem = (value) => !isText(value) ? 'must be a non-em
 export const manifestForm = (manifest) => (manifest?.model?.modelspec !== undefined || manifest?.model?.hcl !== undefined ? 'own' : 'shared');
 
 // The manifest's required fields (format ovdb-manifest/draft-1), by form.
-export function manifestProblems(manifest) {
+export function manifestProblems(manifest, { databaseManifest = false } = {}) {
   const problems = [];
   if (manifest === null || typeof manifest !== 'object' || Array.isArray(manifest)) return ['is not a mapping'];
   const shared = manifestForm(manifest) === 'shared';
@@ -194,7 +207,7 @@ export function manifestProblems(manifest) {
   need(manifest.deployment, 'engine', 'deployment.engine', (value) => typeof value === 'string' && /^[A-Za-z][A-Za-z0-9_.+-]{0,39}$/.test(value));
   needUrl(manifest.deployment?.discovery, 'deployment.discovery');
   // The discovery document is the canonical host's: same origin as the canonical url.
-  if (!urlProblem(manifest.url) && !publicHttpsProblem(manifest.deployment?.discovery) && new URL(manifest.deployment.discovery).origin !== new URL(manifest.url).origin) {
+  if (!databaseManifest && !urlProblem(manifest.url) && !publicHttpsProblem(manifest.deployment?.discovery) && new URL(manifest.deployment.discovery).origin !== new URL(manifest.url).origin) {
     problems.push(`deployment.discovery must be on the same origin as url (${new URL(manifest.url).origin}), not ${new URL(manifest.deployment.discovery).origin}`);
   }
   // Optional: where a recordset is browsed, with {name} for the recordset name.
@@ -254,6 +267,46 @@ export function manifestProblems(manifest) {
         else if (usedEntities.has(entity)) problems.push(`recordset_entities maps both ${JSON.stringify(usedEntities.get(entity))} and ${JSON.stringify(recordset)} to ModelSpec entity ${entity}; mappings must be one-to-one`);
         else usedEntities.set(entity, recordset);
       }
+    }
+  }
+  return problems;
+}
+
+const localIdPattern = /^[a-z][a-z0-9-]{0,39}$/;
+
+// The opt-in JSON descriptor separates a publisher's global database identity
+// from its server-local id and API paths. Keep this validation structural and
+// compare URLs as canonical strings; the provider-owned frozen JSON Schema is
+// responsible for the rest of the public descriptor shape.
+function databaseDescriptorProblems(descriptor, { url, manifest }) {
+  const problems = [];
+  if (!descriptor || typeof descriptor !== 'object' || Array.isArray(descriptor)) return ['is not a JSON object'];
+  if (descriptor.format !== 'ovdb-database/draft-1') problems.push('format must be ovdb-database/draft-1');
+  for (const field of ['id', 'localId', 'serverId', 'serverDbBaseUrl', 'apiUrl']) {
+    if (typeof descriptor[field] !== 'string' || descriptor[field] === '') problems.push(`${field} is required`);
+  }
+  if (descriptor.id !== url) problems.push(`id is ${descriptor.id}, but the Directory record's url is ${url}`);
+  if (typeof descriptor.localId === 'string' && !localIdPattern.test(descriptor.localId)) problems.push(`localId ${JSON.stringify(descriptor.localId)} must be lower-case letters, digits and single hyphens, beginning with a letter, at most 40 characters`);
+  for (const field of ['id', 'serverId', 'serverDbBaseUrl', 'apiUrl']) {
+    const value = descriptor[field];
+    if (typeof value === 'string') {
+      const problem = field === 'id' ? globalDatabaseIdProblem(value) : publicHttpsProblem(value);
+      if (problem) problems.push(`${field} ${problem}`);
+    }
+  }
+  if (typeof descriptor.serverId === 'string' && publicHttpsProblem(descriptor.serverId) === null && typeof descriptor.localId === 'string' && localIdPattern.test(descriptor.localId)) {
+    const server = new URL(descriptor.serverId);
+    const dbBase = typeof descriptor.serverDbBaseUrl === 'string' && publicHttpsProblem(descriptor.serverDbBaseUrl) === null ? new URL(descriptor.serverDbBaseUrl) : null;
+    const api = typeof descriptor.apiUrl === 'string' && publicHttpsProblem(descriptor.apiUrl) === null ? new URL(descriptor.apiUrl) : null;
+    if (dbBase && dbBase.origin !== server.origin) problems.push(`serverDbBaseUrl must share serverId origin ${server.origin}`);
+    if (api && api.origin !== server.origin) problems.push(`apiUrl must share serverId origin ${server.origin}`);
+    const discovery = descriptor.deployment?.discovery;
+    if (typeof discovery !== 'string') problems.push('deployment.discovery is required');
+    else {
+      const discoveryProblem = publicHttpsProblem(discovery);
+      if (discoveryProblem) problems.push(`deployment.discovery ${discoveryProblem}`);
+      else if (new URL(discovery).origin !== server.origin) problems.push(`deployment.discovery must share serverId origin ${server.origin}`);
+      if (manifest?.deployment?.discovery !== discovery) problems.push(`deployment.discovery is ${discovery}, but ${manifest.format} says ${manifest.deployment?.discovery}`);
     }
   }
   return problems;
@@ -328,12 +381,37 @@ export async function analyseDatabase(record, context) {
   if (manifestText === null) return stop();
   let manifest;
   try { manifest = parseYaml(manifestText); } catch (parseError) { bad(`${data.manifest} is not valid YAML: ${parseError.message}`); return stop(); }
-  const missing = manifestProblems(manifest);
+  if (data.database_manifest !== undefined && !published.has(data.database_manifest)) {
+    bad(`OVDB.md does not list ./${data.database_manifest} in publish (the descriptor must be explicitly opted in)`);
+    return stop();
+  }
+  let descriptor;
+  if (data.database_manifest !== undefined) {
+    const descriptorText = text(data.database_manifest, 'database descriptor');
+    if (descriptorText === null) return stop();
+    try { descriptor = JSON.parse(descriptorText); }
+    catch (parseError) { bad(`${data.database_manifest} is not valid JSON: ${parseError.message}`); return stop(); }
+  }
+  const missing = manifestProblems(manifest, { databaseManifest: data.database_manifest !== undefined });
   for (const problem of missing) bad(`${data.manifest}: ${problem}`);
   if (missing.length) return stop();
-  claims = { key, file, manifest: data.manifest, addresses: addressClaims(manifest) };
+  if (descriptor !== undefined) {
+    for (const problem of databaseDescriptorProblems(descriptor, { url: data.url, manifest })) bad(`${data.database_manifest}: ${problem}`);
+  }
+  claims = {
+    key, file, manifest: data.manifest, serverId: descriptor?.serverId,
+    addresses: [
+      ...addressClaims(manifest),
+      ...(descriptor ? [
+        ...(typeof manifest.deployment.discovery === 'string' ? [{ field: 'deployment.discovery', value: claimedForm(manifest.deployment.discovery) }] : []),
+        ...(typeof descriptor.serverDbBaseUrl === 'string' ? [{ field: 'serverDbBaseUrl', value: claimedForm(descriptor.serverDbBaseUrl) }] : []),
+        ...(typeof descriptor.apiUrl === 'string' ? [{ field: 'apiUrl', value: claimedForm(descriptor.apiUrl) }] : []),
+      ] : []),
+    ],
+  };
   if (manifest.url !== data.url) bad(`${data.manifest}: url is ${manifest.url}, but the record's url is ${data.url}; the manifest and the record name one canonical identity`);
-  if (manifest.id !== key) bad(`${data.manifest}: id is ${manifest.id}, but the record is ${key}`);
+  const expectedManifestId = descriptor?.localId ?? key;
+  if (manifest.id !== expectedManifestId) bad(`${data.manifest}: id is ${manifest.id}, but the ${descriptor ? 'descriptor localId' : 'record id'} is ${expectedManifestId}`);
   if (manifest.meaning.graph.id !== data.meaning_graph) bad(`${data.manifest}: meaning.graph.id is ${manifest.meaning.graph.id}, but the record's meaning_graph is ${data.meaning_graph}`);
   if (manifest.publisher.repository !== undefined && lowerKey(repositoryKey(manifest.publisher.repository) ?? '') !== lowerKey(repositoryKey(data.repository))) {
     bad(`${data.manifest}: publisher.repository is ${manifest.publisher.repository}, but the record's repository is ${data.repository}`);
@@ -695,7 +773,11 @@ export async function analyseDatabase(record, context) {
 
   const sorted = (meanings) => [...meanings].sort(by('concept', 'role'));
   const entry = {
-    id: key,
+    id: data.url,
+    recordId: key,
+    localId: descriptor?.localId ?? key,
+    directoryPath: directoryPagePath(data.url),
+    ...(descriptor ? { serverId: descriptor.serverId, serverDbBaseUrl: descriptor.serverDbBaseUrl, apiUrl: descriptor.apiUrl } : {}),
     title: data.title,
     description: data.description,
     status: data.status,

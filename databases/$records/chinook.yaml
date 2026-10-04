@@ -6,10 +6,11 @@ description: >-
   a pinned copy of the upstream SQLite fixture. Its recordsets and fields carry
   the meanings of the chinook meaning graph.
 status: draft
-url: https://chinookdb.com/ovdb/dbs/chinook
+url: https://demodb.dev/chinook/
 repository: https://github.com/demo-db/chinook
-commit: f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b
+commit: 26e852cca00101f53a84ef8ee1f1ae389067f5cf
 manifest: ovdb.yaml
+database_manifest: ovdb-database.json
 meaning_graph: chinook
 maintainers:
   - trakhimenok

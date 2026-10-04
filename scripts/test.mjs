@@ -15,7 +15,7 @@ import { after, test } from 'node:test';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { addressOf, cacheRepoSound, defaultBranch, defaultCacheDir, git, gitEnv, historyPath, identity, install, onBranch, openCommit, repositoryKey, setGitProtocols } from './lib/git.mjs';
 import { runCheck, runIndex } from './lib/cli.mjs';
-import { encodePathSegment, hasOvdbMarker, publicHttpsProblem } from './lib/urls.mjs';
+import { directoryPagePath, encodePathSegment, globalDatabaseIdProblem, hasOvdbMarker, publicHttpsProblem } from './lib/urls.mjs';
 import { buildIndex, checkDirectory, addressClaims, claimProblems, indexText, readDirectory, recordProblems, urlProblem } from './lib/directory.mjs';
 import { indexMeaningRegistry, loadMeaningRegistry } from './lib/meaning.mjs';
 import { indexModelRegistry, loadModelRegistry, modelRegistryDefaultUrl, parseModelRef, parseModelSpec } from './lib/modelspec.mjs';
@@ -94,7 +94,19 @@ function origin(files, { symlinks = {}, side, name = 'origin' } = {}) {
 
 const fixtureCore = readTree(join(root, 'scripts', 'fixtures', 'core'));
 const fixtureChinook = readTree(join(root, 'scripts', 'fixtures', 'chinookdb'));
-const realRecord = parseYaml(readFileSync(join(root, 'databases', '$records', 'chinook.yaml'), 'utf8'));
+// A stable legacy YAML-only fixture for isolated validator tests. The live
+// registry record moves independently and must not change these synthetic worlds.
+const realRecord = parseYaml(`format: ovdb-directory/draft-1
+title: Chinook music store
+description: The Chinook sample database.
+status: draft
+url: https://chinookdb.com/ovdb/dbs/chinook
+repository: https://github.com/demo-db/chinook
+commit: f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b
+manifest: ovdb.yaml
+meaning_graph: chinook
+maintainers: [trakhimenok]
+`);
 
 const meaningIndex = ({ chinook, core, edit } = {}) => {
   const graphs = [
@@ -156,6 +168,21 @@ const problemsOf = async (w, extra) => {
 const expectProblem = (problems, pattern) => assert.ok(problems.some((problem) => pattern.test(problem)), `expected a problem matching ${pattern}, got:\n${problems.join('\n') || '(none)'}`);
 const edited = (path, change) => (files) => files.set(path, change(files.get(path)));
 const manifestEdit = (change) => edited('ovdb.yaml', (text) => { const manifest = parseYaml(text); change(manifest); return stringifyYaml(manifest); });
+const descriptorFor = ({ id, localId = 'chinook', serverId = 'https://demodb.dev/ovdb' }) => ({
+  format: 'ovdb-database/draft-1', id, localId, serverId,
+  serverDbBaseUrl: `${new URL(serverId).origin}/resources/${localId}/`,
+  apiUrl: `${new URL(serverId).origin}/gateway/databases/${localId}`,
+  deployment: { discovery: `${new URL(serverId).origin}/.well-known/openvaultdb` },
+});
+const globalProvider = ({ id, localId = 'chinook', serverId = 'https://demodb.dev/ovdb' }) => (files) => {
+  const manifest = parseYaml(files.get('ovdb.yaml'));
+  manifest.url = id;
+  manifest.id = localId;
+  manifest.deployment.discovery = `${new URL(serverId).origin}/.well-known/openvaultdb`;
+  files.set('ovdb.yaml', stringifyYaml(manifest));
+  files.set('OVDB.md', '---\novdb: 1\npublish: [./ovdb.yaml, ./ovdb-database.json]\n---\n');
+  files.set('ovdb-database.json', `${JSON.stringify(descriptorFor({ id, localId, serverId }), null, 2)}\n`);
+};
 const meaningEdit = (change) => edited('model/chinook.meaning.yaml', (text) => { const doc = parseYaml(text); change(doc); return stringifyYaml(doc); });
 const field = (database, recordset, name) => database.recordsets.find((entry) => entry.name === recordset).fields.find((entry) => entry.name === name);
 
@@ -174,7 +201,10 @@ test('index.json has the documented shape: recordsets and fields from the ModelS
   assert.equal(result.format, 'ovdb-directory/draft-1');
   assert.equal(result.databases.length, 1);
   const [chinook] = result.databases;
-  assert.equal(chinook.id, 'chinook');
+  assert.equal(chinook.id, realRecord.url);
+  assert.equal(chinook.recordId, 'chinook');
+  assert.equal(chinook.localId, 'chinook', 'legacy providers retain their existing local id');
+  assert.equal(chinook.directoryPath, '/ovdb/chinookdb.com/ovdb/dbs/chinook/');
   assert.equal(chinook.title, 'Chinook music store');
   assert.equal(chinook.status, 'draft');
   assert.equal(chinook.url, 'https://chinookdb.com/ovdb/dbs/chinook');
@@ -223,6 +253,87 @@ test('index.json has the documented shape: recordsets and fields from the ModelS
   // Fields keep the ModelSpec's order; a field nothing is bound to has no meanings.
   assert.deepEqual(customer.fields.slice(0, 3).map((entry) => entry.name), ['CustomerId', 'FirstName', 'LastName']);
   assert.deepEqual(field(chinook, 'Customer', 'FirstName').meanings, []);
+});
+
+test('the published JSON descriptor supplies global identity and server-local routes independently', async () => {
+  const id = 'https://demodb.dev/northwind/';
+  const w = world({
+    publisher: globalProvider({ id, localId: 'northwind' }),
+    record: (record) => { record.url = id; record.database_manifest = 'ovdb-database.json'; },
+  });
+  assert.deepEqual(await problemsOf(w), []);
+  const [database] = (await index(w)).databases;
+  assert.equal(database.id, id);
+  assert.equal(database.recordId, 'chinook');
+  assert.equal(database.localId, 'northwind');
+  assert.equal(database.directoryPath, '/ovdb/demodb.dev/northwind/');
+  assert.equal(database.serverId, 'https://demodb.dev/ovdb');
+  assert.equal(database.serverDbBaseUrl, 'https://demodb.dev/resources/northwind/');
+  assert.equal(database.apiUrl, 'https://demodb.dev/gateway/databases/northwind');
+});
+
+test('a JSON database descriptor must be explicitly published and its identity and endpoint origins must agree', async () => {
+  const id = 'https://demodb.dev/northwind/';
+  const record = (value) => { value.url = id; value.database_manifest = 'ovdb-database.json'; };
+  const missingOptIn = world({ publisher: (files, context) => { globalProvider({ id, localId: 'northwind' })(files, context); files.set('OVDB.md', '---\novdb: 1\npublish: [./ovdb.yaml]\n---\n'); }, record });
+  expectProblem(await problemsOf(missingOptIn), /OVDB\.md does not list \.\/ovdb-database\.json in publish/);
+  const wrongIdentity = world({ publisher: (files, context) => {
+    globalProvider({ id, localId: 'northwind' })(files, context);
+    const descriptor = JSON.parse(files.get('ovdb-database.json'));
+    descriptor.id = 'https://demodb.dev/other/';
+    files.set('ovdb-database.json', JSON.stringify(descriptor));
+  }, record });
+  expectProblem(await problemsOf(wrongIdentity), /id is https:\/\/demodb\.dev\/other\/, but the Directory record's url is https:\/\/demodb\.dev\/northwind/);
+  const foreignEndpoint = world({ publisher: (files, context) => {
+    globalProvider({ id, localId: 'northwind' })(files, context);
+    const descriptor = JSON.parse(files.get('ovdb-database.json'));
+    descriptor.apiUrl = 'https://api.other.example.net/query';
+    files.set('ovdb-database.json', JSON.stringify(descriptor));
+  }, record });
+  expectProblem(await problemsOf(foreignEndpoint), /apiUrl must share serverId origin https:\/\/demodb\.dev/);
+});
+
+test('publishers may reuse a localId on separate servers, and databases may share one discovery endpoint', async () => {
+  const idA = 'https://one.example.com/chinook/';
+  const idB = 'https://two.example.com/chinook/';
+  const separateServers = sharedWorld({
+    chinook: {
+      ...chinookNamesModel,
+      publisher: (files, context) => { chinookNamesModel.publisher(files, context); globalProvider({ id: idA, localId: 'chinook', serverId: 'https://api.one.example.com/ovdb' })(files, context); },
+      record: (record) => { record.url = idA; record.database_manifest = 'ovdb-database.json'; },
+    },
+    hoster: globalProvider({ id: idB, localId: 'chinook', serverId: 'https://api.two.example.com/ovdb' }),
+    record: (record) => { record.url = idB; record.database_manifest = 'ovdb-database.json'; },
+  });
+  const separateResult = await checkDirectory(sharedOptions(separateServers));
+  assert.deepEqual(separateResult.problems.filter((problem) => !problem.startsWith('index.json')), []);
+  const entries = (await sharedIndex(separateServers)).databases;
+  assert.deepEqual(entries.map((database) => database.localId), ['chinook', 'chinook']);
+  assert.equal(new Set(entries.map((database) => database.id)).size, 2);
+  assert.equal(new Set(entries.map((database) => database.directoryPath)).size, 2);
+  assert.equal(new Set(entries.map((database) => database.serverDbBaseUrl)).size, 2);
+
+  const sharedServer = sharedWorld({
+    chinook: {
+      ...chinookNamesModel,
+      publisher: (files, context) => { chinookNamesModel.publisher(files, context); globalProvider({ id: idA, localId: 'chinook', serverId: 'https://api.shared.example.com/ovdb' })(files, context); },
+      record: (record) => { record.url = idA; record.database_manifest = 'ovdb-database.json'; },
+    },
+    hoster: globalProvider({ id: idB, localId: 'chinook-acme', serverId: 'https://api.shared.example.com/ovdb' }),
+    record: (record) => { record.url = idB; record.database_manifest = 'ovdb-database.json'; },
+  });
+  assert.deepEqual(await sharedProblems(sharedServer), [], 'the descriptor serverId and discovery origin match for both records');
+
+  const duplicateServerResource = sharedWorld({
+    chinook: {
+      publisher: (files, context) => { chinookNamesModel.publisher(files, context); globalProvider({ id: idA, localId: 'chinook', serverId: 'https://api.shared.example.com/ovdb' })(files, context); },
+      record: (record) => { record.url = idA; record.database_manifest = 'ovdb-database.json'; },
+    },
+    hoster: globalProvider({ id: idB, localId: 'chinook', serverId: 'https://api.shared.example.com/ovdb' }),
+    record: (record) => { record.url = idB; record.database_manifest = 'ovdb-database.json'; },
+  });
+  const duplicateProblems = (await checkDirectory(sharedOptions(duplicateServerResource))).problems;
+  expectProblem(duplicateProblems, /is claimed by 2 databases .*serverDbBaseUrl/);
 });
 
 test('native spaced recordset names map to publishable ModelSpec entities and encode in recordset URLs', async () => {
@@ -511,7 +622,7 @@ test('the manifest needs its required fields, and its url, id and graph must agr
   expectProblem(missing, /ovdb\.yaml: deployment\.engine is required/);
   expectProblem(missing, /ovdb\.yaml: licences\.model is required/);
   expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.url = 'https://chinookdb.com/ovdb/dbs/other'; }) })), /ovdb\.yaml: url is https:\/\/chinookdb\.com\/ovdb\/dbs\/other, but the record's url is https:\/\/chinookdb\.com\/ovdb\/dbs\/chinook/);
-  expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.id = 'other'; }) })), /ovdb\.yaml: id is other, but the record is chinook/);
+  expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.id = 'other'; }) })), /ovdb\.yaml: id is other, but the record id is chinook/);
   expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.meaning.graph.id = 'core'; }) })), /ovdb\.yaml: meaning\.graph\.id is core, but the record's meaning_graph is chinook/);
   expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.publisher.repository = 'https://github.com/someone/else'; }) })), /publisher\.repository is https:\/\/github\.com\/someone\/else, but the record's repository/);
   expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.model.modelspec = '../outside.json'; }) })), /ovdb\.yaml: model\.modelspec is required/);
@@ -669,10 +780,16 @@ test('ids, formats, statuses, urls and maintainers follow the record rules; a ur
   expectProblem(recordProblems(directoryOf([recordWith({ status: 'live' })])), /status must be one of draft, published, deprecated/);
   expectProblem(recordProblems(directoryOf([recordWith({ maintainers: ['nobody'] })])), /maintainer nobody has no record in maintainers\//);
   expectProblem(recordProblems(directoryOf([recordWith({ meaning_graph: 'Not An Id' })])), /meaning_graph must be a MeaningGraph registry id/);
-  for (const url of ['http://chinookdb.com/ovdb/dbs/chinook', 'https://chinookdb.com/ovdb/dbs/chinook/', 'https://chinookdb.com/ovdb/dbs/chinook?x=1', 'https://CHINOOKDB.com/ovdb/dbs/chinook', 'https://user@chinookdb.com/ovdb/x', 'chinookdb.com/ovdb/x', 'https://chinookdb.com/ovdb/x#y']) {
+  for (const url of ['http://chinookdb.com/ovdb/dbs/chinook', 'https://chinookdb.com/ovdb/dbs/chinook?x=1', 'https://CHINOOKDB.com/ovdb/dbs/chinook', 'https://user@chinookdb.com/ovdb/x', 'chinookdb.com/ovdb/x', 'https://chinookdb.com/ovdb/x#y']) {
     expectProblem(recordProblems(directoryOf([recordWith({ url })])), /url (must|is not|contains)/);
   }
   expectProblem(recordProblems(directoryOf([recordWith({}), recordWith({ url: 'https://CHINOOKDB.com/ovdb/dbs/chinook'.replace('CHINOOKDB', 'chinookdb') }, 'chinook-again')])), /url https:\/\/chinookdb\.com\/ovdb\/dbs\/chinook is registered under 2 ids \(chinook, chinook-again/);
+});
+
+test('distinct canonical URLs may not collapse to the same computed Directory path', () => {
+  const first = recordWith({ url: 'https://example.org/db/northwind' }, 'northwind');
+  const second = recordWith({ url: 'https://example.org/db/northwind/' }, 'northwind-alt');
+  expectProblem(recordProblems(directoryOf([first, second])), /Directory path is shared by 2 database identities \(northwind, northwind-alt\)/);
 });
 
 test('a file in $records that is not <key>.yaml is a problem', async () => {
@@ -758,7 +875,8 @@ test('the committed index.json has the documented shape and its own checksum', (
   assert.equal(committed.format, 'ovdb-directory/draft-1');
   assert.equal(committed.checksum, `sha256:${createHash('sha256').update(JSON.stringify(committed.databases)).digest('hex')}`);
   const records = readDirectory(root).databases.map((record) => record.key).sort();
-  assert.deepEqual(committed.databases.map((database) => database.id), records);
+  assert.deepEqual(committed.databases.map((database) => database.recordId), records);
+  assert.deepEqual(committed.databases.map((database) => database.id), readDirectory(root).databases.map((record) => record.data.url).sort());
   assert.equal(readFileSync(path, 'utf8'), `${JSON.stringify(committed, null, 2)}\n`);
 });
 
@@ -858,23 +976,57 @@ test('public URLs are https only, without credentials, query or fragment, and ne
   assert.equal(publicHttpsProblem(`https://cloud.openvaultdb.com/ovdb/${encodedName}`, { encodedPathSegment: encodedName }), null);
   assert.match(publicHttpsProblem('https://cloud.openvaultdb.com/ovdb/%2f', { encodedPathSegment: '%2f' }) ?? '', /canonically|non-canonical/);
   assert.match(publicHttpsProblem('https://cloud.openvaultdb.com/ovdb/%2F', { encodedPathSegment: '%2F' }) ?? '', /unsafe encoded path segment/);
-  assert.match(publicHttpsProblem('https://cloud.openvaultdb.com/ovdb/%2E%2E', { encodedPathSegment: '%2E%2E' }) ?? '', /canonically/);
+  assert.match(publicHttpsProblem('https://cloud.openvaultdb.com/ovdb/%2E%2E', { encodedPathSegment: '%2E%2E' }) ?? '', /unsafe encoded path segment/);
   for (const template of ['https://169.254.169.{name}/latest', 'https://metadata.google.{name}/x', 'https://{name}.example.com/x', 'https://{name}@example.com/x', 'https://example.com:{name}/x', 'https://{name}']) {
     assert.match(publicHttpsProblem(template, { template: true }) ?? '', /\{name\} in the path only|exactly once|not a URL/, template);
   }
   assert.equal(publicHttpsProblem('https://example.com/{name}', { template: true }), null);
 });
 
-test('the canonical url needs ovdb as a complete path segment or as a subdomain', () => {
-  for (const url of ['https://example.com/sales', 'https://acme.com/ovdbx/sales', 'https://acme.com/xovdb/sales', 'https://ovdb.com/sales', 'https://ovdb.co.uk/sales', 'https://ovdb.com.au/sales', 'https://acme.ovdb/sales', 'https://notovdb.acme.com/sales']) {
-    assert.match(urlProblem(url) ?? '', /ovdb as a complete path segment or as a subdomain/, url);
-  }
-  for (const url of ['https://acme.com/ovdb/sales', 'https://acme.com/data/ovdb/sales', 'https://ovdb.acme.com/sales', 'https://x.ovdb.acme.co.uk/sales', 'https://ovdb.acme.co.uk/sales', 'https://chinookdb.com/ovdb/dbs/chinook']) {
+test('global canonical identity URLs do not depend on an OVDB marker in their path or host', () => {
+  for (const url of ['https://example.com/sales', 'https://acme.com/ovdbx/sales', 'https://acme.com/xovdb/sales', 'https://ovdb.com/sales', 'https://ovdb.co.uk/sales', 'https://ovdb.com.au/sales', 'https://acme.ovdb/sales', 'https://notovdb.acme.com/sales', 'https://chinookdb.com/ovdb/dbs/chinook']) {
     assert.equal(urlProblem(url), null, url);
   }
   assert.equal(hasOvdbMarker('https://acme.com/ovdb'), true);
+  assert.equal(hasOvdbMarker('https://example.com/sales'), false);
   for (const url of ['https://127.0.0.1/ovdb/x', 'https://localhost/ovdb/x', 'https://169.254.169.254/ovdb/x', 'https://[::1]/ovdb/x', 'https://intranet.local/ovdb/x']) {
     expectProblem(recordProblems(directoryOf([recordWith({ url })])), /url .*(IP address|local, internal or reserved|single-label)/);
+  }
+});
+
+test('global database identities derive a safe Directory path without decoding encoded segments twice', () => {
+  assert.equal(globalDatabaseIdProblem('https://demodb.dev/northwind/'), null);
+  assert.equal(directoryPagePath('https://demodb.dev/northwind/'), '/ovdb/demodb.dev/northwind/');
+  assert.equal(globalDatabaseIdProblem('https://example.org/db/northwind/'), null);
+  assert.equal(directoryPagePath('https://example.org/db/northwind/'), '/ovdb/example.org/db/northwind/');
+  assert.equal(globalDatabaseIdProblem('https://northwind.example.com/'), null);
+  assert.equal(directoryPagePath('https://northwind.example.com/'), '/ovdb/northwind.example.com/');
+  assert.equal(globalDatabaseIdProblem('https://northwind.example/'), null, 'a root global identity may use its dedicated publisher host');
+  assert.equal(directoryPagePath('https://northwind.example/'), '/ovdb/northwind.example/');
+  assert.equal(globalDatabaseIdProblem('https://acme.example.com/dbs/a.b'), null);
+  assert.equal(directoryPagePath('https://acme.example.com/dbs/a.b'), '/ovdb/acme.example.com/dbs/a.b/');
+  assert.equal(globalDatabaseIdProblem('https://chinookdb.com/ovdb/dbs/chinook'), null);
+  assert.equal(directoryPagePath('https://chinookdb.com/ovdb/dbs/chinook'), '/ovdb/chinookdb.com/ovdb/dbs/chinook/');
+  assert.equal(globalDatabaseIdProblem('https://data.example.org/Order%20Details/'), null);
+  assert.equal(directoryPagePath('https://data.example.org/Order%20Details/'), '/ovdb/data.example.org/Order%20Details/');
+  assert.equal(globalDatabaseIdProblem('https://data.example.org/a%20b/'), null);
+  assert.equal(directoryPagePath('https://data.example.org/a%20b/'), '/ovdb/data.example.org/a%20b/');
+  for (const url of [
+    'http://demodb.dev/northwind/',
+    'https://user@demodb.dev/northwind/',
+    'https://demodb.dev/northwind/?token=x',
+    'https://demodb.dev/northwind/#fragment',
+    'https://localhost/northwind/',
+    'https://demodb.dev/a/../northwind/',
+    'https://demodb.dev/a/./northwind/',
+    'https://demodb.dev/%2e%2e/',
+    'https://demodb.dev/a%2Fb/',
+    'https://demodb.dev/a%5Cb/',
+    'https://demodb.dev/a%00b/',
+    'https://demodb.dev/a//northwind/',
+  ]) {
+    assert.notEqual(globalDatabaseIdProblem(url), null, url);
+    assert.throws(() => directoryPagePath(url), /invalid global database id/);
   }
 });
 
@@ -882,7 +1034,6 @@ test('every URL a manifest publishes is held to the same rules', async () => {
   const set = (change) => ({ publisher: manifestEdit(change) });
   const cases = [
     ['url', (manifest) => { manifest.url = 'https://127.0.0.1/ovdb/dbs/chinook'; }, /ovdb\.yaml: url https:\/\/127\.0\.0\.1 is an IP address|ovdb\.yaml: url 127\.0\.0\.1 is an IP address/],
-    ['url without ovdb', (manifest) => { manifest.url = 'https://chinookdb.com/sales'; }, /ovdb\.yaml: url must have ovdb as a complete path segment or as a subdomain/],
     ['deployment.url ip', (manifest) => { manifest.deployment.url = 'https://169.254.169.254/latest'; }, /ovdb\.yaml: deployment\.url 169\.254\.169\.254 is an IP address/],
     ['deployment.url localhost', (manifest) => { manifest.deployment.url = 'https://localhost/ovdb/dbs/chinook'; }, /ovdb\.yaml: deployment\.url localhost is a single-label name/],
     ['deployment.url http', (manifest) => { manifest.deployment.url = 'http://cloud.openvaultdb.com/ovdb/dbs/chinook'; }, /ovdb\.yaml: deployment\.url must be https, not http/],
@@ -1212,7 +1363,7 @@ test('a second hoster of Chinook points at the published model and meaning graph
   assert.deepEqual(checkedResult.warnings, []);
   assert.equal(checkedResult.databases, 2);
   const result = await sharedIndex(w);
-  assert.deepEqual(result.databases.map((database) => database.id), ['chinook', 'chinook-acme']);
+  assert.deepEqual(result.databases.map((database) => database.recordId), ['chinook', 'chinook-acme']);
   const [chinook, acme] = result.databases;
   // Both are databases of the same model: the same normalised address, without a pin.
   assert.equal(chinook.model.address, modelAddr);
@@ -1271,7 +1422,7 @@ test('a pin that differs from the one a registry registers is a warning, not a p
   expectProblem(warnings, new RegExp(`meaning\\.address pins [0-9a-f]{40}, but the MeaningGraph registry registers chinook at ${w.publisher.commit}`));
   const result = JSON.parse(await buildIndex(sharedOptions(w, { onWarning: (warning) => warned.push(warning) })));
   assert.equal(warned.length, 2);
-  const acme = result.databases.find((database) => database.id === 'chinook-acme');
+  const acme = result.databases.find((database) => database.recordId === 'chinook-acme');
   assert.notEqual(acme.model.commit, w.publisher.commit);
   assert.ok(field(acme, 'Customer', 'Country').meanings[0].address.endsWith(`?ref=${acme.model.commit}`), 'meaning addresses carry the pinned commit of the graph repository');
 });
@@ -1659,6 +1810,28 @@ test('claims are compared as whole addresses, in any field, ignoring case: hones
   assert.match(claimProblems([claim('a', `${host}/ovdb/a`, `${host}/x`), claim('b', `${host}/ovdb/b`, `${host}/x`), claim('c', `${host}/ovdb/c`, `${host}/x`)])[0], /^databases\/\$records\/c\.yaml: ovdb\.yaml: .*\(a as deployment\.url; b as deployment\.url; c as deployment\.url;/);
 });
 
+test('a shared discovery claim needs matching server ids and origins', () => {
+  const make = (key, serverId, discovery) => ({
+    key,
+    file: `databases/$records/${key}.yaml`,
+    manifest: 'ovdb.yaml',
+    serverId,
+    addresses: [{ field: 'deployment.discovery', value: discovery }],
+  });
+  assert.deepEqual(claimProblems([
+    make('one', 'https://api.example.org/ovdb', 'https://api.example.org/.well-known/openvaultdb'),
+    make('two', 'https://api.example.org/ovdb', 'https://api.example.org/.well-known/openvaultdb'),
+  ]), []);
+  assert.match(claimProblems([
+    make('one', 'https://api.example.org/ovdb', 'https://api.example.org/.well-known/openvaultdb'),
+    make('two', 'https://api.other.org/ovdb', 'https://api.example.org/.well-known/openvaultdb'),
+  ])[0], /is claimed by 2 databases/);
+  assert.match(claimProblems([
+    make('one', 'https://api.other.org/ovdb', 'https://api.example.org/.well-known/openvaultdb'),
+    make('two', 'https://api.other.org/ovdb', 'https://api.example.org/.well-known/openvaultdb'),
+  ])[0], /is claimed by 2 databases/, 'matching serverIds do not authorize a discovery URL on another origin');
+});
+
 test('the registries\' paths hold at the registry\'s own commit: at another pin they must exist there, or the problem names both commits and nothing is guessed', async () => {
   const v2 = 'model/v2/chinook.modelspec.json';
   // The ModelSpec registry moved its files to v2 at a newer commit; the hoster still pins the older one.
@@ -1708,7 +1881,7 @@ test('a graph the MeaningGraph registry registers with capitals is found by its 
   const world_ = (extra = {}) => sharedWorld({ chinook: { registry: registered, publisher: manifestEdit((manifest) => { manifest.meaning.graph.address = 'meaning://github.com/Demo-DB/Chinook'; }) }, ...extra, manifest: (manifest, w) => { w.urls.set(capitals, w.publisher.url); extra.manifest?.(manifest, w); } });
   const found = world_();
   assert.deepEqual(await sharedProblems(found), []);
-  const acme = (await sharedIndex(found)).databases.find((database) => database.id === 'chinook-acme');
+  const acme = (await sharedIndex(found)).databases.find((database) => database.recordId === 'chinook-acme');
   assert.deepEqual(acme.meaning_graph, { id: 'chinook', address: 'meaning://github.com/Demo-DB/Chinook' }, 'the index spells the graph as the registry does');
   assert.equal(field(acme, 'Customer', 'Country').meanings[0].address, `meaning://github.com/Demo-DB/Chinook/customer-country?ref=${found.publisher.commit}`);
   // One rule: the manifest writes host, organisation and repository in lower case, whatever the registry does.
@@ -1862,12 +2035,12 @@ test('a binding to an entity or module whose name starts with _ says why it cann
 
 test('the list of two-label public suffixes is short, and a name under a suffix that is not on it counts as having a subdomain', () => {
   for (const url of ['https://ovdb.co.il/sales', 'https://ovdb.com.sg/sales', 'https://ovdb.github.io/sales', 'https://ovdb.pages.dev/sales']) {
-    assert.equal(urlProblem(url), null, `${url} is accepted: its suffix is not on the list`);
+    assert.equal(hasOvdbMarker(url), true, `${url} counts the marker as a subdomain`);
   }
-  for (const url of ['https://ovdb.co.uk/sales', 'https://ovdb.com.au/sales']) assert.notEqual(urlProblem(url), null, `${url}: the suffix is on the list, so ovdb is the registered name`);
+  for (const url of ['https://ovdb.co.uk/sales', 'https://ovdb.com.au/sales']) assert.equal(hasOvdbMarker(url), false, `${url}: the suffix is on the list, so ovdb is the registered name`);
   const readme = readFileSync(join(root, 'README.md'), 'utf8').replace(/\s+/g, ' ');
-  assert.match(readme, /The list of two-label suffixes is short \(17 common ones, kept by hand in scripts\/lib\/urls\.mjs, not the public suffix list\)/);
-  assert.match(readme, /a suffix is added by a reviewed change when a publisher needs it/);
+  assert.match(readme, /old OVDB host\/path marker remains available as a legacy classification helper/);
+  assert.match(readme, /short two-label suffix list \(17 common ones, kept by hand in scripts\/lib\/urls\.mjs/);
   const comment = readFileSync(join(root, 'scripts', 'lib', 'urls.mjs'), 'utf8').replace(/\n\/\/ ?/g, ' ');
   assert.match(comment, /The list is short: 17 of the common ones, kept by hand/);
 });
@@ -2339,7 +2512,7 @@ test('the registries are searched ignoring case: a model registered with capital
   const capitals = (models) => { models[0].address = 'modelspec://github.com/Demo-DB/Chinook/chinook'; models[0].repository = 'https://github.com/Demo-DB/Chinook'; };
   const found = sharedWorld({ manifest: (manifest, w) => { w.urls.set('https://github.com/Demo-DB/Chinook', w.publisher.url); }, models: capitals });
   assert.deepEqual(await sharedProblems(found), []);
-  const acme = (await sharedIndex(found)).databases.find((database) => database.id === 'chinook-acme');
+  const acme = (await sharedIndex(found)).databases.find((database) => database.recordId === 'chinook-acme');
   assert.equal(acme.model.address, modelAddr, 'the index spells the model address in lower case, the module as written');
   // Still a problem when the record is not that repository's, and when the registry lists the model twice.
   expectProblem(await sharedProblems(sharedWorld({ models: (models) => { models[0].address = 'modelspec://github.com/Demo-DB/Chinook/chinook'; models[0].repository = 'https://github.com/someone/else'; } })), /is not well formed \(its repository and module must give that address\)/);
