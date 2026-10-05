@@ -7,6 +7,12 @@
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runIndex } from './lib/cli.mjs';
+import { directoryArguments } from './lib/dependencies.mjs';
 
-const root = dirname(dirname(fileURLToPath(import.meta.url)));
-process.exitCode = await runIndex({ root });
+try {
+  const options = directoryArguments(process.argv.slice(2), dirname(dirname(fileURLToPath(import.meta.url))));
+  process.exitCode = await runIndex(options);
+} catch (error) {
+  console.error(`error: ${error.message}`);
+  process.exitCode = 2;
+}

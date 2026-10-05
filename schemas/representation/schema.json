@@ -1,0 +1,294 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ovdb-representation-contract/1"
+    },
+    "contracts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "schema": {
+                "$ref": "#/$defs/ref"
+              },
+              "module": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                "maxLength": 128
+              },
+              "entity": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                "maxLength": 128
+              },
+              "property": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                "maxLength": 128
+              },
+              "datatype": {
+                "const": "string"
+              },
+              "namespace": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              }
+            },
+            "required": [
+              "schema",
+              "module",
+              "entity",
+              "property",
+              "datatype",
+              "namespace"
+            ]
+          },
+          "target": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "snapshot": {
+                "$ref": "#/$defs/ref"
+              },
+              "model": {
+                "$ref": "#/$defs/ref"
+              },
+              "module": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                "maxLength": 128
+              },
+              "entity": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                "maxLength": 128
+              },
+              "property": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                "maxLength": 128
+              },
+              "datatype": {
+                "const": "string"
+              },
+              "namespace": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "binding": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "document": {
+                    "$ref": "#/$defs/ref"
+                  },
+                  "concept": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  },
+                  "role": {
+                    "const": "identifier"
+                  },
+                  "meaning": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "document": {
+                        "$ref": "#/$defs/ref"
+                      },
+                      "concept": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024
+                      }
+                    },
+                    "required": [
+                      "document",
+                      "concept"
+                    ]
+                  }
+                },
+                "required": [
+                  "document",
+                  "concept",
+                  "role",
+                  "meaning"
+                ]
+              },
+              "keys": {
+                "$ref": "#/$defs/ref"
+              }
+            },
+            "required": [
+              "snapshot",
+              "model",
+              "module",
+              "entity",
+              "property",
+              "datatype",
+              "namespace",
+              "binding",
+              "keys"
+            ]
+          },
+          "bridge": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "artifact": {
+                "$ref": "#/$defs/ref"
+              },
+              "table": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                "maxLength": 128
+              },
+              "raw_label_column": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                "maxLength": 128
+              },
+              "target_key_column": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                "maxLength": 128
+              },
+              "serving_identity_column": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "artifact",
+              "table",
+              "raw_label_column",
+              "target_key_column"
+            ]
+          },
+          "policy": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "transform": {
+                "const": "identity"
+              },
+              "equality": {
+                "const": "utf8-byte-exact"
+              },
+              "cardinality": {
+                "const": "zero-or-one"
+              },
+              "unmatched": {
+                "const": "exception"
+              },
+              "collision": {
+                "const": "ineligible"
+              }
+            },
+            "required": [
+              "transform",
+              "equality",
+              "cardinality",
+              "unmatched",
+              "collision"
+            ]
+          },
+          "decision": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "document": {
+                "$ref": "#/$defs/ref"
+              },
+              "scope": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              }
+            },
+            "required": [
+              "document",
+              "scope"
+            ]
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "bridge",
+          "policy",
+          "decision"
+        ]
+      }
+    }
+  },
+  "required": [
+    "format",
+    "contracts"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openvaultdb.com/schemas/representation-contract-1.json",
+  "$defs": {
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[A-Za-z0-9_./-]+$",
+          "allOf": [
+            {
+              "not": {
+                "pattern": "(^|/)(\\.|\\.\\.|\\.[gG][iI][tT])(/|$)"
+              }
+            },
+            {
+              "not": {
+                "pattern": "(^/|/$|//)"
+              }
+            }
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "repository": {
+          "type": "string",
+          "pattern": "^https://github\\.com/[a-z0-9_.-]+/[a-z0-9_.-]+$"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "dependentRequired": {
+        "repository": [
+          "revision"
+        ],
+        "revision": [
+          "repository"
+        ]
+      }
+    }
+  }
+}

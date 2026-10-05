@@ -13,10 +13,10 @@ import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, test } from 'node:test';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import { addressOf, cacheRepoSound, defaultBranch, defaultCacheDir, git, gitEnv, historyPath, identity, install, onBranch, openCommit, repositoryKey, setGitProtocols } from './lib/git.mjs';
+import { addressOf, cacheRepoSound, defaultBranch, defaultCacheDir, git, gitEnv, historyPath, identity, install, onBranch, openCommit, openDependency, repositoryKey, setGitProtocols } from './lib/git.mjs';
 import { runCheck, runIndex } from './lib/cli.mjs';
 import { directoryPagePath, encodePathSegment, globalDatabaseIdProblem, hasOvdbMarker, publicHttpsProblem } from './lib/urls.mjs';
-import { buildIndex, checkDirectory, addressClaims, claimProblems, indexText, readDirectory, recordProblems, urlProblem } from './lib/directory.mjs';
+import { buildIndex, checkDirectory, addressClaims, claimProblems, indexText, readDirectory, recordProblems, urlProblem, manifestProblems } from './lib/directory.mjs';
 import { indexMeaningRegistry, loadMeaningRegistry } from './lib/meaning.mjs';
 import { indexModelRegistry, loadModelRegistry, modelRegistryDefaultUrl, parseModelRef, parseModelSpec } from './lib/modelspec.mjs';
 
@@ -2822,4 +2822,77 @@ test('a graph id from the MeaningGraph registry is held to the id pattern before
   const [chinook] = (await index(world())).databases;
   assert.equal(chinook.meaning_graph.id, 'chinook');
   assert.equal(field(chinook, 'Customer', 'Country').meanings[0].values_of.graph, 'core');
+});
+
+
+// W1 grammar extends data only; preserve every prior single-ID shape.
+test('data licence conjunction accepts exact known atoms and preserves legacy single IDs', async () => {
+  const atoms = ['0BSD', 'AGPL-3.0-only', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'CC-BY-4.0', 'CC-BY-SA-4.0', 'CC0-1.0', 'GPL-2.0-only', 'GPL-3.0-only', 'ISC', 'LGPL-3.0-only', 'MIT', 'MPL-2.0', 'ODC-By-1.0', 'ODbL-1.0', 'PDDL-1.0', 'Unlicense'];
+  const valid = [...atoms, 'GPL-2.0+', 'LicenseRef-x', 'Shaped-Unknown', 'mit', 'CC-BY-SA-3.0', 'CC0-1.0 AND CC-BY-4.0', 'CC-BY-4.0 AND CC0-1.0', 'MIT AND Apache-2.0', 'MIT AND ISC AND 0BSD', 'AGPL-3.0-only AND BSD-2-Clause AND BSD-3-Clause AND GPL-2.0-only'];
+  assert.equal(Buffer.byteLength(valid.at(-1)), 64);
+  for (const value of valid) {
+    const own = parseYaml(fixtureChinook.get('ovdb.yaml')); own.licences.data = value;
+    assert.deepEqual(manifestProblems(own), [], value);
+    const shared = hosterManifest({publisher:{commit:'a'.repeat(40)}}); shared.licences.data = value;
+    assert.deepEqual(manifestProblems(shared), [], value);
+  }
+  const conjunction = 'CC-BY-4.0 AND CC0-1.0';
+  const own = await index(world({ publisher: manifestEdit((m) => { m.licences.data = conjunction; }) }));
+  const shared = await sharedIndex(sharedWorld(hosterManifestEdit((m) => { m.licences.data = conjunction; })));
+  assert.equal(own.databases[0].licence, conjunction); assert.equal(shared.databases.find((d) => d.repository === hosterUrl).licence, conjunction);
+});
+
+test('data conjunction grammar refuses normalization/operators/unknown/duplicate/count/byte changes', () => {
+  const over = 'AGPL-3.0-only AND GPL-2.0-only AND GPL-3.0-only AND LGPL-3.0-only'; assert.equal(Buffer.byteLength(over),65);
+  const bad = [over, 'MIT AND ISC AND 0BSD AND CC0-1.0 AND MPL-2.0', 'MIT AND MIT', 'MIT AND Unknown', 'mit AND ISC', 'GPL-2.0+ AND MIT', 'LicenseRef-x AND MIT', 'MIT OR ISC', 'MIT WITH ISC', '(MIT AND ISC)', ' MIT AND ISC', 'MIT AND ISC ', 'MIT  AND ISC', 'MIT\tAND ISC', 'MIT\nAND ISC', 'MIT\u00a0AND ISC', 'MIT AND ', ' AND ISC', ['MIT','ISC'], {}, null, 42];
+  for (const value of bad) {
+    const own = parseYaml(fixtureChinook.get('ovdb.yaml')); own.licences.data = value;
+    assert.ok(manifestProblems(own).some((p) => p.includes('licences.data')), JSON.stringify(value));
+  }
+  for (const field of ['model','meaning']) {
+    const own = parseYaml(fixtureChinook.get('ovdb.yaml')); own.licences[field] = 'MIT AND ISC';
+    assert.ok(manifestProblems(own).some((p) => p.includes(`licences.${field}`)));
+    const shared = hosterManifest({publisher:{commit:'a'.repeat(40)}}); shared.licences[field] = 'MIT AND ISC';
+    assert.ok(manifestProblems(shared).some((p) => p.includes(`licences.${field}`)));
+  }
+});
+
+function representationWorld({ contractEdit, sourceData = '[{"grain":"1","id":"US"}]' } = {}) {
+  const hash = (v) => createHash('sha256').update(v).digest('hex');
+  const sourceBytes = Buffer.from(sourceData);
+  const sourceModel = JSON.stringify({ modelspec:'1.0-draft', module:{id:'test-input',name:'input'}, entities:{Rows:{key:['grain'],properties:{grain:{type:'string',required:true},id:{type:'string',required:false}}}} });
+  const source = origin(new Map([['input.json',sourceBytes],['input.modelspec.json',sourceModel],['decision.md','opaque test provenance']]));
+  let attachment;
+  const w = world({ publisher: (files, {coreCommit}) => {
+    const ref = (path) => ({path,sha256:hash(files.get(path))});
+    const external = (path) => ({repository:'https://github.com/example/input',revision:source.commit,path,sha256:hash(path === 'input.json' ? sourceBytes : path === 'input.modelspec.json' ? sourceModel : 'opaque test provenance')});
+    const model = JSON.parse(files.get('model/chinook.modelspec.json'));
+    model.entities.TestNative = {key:['native_id'],properties:{native_id:{type:'string',required:true},serving_id:{type:'string'}}};
+    files.set('model/chinook.modelspec.json',JSON.stringify(model));
+    const binding = parseYaml(files.get('model/chinook.meaning.yaml'));
+    binding.concepts.push({id:'test-native',kind:'entity',extends:`${coreAddress}/country?ref=${coreCommit}`,bindings:[{model:'modelspec:///chinook.TestNative',property:'native_id',role:'identifier'}]});
+    files.set('model/chinook.meaning.yaml',stringifyYaml(binding));
+    const modelRef=ref('model/chinook.modelspec.json'), bindingRef=ref('model/chinook.meaning.yaml');
+    const dataset={path:'native.sqlite',sha256:'a'.repeat(64)};
+    files.set('provenance.json',JSON.stringify({native_key:{module:'chinook',entity:'TestNative',property:'native_id',namespace:'TEST:ID',model:modelRef,binding:bindingRef,dataset,records:1,duplicates:0},snapshot:{outputs:{'native.sqlite':{sha256:dataset.sha256}},counts:{TestNative:1}}}));
+    const provenance=ref('provenance.json');
+    files.set('snapshot.json',JSON.stringify({generator:{repository:chinookUrl,revision:'b'.repeat(40)},artifacts:[modelRef,bindingRef,dataset,provenance]}));
+    const contract={execution:'native-identifier',source:{schema:external('input.modelspec.json'),data:external('input.json'),module:'input',entity:'Rows',property:'id',datatype:'string',namespace:'TEST:ID'},target:{model:modelRef,snapshot:ref('snapshot.json'),module:'chinook',entity:'TestNative',property:'native_id',datatype:'string',namespace:'TEST:ID',binding:{document:bindingRef,concept:'test-native',role:'identifier',meaning:{document:{repository:coreUrl,revision:coreCommit,path:'geo.meaning.yaml',sha256:hash(fixtureCore.get('geo.meaning.yaml'))},concept:'country'}}},native:{dataset,provenance,serving_identity_column:'serving_id'},policy:{transform:'identity',equality:'utf8-byte-exact',cardinality:'zero-or-one',unmatched:'exception',collision:'ineligible'},decision:{document:external('decision.md'),scope:'synthetic-only'}};
+    contractEdit?.(contract);
+    files.set('representation.json',JSON.stringify({format:'ovdb-representation-contract/3',contracts:[contract]})); attachment=ref('representation.json');
+    const manifest=parseYaml(files.get('ovdb.yaml')); manifest.recordsets.push('TestNative'); manifest.representation_contract=attachment; files.set('ovdb.yaml',stringifyYaml(manifest));
+  }});
+  w.dependencies = new Map([[`https://github.com/example/input@${source.commit}`,openDependency(source.dir,source.commit)],[`${coreUrl}@${w.core.commit}`,openDependency(w.core.dir,w.core.commit)]]);
+  return {...w,attachment};
+}
+
+test('Directory emits only the completely checked attachment envelope at its provider pin', async () => {
+  const w = representationWorld();
+  const result = await index(w,{representationDependencies:w.dependencies});
+  assert.deepEqual(result.databases[0].representation_contract,w.attachment);
+  assert.equal(result.databases[0].commit,w.publisher.commit);
+  assert.equal(JSON.stringify(result).includes('accepted'),false);
+  expectProblem(await problemsOf(w), /explicit immutable dependency/);
+  const changed = representationWorld({contractEdit:(c)=>{c.source.data.sha256='0'.repeat(64);}});
+  expectProblem(await problemsOf(changed,{representationDependencies:changed.dependencies}),/source.data raw-byte size\/SHA-256 mismatch/);
 });

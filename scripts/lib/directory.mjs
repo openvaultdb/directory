@@ -15,6 +15,7 @@ import { addressOf, commitPattern, defaultBranch, defaultCacheDir, ensurePlainDi
 import { createMeaningResolver, entryOf, graphIdProblem, graphsAtAddress, loadMeaningRegistry, meaningFilesOf, registryIdPattern, parseConceptRef, parseGraphAddress, labelOf, validateConcept } from './meaning.mjs';
 import { addressMatchesRecord, identifierPattern, loadModelRegistry, modelsAtAddress, normalisedModelAddress, parseModelSpec, parseModelRef, parseModelAddress } from './modelspec.mjs';
 import { directoryPagePath, encodePathSegment, globalDatabaseIdProblem, hasOvdbMarker, homepageProblem, publicHttpsProblem } from './urls.mjs';
+import { checkRepresentationEnvelope, checkRepresentation, verifySourceData } from './representation.mjs';
 
 export { repositoryHosts };
 export const directoryFormat = 'ovdb-directory/draft-1';
@@ -178,6 +179,13 @@ export function parseFrontmatter(text) {
 const isText = (value) => typeof value === 'string' && value.trim() !== '';
 const modelSourcePattern = /\.modelspec\.hcl$/;
 const spdxLike = (value) => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9.+-]{0,63}$/.test(value);
+const publisherLicenceIds = new Set(['0BSD', 'AGPL-3.0-only', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'CC-BY-4.0', 'CC-BY-SA-4.0', 'CC0-1.0', 'GPL-2.0-only', 'GPL-3.0-only', 'ISC', 'LGPL-3.0-only', 'MIT', 'MPL-2.0', 'ODC-By-1.0', 'ODbL-1.0', 'PDDL-1.0', 'Unlicense']);
+const dataLicence = (value) => {
+  if (spdxLike(value)) return true; // Preserve the Directory single-ID profile.
+  if (typeof value !== 'string' || Buffer.byteLength(value) > 64) return false;
+  const ids = value.split(' AND ');
+  return ids.length >= 2 && ids.length <= 4 && new Set(ids).size === ids.length && ids.every((id) => publisherLicenceIds.has(id));
+};
 const nativeRecordsetNameProblem = (value) => !isText(value) ? 'must be a non-empty name'
   : value.length > 256 || value === '.' || value === '..' || /[\/\\\u0000-\u001f\u007f]/.test(value)
     ? 'must be at most 256 characters and contain no slash, backslash or control character, and cannot be a dot path segment'
@@ -248,7 +256,11 @@ export function manifestProblems(manifest, { databaseManifest = false } = {}) {
     const problem = typeof manifest.homepage === 'string' && manifest.homepage !== '' ? homepageProblem(manifest.homepage) : 'is not a URL (leave homepage out when the database has no website)';
     if (problem) problems.push(`homepage ${problem}`);
   }
-  need(manifest.licences, 'data', 'licences.data', spdxLike);
+  need(manifest.licences, 'data', 'licences.data', dataLicence);
+  if (manifest.representation_contract !== undefined) {
+    try { checkRepresentationEnvelope(manifest.representation_contract); }
+    catch (error) { problems.push(error.message); }
+  }
   if (!Array.isArray(manifest.recordsets) || manifest.recordsets.length === 0 || !manifest.recordsets.every(isText)) problems.push('recordsets must be a non-empty list of names');
   else for (const name of manifest.recordsets) {
     const problem = nativeRecordsetNameProblem(name);
@@ -772,6 +784,20 @@ export async function analyseDatabase(record, context) {
   if (problems.length) return stop();
 
   const sorted = (meanings) => [...meanings].sort(by('concept', 'role'));
+  if (manifest.representation_contract !== undefined) {
+    try {
+      const canonicalMeaning = (ref) => {
+        const registered = graphsAtAddress(context.meaningRegistry, addressOf(ref.repository));
+        return registered.length === 1 && registered[0].commit === ref.revision
+          && registered[0].repository === ref.repository && addressOf(registered[0].repository) === registered[0].address
+          && meaningFilesOf(registered[0])?.some((pattern) => typeof pattern === 'string' && new RegExp('^' + pattern.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('[^/]*') + '$').test(ref.path));
+      };
+      const result = checkRepresentation(manifest.representation_contract, files, manifest, data.repository, context.representationDependencies, canonicalMeaning);
+      for (const problem of result.problems) bad(`${data.manifest}: ${problem}`);
+      if (result.document) verifySourceData(result.document, context.representationDependencies);
+    } catch (error) { if (error.code === 'DEPENDENCY_UNRUNNABLE') throw error; bad(`${data.manifest}: representation_contract: ${error.message}`); }
+    if (problems.length) return stop();
+  }
   const entry = {
     id: data.url,
     recordId: key,
@@ -787,6 +813,7 @@ export async function analyseDatabase(record, context) {
     repository: data.repository,
     commit: data.commit,
     manifest: data.manifest,
+    ...(manifest.representation_contract !== undefined ? { representation_contract: { ...manifest.representation_contract } } : {}),
     licence: manifest.licences.data,
     model: { name: model.module, path: modelPath, ...(modelAddress ? { address: modelAddress } : {}), ...(modelHome ? { repository: modelHome.repository, commit: modelHome.commit } : {}) },
     meaning_graph: { id: graph.id, address: graph.address },
@@ -816,13 +843,13 @@ export function indexText(entries) {
   return `${JSON.stringify({ format: directoryFormat, checksum, databases }, null, 2)}\n`;
 }
 
-function sharedContext({ urlFor, cacheDir, meaningRegistry, modelRegistry, fetched = new Set(), branches = new Map() }) {
+function sharedContext({ urlFor, cacheDir, meaningRegistry, modelRegistry, representationDependencies = new Map(), fetched = new Set(), branches = new Map() }) {
   const repositories = join(cacheDir, 'repositories');
   const history = join(cacheDir, 'history');
   // The two directories are plain directories, never links to somewhere else.
   ensurePlainDirectory(repositories);
   ensurePlainDirectory(history);
-  return { urlFor, cacheDir: repositories, historyDir: history, meaningRegistry, modelRegistry, fetched, branches };
+  return { urlFor, cacheDir: repositories, historyDir: history, meaningRegistry, modelRegistry, representationDependencies, fetched, branches };
 }
 
 // Reads the MeaningGraph registry (a fetched index, or `meaningRegistry` as given) and
