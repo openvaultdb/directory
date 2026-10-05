@@ -34,7 +34,7 @@
 //   fetched" alone would let a fork's commit be registered under the parent.
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import { lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync } from 'node:fs';
 import { devNull, homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 
@@ -65,6 +65,54 @@ export const gitEnv = () => ({
 // repository in the cache cannot run code of its own however it got there.
 const safeGitConfig = ['-c', `core.hooksPath=${devNull}`, '-c', 'core.fsmonitor=false', '-c', 'core.useReplaceRefs=false'];
 export const git = (args, options = {}) => execFileSync('git', [...safeGitConfig, ...args], { stdio: 'pipe', env: gitEnv(), maxBuffer: 256 * 1024 * 1024, ...options }).toString();
+const gitBytes = (args, limit) => execFileSync('git', [...safeGitConfig, ...args], { stdio: 'pipe', env: gitEnv(), maxBuffer: limit + 1, timeout: 10_000 });
+
+// Committed raw bytes, never decoded text or worktree/filter output.
+function boundedBlob(dir, commit, path, limit) {
+  try {
+    const object = `${commit}:${path}`;
+    const size = Number(git(['-C', dir, 'cat-file', '-s', object], { timeout: 10_000 }).trim());
+    if (!Number.isSafeInteger(size) || size < 0 || size > limit) throw new Error(`${path} exceeds ${limit} bytes`);
+    return gitBytes(['-C', dir, 'cat-file', 'blob', object], limit);
+  } catch (error) {
+    if (error.code === 'ENOENT' || error.code === 'ETIMEDOUT') error.code = 'DEPENDENCY_UNRUNNABLE';
+    throw error;
+  }
+}
+
+// The owner supplies checkout and identity. No fetch, branch change, scripts,
+// worktree/filter reads, or attachment-selected filesystem capabilities.
+export function openDependency(dir, commit) {
+  const run = (args) => {
+    try { return git(args, { timeout: 10_000, maxBuffer: 4 * 1024 * 1024 }); }
+    catch (error) {
+      if (error.code === 'ENOENT' || error.code === 'ETIMEDOUT') error.code = 'DEPENDENCY_UNRUNNABLE';
+      throw error;
+    }
+  };
+  const version = /git version (\d+)\.(\d+)/.exec(run(['--version']));
+  if (!version || Number(version[1]) < 2 || Number(version[1]) === 2 && Number(version[2]) < 45) {
+    const error = new Error('dependency requires Git >=2.45 to prevent lazy fetching'); error.code = 'DEPENDENCY_UNRUNNABLE'; throw error;
+  }
+  if (!commitPattern.test(commit)) throw new Error('dependency revision must be 40 lowercase hexadecimal digits');
+  if (run(['-C', dir, 'rev-parse', '--is-bare-repository']).trim() !== 'false'
+    || realpathSync(run(['-C', dir, 'rev-parse', '--show-toplevel']).trim()) !== realpathSync(dir)) throw new Error('dependency path must be a checkout root');
+  if (run(['-C', dir, 'rev-parse', 'HEAD']).trim() !== commit) throw new Error('dependency HEAD differs from bound revision');
+  const status = (path) => {
+    const parts = path.split('/');
+    for (let i = 1; i <= parts.length; i++) {
+      const entry = run(['-C', dir, 'ls-tree', '-z', commit, '--', parts.slice(0, i).join('/')]).split('\0')[0];
+      if (!entry) return 'missing';
+      const mode = entry.split(' ')[0];
+      if (i < parts.length ? mode !== '040000' : !regularModes.has(mode)) return 'link';
+    }
+    return 'file';
+  };
+  return { commit, status, readBytes: (path, limit) => {
+    if (status(path) !== 'file') throw new Error(`${path} is not a tracked regular file`);
+    return boundedBlob(dir, commit, path, limit);
+  } };
+}
 export const lastLine = (error) => String(error.stderr ?? error.message).trim().split('\n').filter(Boolean).pop() ?? 'failed';
 // What git said went wrong: its first `fatal:` or `error:` line (the last line of a failed fetch or clone can be
 // advice such as "and the repository exists."), or the last line when it has none.
@@ -309,5 +357,8 @@ export function openCommit(url, commit, cacheDir) {
     const regExp = new RegExp(`^${pattern.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('[^/]*')}$`);
     return [...entries.keys()].filter((path) => regExp.test(path)).sort();
   };
-  return { commit, status, read, match };
+  return { commit, status, read, match, readBytes: (path, limit) => {
+    if (status(path) !== 'file') throw new Error(`${path} is not a regular file at ${commit}`);
+    return boundedBlob(dir, commit, path, limit);
+  } };
 }

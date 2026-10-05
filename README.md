@@ -318,7 +318,7 @@ it does not restrict new canonical database identities.
 Names that reach `index.json` are checked too: ModelSpec entity, property and
 module names are identifiers (`[A-Za-z_][A-Za-z0-9_]*`, since recordset names are
 used in URLs and anchors), property types are type names, concept labels are
-plain strings, binding roles are `meaning/draft-1` roles, licences are SPDX-shaped.
+plain strings, binding roles are `meaning/draft-1` roles, licences are SPDX-shaped single IDs with the bounded data-only conjunction extension described below.
 
 ## `index.json`
 
@@ -479,6 +479,86 @@ Moving a database to a new version is a pull request that changes `commit`; the
 checks run against the new commit. Older commits stay valid for anyone who pins
 them: a commit is immutable, and this repository only says which commit is
 current.
+
+## Representation attachments and exact dependencies
+
+An optional publisher `representation_contract` is a closed mapping with exactly
+`path` (provider-local `.json` path) and `sha256` (64 lowercase hexadecimal
+characters). Directory validates the raw committed attachment bytes with the
+frozen OVDB formats 1, 2 and 3 schemas before exposing that same envelope beside
+the existing provider `repository` and `commit` in `index.json`. The schemas are
+vendored unchanged from OVDB `v0.27.1`, commit
+`27f2664782e01feb4fb5938f28b8f8eae0a868a8`.
+
+The structural pass verifies exact source model property/type, provider-local
+target model and binding/recordsets, externally pinned registered canonical meaning,
+opaque immutable decision bytes, snapshot artifact hashes, and either exact bridge
+rows/key membership or native key/provenance associations. Format 3 additionally
+requires exact external `source.data`; formats 1/2 reject that member. Native
+`dataset` remains a logical hashed snapshot descriptor and is never downloaded
+by metadata validation. Format 3 source bytes are verified separately, sequentially,
+with a 5 MiB raw-byte limit per distinct full reference; exactly 5 MiB is allowed.
+This proves file identity/hash, not JSON row validity, semantic acceptance or runtime
+eligibility. Missing external readers or any required proof refuse index generation.
+
+Bridge artifacts and target key dictionaries in formats 1/2 must be provider-local;
+an external copy with identical bytes/path/hash cannot satisfy a local snapshot.
+Every implicit native snapshot count must be an integer JSON token within int64
+bounds and JavaScript's safe integer range. Signed unrelated entity counts are
+preserved; selected/native counts remain nonnegative. Fractional/exponent tokens,
+non-number values and rounding are refused. This is conservatively narrower than
+Go's int64 range and its conversion of unrelated JSON null counts to zero.
+Explicit original-snapshot associations retain their separate
+complete value/number-token equality check.
+
+Publication owners provision dependencies explicitly, separately from attachment
+validation. Both check and index entry points accept repeatable literal bindings:
+
+```text
+node scripts/check.mjs --dependency 'https://github.com/owner/repo@<40 lowercase hex>=/absolute/checkout'
+node scripts/build-index.mjs --dependency 'https://github.com/owner/repo@<40 lowercase hex>=/absolute/checkout'
+```
+
+The Directory transport uses the already reviewed OVDB binding grammar: split at
+the first `=`, preserve spaces, commas and later `@`/`=` in the checkout path,
+coalesce identical bindings and refuse conflicting paths for one repository/revision.
+Every explicit flag is validated even when unused; only referenced Git readers are
+opened. A checkout must be a repository root at the exact bound HEAD. Reads use
+pinned committed regular files and ignore dirty worktree bytes; Git >=2.45,
+configuration isolation, no lazy fetch and bounded subprocess calls protect the
+reader. No binding fetches, changes branches, runs provider scripts or derives a
+local path from attachment metadata. Bad CLI arguments return 2; unavailable/old/
+timed-out dependency Git returns 2; missing or invalid proof returns 1.
+
+Programmatic callers can supply `representationDependencies`, a `Map` keyed by
+`repository + '@' + revision`, with explicitly trusted readers exposing `commit`,
+`status(path)` and `readBytes(path, limit)`. Reader identity is the caller's
+responsibility. This is provisioning, not an additional source registry.
+The normal independent review of final immutable provider/attachment/decision/
+source pins and canonical record/index publication remains mandatory. No research
+ID, prose verdict, `accepted` flag or successful checksum grants semantic admission.
+No W1 provider is listed or opted in by this tooling change.
+
+`licences.data` also accepts the bounded scalar expression
+`KnownID (" AND " KnownID){1,3}`: 2–4 distinct IDs from the current Publisher
+allowlist, at most 64 ASCII bytes, canonical case and exactly one space around
+uppercase `AND`. Authored order is preserved byte-for-byte in the scalar index
+`licence`. The 18 IDs are `0BSD`, `AGPL-3.0-only`, `Apache-2.0`, `BSD-2-Clause`,
+`BSD-3-Clause`, `CC-BY-4.0`, `CC-BY-SA-4.0`, `CC0-1.0`, `GPL-2.0-only`,
+`GPL-3.0-only`, `ISC`, `LGPL-3.0-only`, `MIT`, `MPL-2.0`, `ODC-By-1.0`,
+`ODbL-1.0`, `PDDL-1.0` and `Unlicense`.
+There is no trimming, sorting, normalization or full SPDX expression parser.
+OR/WITH, parentheses, duplicates, unsupported atoms and malformed spacing refuse.
+Legacy single IDs retain Directory's shape-only acceptance (including
+`GPL-2.0+`, `LicenseRef-x`, shaped unknown IDs and prior case behavior).
+Model/meaning remain single IDs with the existing registry equality checks.
+Compound labels must retain their complete expression and scoped source attribution;
+they must never become one `spdx.org/licenses/<whole expression>` URL. Grammar
+success does not establish legal compatibility or replace attribution delivery.
+
+The vendored schemas are Apache-2.0; adapted Chinook strict JSON and association
+checks are MIT. Their source pins and full notices are retained in
+`scripts/lib/representation-LICENSE.txt`; Directory-authored code/data retain CC0.
 
 ## Checks
 

@@ -11,12 +11,13 @@
   "scripts": {
     "check": "node scripts/check.mjs",
     "index": "node scripts/build-index.mjs",
-    "test": "node --test scripts/test.mjs",
+    "test": "node --test scripts/test.mjs scripts/test-representation.mjs",
     "test:ingitdb": "node --test scripts/test-ingitdb.mjs",
     "test:journey": "playwright test --config tests/journey/playwright.config.mjs",
     "test:journey:selftest": "node --test --test-concurrency=1 tests/journey/self-test.mjs"
   },
   "dependencies": {
+    "ajv": "8.20.0",
     "yaml": "^2.8.1"
   },
   "devDependencies": {

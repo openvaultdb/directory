@@ -27,6 +27,7 @@ export async function runIndex(options, { out, err } = stdio) {
   try {
     writeFileSync(join(options.root, 'index.json'), await buildIndex({ ...options, onWarning: (warning) => err(`warning: ${warning}`) }));
   } catch (error) {
+    if (error.code === 'DEPENDENCY_UNRUNNABLE') throw error;
     err(`error: ${error.message}`);
     return 1;
   }

@@ -16,6 +16,12 @@
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runCheck } from './lib/cli.mjs';
+import { directoryArguments } from './lib/dependencies.mjs';
 
-const root = process.argv[2] ?? dirname(dirname(fileURLToPath(import.meta.url)));
-process.exitCode = await runCheck({ root });
+try {
+  const options = directoryArguments(process.argv.slice(2), dirname(dirname(fileURLToPath(import.meta.url))));
+  process.exitCode = await runCheck(options);
+} catch (error) {
+  console.error(`error: ${error.message}`);
+  process.exitCode = 2;
+}
