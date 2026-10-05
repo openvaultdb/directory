@@ -935,7 +935,7 @@ test('AdventureWorks and Employees Directory records pin their exact public prov
       recordId: 'adventureworks',
       url: 'https://demodb.dev/adventureworks/',
       repository: 'https://github.com/demo-db/adventureworks',
-      commit: '31bdb4eceff01367ce812b2844530ed17a7d35ae',
+      commit: '5028a27189b487d6fd8025fafc1307aada707fd2',
       meaningGraph: 'adventureworks',
       title: 'AdventureWorks OLTP',
     },

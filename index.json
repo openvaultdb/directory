@@ -1,6 +1,6 @@
 {
   "format": "ovdb-directory/draft-1",
-  "checksum": "sha256:8398f2e147806b148675f9446c65d54ad05be93fa588498f4b2eb6ea16869d6d",
+  "checksum": "sha256:092035ad05ed4e278c458783817af3dafbfec28bd8ca398018b3a4a1a58c2fd8",
   "databases": [
     {
       "id": "https://demodb.dev/adventureworks/",
@@ -20,7 +20,7 @@
       },
       "homepage": "https://adventureworks.demodb.dev/",
       "repository": "https://github.com/demo-db/adventureworks",
-      "commit": "31bdb4eceff01367ce812b2844530ed17a7d35ae",
+      "commit": "5028a27189b487d6fd8025fafc1307aada707fd2",
       "manifest": "ovdb.yaml",
       "licence": "MIT",
       "model": {
@@ -69,7 +69,7 @@
               "concept": "employee",
               "label": "Employee",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/employee?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+              "address": "meaning://github.com/demo-db/adventureworks/employee?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
               "extends": [
                 {
                   "graph": "core",
@@ -506,7 +506,7 @@
               "concept": "country-region",
               "label": "Country or region",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/country-region?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+              "address": "meaning://github.com/demo-db/adventureworks/country-region?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
               "extends": [
                 {
                   "graph": "core",
@@ -527,7 +527,7 @@
                   "concept": "country-region",
                   "label": "Country or region",
                   "role": "identifier",
-                  "address": "meaning://github.com/demo-db/adventureworks/country-region?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+                  "address": "meaning://github.com/demo-db/adventureworks/country-region?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
                   "extends": [
                     {
                       "graph": "core",
@@ -626,7 +626,7 @@
               "concept": "natural-person",
               "label": "Person",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/natural-person?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+              "address": "meaning://github.com/demo-db/adventureworks/natural-person?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
               "extends": [
                 {
                   "graph": "core",
@@ -1024,7 +1024,7 @@
               "concept": "product",
               "label": "Product",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/product?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+              "address": "meaning://github.com/demo-db/adventureworks/product?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
               "extends": []
             }
           ],
@@ -1083,7 +1083,7 @@
                   "concept": "product-list-price",
                   "label": "Product list price",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/adventureworks/product-list-price?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+                  "address": "meaning://github.com/demo-db/adventureworks/product-list-price?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
                   "extends": [
                     {
                       "graph": "core",
@@ -1191,7 +1191,7 @@
               "concept": "product-category",
               "label": "Product category",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/product-category?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+              "address": "meaning://github.com/demo-db/adventureworks/product-category?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
               "extends": []
             }
           ],
@@ -1968,7 +1968,7 @@
               "concept": "purchase-order-line",
               "label": "Purchase order line",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/purchase-order-line?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+              "address": "meaning://github.com/demo-db/adventureworks/purchase-order-line?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
               "extends": [
                 {
                   "graph": "core",
@@ -2005,7 +2005,7 @@
                   "concept": "purchase-order-quantity",
                   "label": "Purchase order quantity",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/adventureworks/purchase-order-quantity?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+                  "address": "meaning://github.com/demo-db/adventureworks/purchase-order-quantity?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
                   "extends": [
                     {
                       "graph": "core",
@@ -2032,7 +2032,7 @@
                   "concept": "purchase-order-unit-price",
                   "label": "Purchase order unit price",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/adventureworks/purchase-order-unit-price?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+                  "address": "meaning://github.com/demo-db/adventureworks/purchase-order-unit-price?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
                   "extends": [
                     {
                       "graph": "core",
@@ -2086,7 +2086,7 @@
               "concept": "purchase-order",
               "label": "Purchase order",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/purchase-order?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+              "address": "meaning://github.com/demo-db/adventureworks/purchase-order?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
               "extends": [
                 {
                   "graph": "core",
@@ -2214,7 +2214,7 @@
               "concept": "supplier",
               "label": "Supplier",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/supplier?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+              "address": "meaning://github.com/demo-db/adventureworks/supplier?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
               "extends": [
                 {
                   "graph": "core",
@@ -2405,7 +2405,7 @@
               "concept": "sales-customer",
               "label": "Sales customer",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/sales-customer?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+              "address": "meaning://github.com/demo-db/adventureworks/sales-customer?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
               "extends": [
                 {
                   "graph": "core",
@@ -2490,7 +2490,7 @@
               "concept": "sales-order-line",
               "label": "Sales order line",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/sales-order-line?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+              "address": "meaning://github.com/demo-db/adventureworks/sales-order-line?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
               "extends": [
                 {
                   "graph": "core",
@@ -2533,7 +2533,7 @@
                   "concept": "sales-order-quantity",
                   "label": "Sales order quantity",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/adventureworks/sales-order-quantity?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+                  "address": "meaning://github.com/demo-db/adventureworks/sales-order-quantity?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
                   "extends": [
                     {
                       "graph": "core",
@@ -2566,7 +2566,7 @@
                   "concept": "sales-order-unit-price",
                   "label": "Sales order unit price",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/adventureworks/sales-order-unit-price?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+                  "address": "meaning://github.com/demo-db/adventureworks/sales-order-unit-price?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
                   "extends": [
                     {
                       "graph": "core",
@@ -2615,7 +2615,7 @@
               "concept": "sales-order",
               "label": "Sales order",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/sales-order?ref=31bdb4eceff01367ce812b2844530ed17a7d35ae",
+              "address": "meaning://github.com/demo-db/adventureworks/sales-order?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
               "extends": [
                 {
                   "graph": "core",
