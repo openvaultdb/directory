@@ -135,9 +135,9 @@ export function checkRepresentation(envelope, files, manifest, outerRepository, 
         exactFields(snapshot.generator, ['repository', 'revision']);
         for (const a of snapshot.artifacts ?? []) exactFields(a, ['path', 'sha256']);
       } catch (error) { bad(`${label}: snapshot ${error.message}`); }
-      if (!repository(snapshot.generator?.repository) || !/^[0-9a-f]{40}$/.test(snapshot.generator?.revision ?? '') || !Array.isArray(snapshot.artifacts) || snapshot.artifacts.length > 10000) bad(`${label}: snapshot generator/artifact bounds invalid`);
+      if (!repository(snapshot.generator?.repository) || typeof snapshot.generator?.revision !== 'string' || !/^[0-9a-f]{40}$/.test(snapshot.generator.revision) || !Array.isArray(snapshot.artifacts) || snapshot.artifacts.length > 10000) bad(`${label}: snapshot generator/artifact bounds invalid`);
       else for (const artifact of snapshot.artifacts) {
-        if (!exactKeys(artifact, ['path', 'sha256']) || !representationPath(artifact.path) || !/^[0-9a-f]{64}$/.test(artifact.sha256) || artifacts.has(artifact.path)) bad(`${label}: invalid or duplicate snapshot artifact`);
+        if (!object(artifact) || !representationPath(artifact.path) || typeof artifact.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(artifact.sha256) || artifacts.has(artifact.path)) bad(`${label}: invalid or duplicate snapshot artifact`);
         else artifacts.set(artifact.path, artifact.sha256);
       }
     }
@@ -157,11 +157,13 @@ export function checkRepresentation(envelope, files, manifest, outerRepository, 
       const provenance = localObject(c.native.provenance, `${label}.native.provenance`, 'json', 2 * MiB);
       if (provenance) {
         try {
+          // Generation receipts retain unrelated audit evidence, like Go exactKeys(..., false).
+          exactFields(provenance, ['native_key', 'snapshot', 'snapshot_association']);
           exactFields(provenance.snapshot, ['outputs', 'counts']);
           if (!object(provenance.snapshot.outputs) || !object(provenance.snapshot.counts)) throw new Error('original outputs/counts must be objects');
           if (!Object.hasOwn(provenance, 'snapshot_association')) for (const output of Object.values(provenance.snapshot.outputs)) exactFields(output, ['sha256']);
         } catch (error) { bad(`${label}: provenance ${error.message}`); }
-        if (!object(provenance) || !Object.hasOwn(provenance, 'native_key') || !Object.hasOwn(provenance, 'snapshot') || Object.keys(provenance).some((key) => !['native_key', 'snapshot', 'snapshot_association'].includes(key))) bad(`${label}: native provenance root fields invalid`);
+        if (!object(provenance) || !Object.hasOwn(provenance, 'native_key') || !Object.hasOwn(provenance, 'snapshot')) bad(`${label}: native provenance root fields invalid`);
         const n = provenance.native_key;
         const tokens = parseStrictJson(rawMetadata.get(`${outerRepository}:${files.commit}:${c.native.provenance.path}:${c.native.provenance.sha256}:json:${2 * MiB}`), 2 * MiB, 'provenance', { losslessNumbers: true });
         if (!integerToken(tokens.native_key?.records) || !integerToken(tokens.native_key?.duplicates)) bad(`${label}: native counts must be nonnegative int64 integer tokens`);
@@ -176,6 +178,8 @@ export function checkRepresentation(envelope, files, manifest, outerRepository, 
             const original = localObject(source, `${label}.snapshot_association.source`, 'json', 2 * MiB);
             if (original) {
               const selected = original.outputs?.[outputKey];
+              try { exactFields(selected, ['file', 'sha256']); }
+              catch (error) { bad(`${label}: original output ${error.message}`); }
               if (!object(selected) || selected.file !== c.native.dataset.path || selected.sha256 !== c.native.dataset.sha256 || !Number.isSafeInteger(original.counts?.[c.target.entity]) || original.counts[c.target.entity] < 0 || original.counts[c.target.entity] !== n?.records) bad(`${label}: original snapshot selected output/count mismatch`);
               const originalBytes = rawMetadata.get(`${outerRepository}:${files.commit}:${source.path}:${source.sha256}:json:${2 * MiB}`);
               const provenanceBytes = rawMetadata.get(`${outerRepository}:${files.commit}:${c.native.provenance.path}:${c.native.provenance.sha256}:json:${2 * MiB}`);
@@ -255,7 +259,7 @@ export function verifySourceData(document, dependencies) {
 
 function exactFields(value, fields) {
   if (!object(value)) throw new Error('expected metadata object');
-  for (const key of Object.keys(value)) if (!fields.includes(key) && fields.some((f) => f.toLowerCase() === key.toLowerCase())) throw new Error(`non-exact JSON field ${key}`);
+  for (const key of Object.keys(value)) if (!fields.includes(key) && fields.some((f) => f.toLowerCase() === key.toLowerCase().replace(/ſ/g, 's'))) throw new Error(`non-exact JSON field ${key}`);
 }
 function checkModel(model, scope, native, bad, label) {
   try {
