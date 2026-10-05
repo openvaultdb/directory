@@ -1,7 +1,3346 @@
 {
   "format": "ovdb-directory/draft-1",
-  "checksum": "sha256:a40f66f811e9606e47efbd9c29a067b2e19f749fb3d8274c3b20436f38a04865",
+  "checksum": "sha256:3c9e5002c4c8c158d9895176dfb783f9ab55c067e93b71f65b0afae6f3d19041",
   "databases": [
+    {
+      "id": "https://demodb.dev/adventureworks/",
+      "recordId": "adventureworks",
+      "localId": "adventureworks",
+      "directoryPath": "/ovdb/demodb.dev/adventureworks/",
+      "serverId": "https://demodb.dev/ovdb",
+      "serverDbBaseUrl": "https://demodb.dev/ovdb/db/adventureworks/",
+      "apiUrl": "https://demodb.dev/ovdb/v1/databases/adventureworks",
+      "title": "AdventureWorks OLTP",
+      "description": "Microsoft AdventureWorks OLTP sample with 71 native physical tables and 759,240 source rows. The read-only SQLite fixture preserves native schema names and source-view metadata; only the reviewed compatible views are executable in SQLite.",
+      "status": "draft",
+      "url": "https://demodb.dev/adventureworks/",
+      "deployment": {
+        "url": "https://cloud.openvaultdb.com/ovdb/dbs/adventureworks",
+        "engine": "sqlite"
+      },
+      "homepage": "https://adventureworks.demodb.dev/",
+      "repository": "https://github.com/demo-db/adventureworks",
+      "commit": "cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+      "manifest": "ovdb.yaml",
+      "licence": "MIT",
+      "model": {
+        "name": "adventureworks",
+        "path": "model/adventureworks.modelspec.hcl",
+        "address": "modelspec://github.com/demo-db/adventureworks/adventureworks"
+      },
+      "meaning_graph": {
+        "id": "adventureworks",
+        "address": "meaning://github.com/demo-db/adventureworks"
+      },
+      "recordsets": [
+        {
+          "name": "HumanResources.Department",
+          "modelEntity": "HumanResources_Department",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "DepartmentID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "GroupName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "HumanResources.Employee",
+          "modelEntity": "HumanResources_Employee",
+          "meanings": [
+            {
+              "graph": "adventureworks",
+              "concept": "employee",
+              "label": "Employee",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/adventureworks/employee?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "employee",
+                  "label": "Employee",
+                  "address": "meaning://github.com/meaninggraph/core/employee?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                },
+                {
+                  "graph": "core",
+                  "concept": "person",
+                  "label": "Person",
+                  "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "Person.Person",
+              "meanings": []
+            },
+            {
+              "name": "NationalIDNumber",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "LoginID",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "OrganizationNode",
+              "type": "document",
+              "meanings": []
+            },
+            {
+              "name": "OrganizationLevel",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "JobTitle",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "BirthDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "MaritalStatus",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Gender",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "HireDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "SalariedFlag",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "VacationHours",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "SickLeaveHours",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "CurrentFlag",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "HumanResources.EmployeeDepartmentHistory",
+          "modelEntity": "HumanResources_EmployeeDepartmentHistory",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "HumanResources.Employee",
+              "meanings": []
+            },
+            {
+              "name": "DepartmentID",
+              "type": "reference",
+              "references": "HumanResources.Department",
+              "meanings": []
+            },
+            {
+              "name": "ShiftID",
+              "type": "reference",
+              "references": "HumanResources.Shift",
+              "meanings": []
+            },
+            {
+              "name": "StartDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "EndDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "HumanResources.EmployeePayHistory",
+          "modelEntity": "HumanResources_EmployeePayHistory",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "HumanResources.Employee",
+              "meanings": []
+            },
+            {
+              "name": "RateChangeDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Rate",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "PayFrequency",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "HumanResources.JobCandidate",
+          "modelEntity": "HumanResources_JobCandidate",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "JobCandidateID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "HumanResources.Employee",
+              "meanings": []
+            },
+            {
+              "name": "Resume",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "HumanResources.Shift",
+          "modelEntity": "HumanResources_Shift",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ShiftID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "StartTime",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "EndTime",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Person.Address",
+          "modelEntity": "Person_Address",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "AddressID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "AddressLine1",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "AddressLine2",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "City",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "StateProvinceID",
+              "type": "reference",
+              "references": "Person.StateProvince",
+              "meanings": []
+            },
+            {
+              "name": "PostalCode",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "SpatialLocation",
+              "type": "document",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Person.AddressType",
+          "modelEntity": "Person_AddressType",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "AddressTypeID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Person.BusinessEntity",
+          "modelEntity": "Person_BusinessEntity",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Person.BusinessEntityAddress",
+          "modelEntity": "Person_BusinessEntityAddress",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "Person.BusinessEntity",
+              "meanings": []
+            },
+            {
+              "name": "AddressID",
+              "type": "reference",
+              "references": "Person.Address",
+              "meanings": []
+            },
+            {
+              "name": "AddressTypeID",
+              "type": "reference",
+              "references": "Person.AddressType",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Person.BusinessEntityContact",
+          "modelEntity": "Person_BusinessEntityContact",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "Person.BusinessEntity",
+              "meanings": []
+            },
+            {
+              "name": "PersonID",
+              "type": "reference",
+              "references": "Person.Person",
+              "meanings": []
+            },
+            {
+              "name": "ContactTypeID",
+              "type": "reference",
+              "references": "Person.ContactType",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Person.ContactType",
+          "modelEntity": "Person_ContactType",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ContactTypeID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Person.CountryRegion",
+          "modelEntity": "Person_CountryRegion",
+          "meanings": [
+            {
+              "graph": "adventureworks",
+              "concept": "country-region",
+              "label": "Country or region",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/adventureworks/country-region?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "country",
+                  "label": "Country",
+                  "address": "meaning://github.com/meaninggraph/core/country?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "CountryRegionCode",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "adventureworks",
+                  "concept": "country-region",
+                  "label": "Country or region",
+                  "role": "identifier",
+                  "address": "meaning://github.com/demo-db/adventureworks/country-region?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "country",
+                      "label": "Country",
+                      "address": "meaning://github.com/meaninggraph/core/country?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Person.EmailAddress",
+          "modelEntity": "Person_EmailAddress",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "Person.Person",
+              "meanings": []
+            },
+            {
+              "name": "EmailAddressID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "EmailAddress",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Person.Password",
+          "modelEntity": "Person_Password",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "Person.Person",
+              "meanings": []
+            },
+            {
+              "name": "PasswordHash",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "PasswordSalt",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Person.Person",
+          "modelEntity": "Person_Person",
+          "meanings": [
+            {
+              "graph": "adventureworks",
+              "concept": "natural-person",
+              "label": "Person",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/adventureworks/natural-person?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "person",
+                  "label": "Person",
+                  "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "Person.BusinessEntity",
+              "meanings": []
+            },
+            {
+              "name": "PersonType",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "NameStyle",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Title",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "FirstName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "MiddleName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "LastName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Suffix",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "EmailPromotion",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "AdditionalContactInfo",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Demographics",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Person.PersonPhone",
+          "modelEntity": "Person_PersonPhone",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "Person.Person",
+              "meanings": []
+            },
+            {
+              "name": "PhoneNumber",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "PhoneNumberTypeID",
+              "type": "reference",
+              "references": "Person.PhoneNumberType",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Person.PhoneNumberType",
+          "modelEntity": "Person_PhoneNumberType",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "PhoneNumberTypeID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Person.StateProvince",
+          "modelEntity": "Person_StateProvince",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "StateProvinceID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "StateProvinceCode",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "CountryRegionCode",
+              "type": "reference",
+              "references": "Person.CountryRegion",
+              "meanings": []
+            },
+            {
+              "name": "IsOnlyStateProvinceFlag",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "TerritoryID",
+              "type": "reference",
+              "references": "Sales.SalesTerritory",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.BillOfMaterials",
+          "modelEntity": "Production_BillOfMaterials",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BillOfMaterialsID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ProductAssemblyID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "ComponentID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "StartDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "EndDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "UnitMeasureCode",
+              "type": "reference",
+              "references": "Production.UnitMeasure",
+              "meanings": []
+            },
+            {
+              "name": "BOMLevel",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "PerAssemblyQty",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.Culture",
+          "modelEntity": "Production_Culture",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "CultureID",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.Document",
+          "modelEntity": "Production_Document",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "DocumentNode",
+              "type": "document",
+              "meanings": []
+            },
+            {
+              "name": "DocumentLevel",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Title",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Owner",
+              "type": "reference",
+              "references": "HumanResources.Employee",
+              "meanings": []
+            },
+            {
+              "name": "FolderFlag",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "FileName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "FileExtension",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Revision",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ChangeNumber",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Status",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "DocumentSummary",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Document",
+              "type": "document",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.Illustration",
+          "modelEntity": "Production_Illustration",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "IllustrationID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Diagram",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.Location",
+          "modelEntity": "Production_Location",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "LocationID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "CostRate",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "Availability",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.Product",
+          "modelEntity": "Production_Product",
+          "meanings": [
+            {
+              "graph": "adventureworks",
+              "concept": "product",
+              "label": "Product",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/adventureworks/product?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "ProductID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ProductNumber",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "MakeFlag",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "FinishedGoodsFlag",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Color",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "SafetyStockLevel",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ReorderPoint",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "StandardCost",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ListPrice",
+              "type": "decimal",
+              "meanings": [
+                {
+                  "graph": "adventureworks",
+                  "concept": "product-list-price",
+                  "label": "Product list price",
+                  "role": "value",
+                  "address": "meaning://github.com/demo-db/adventureworks/product-list-price?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "price",
+                      "label": "Price",
+                      "address": "meaning://github.com/meaninggraph/core/price?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    },
+                    {
+                      "graph": "core",
+                      "concept": "money-amount",
+                      "label": "Money amount",
+                      "address": "meaning://github.com/meaninggraph/core/money-amount?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Size",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "SizeUnitMeasureCode",
+              "type": "reference",
+              "references": "Production.UnitMeasure",
+              "meanings": []
+            },
+            {
+              "name": "WeightUnitMeasureCode",
+              "type": "reference",
+              "references": "Production.UnitMeasure",
+              "meanings": []
+            },
+            {
+              "name": "Weight",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "DaysToManufacture",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ProductLine",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Class",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Style",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ProductSubcategoryID",
+              "type": "reference",
+              "references": "Production.ProductSubcategory",
+              "meanings": []
+            },
+            {
+              "name": "ProductModelID",
+              "type": "reference",
+              "references": "Production.ProductModel",
+              "meanings": []
+            },
+            {
+              "name": "SellStartDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "SellEndDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "DiscontinuedDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ProductCategory",
+          "modelEntity": "Production_ProductCategory",
+          "meanings": [
+            {
+              "graph": "adventureworks",
+              "concept": "product-category",
+              "label": "Product category",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/adventureworks/product-category?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "ProductCategoryID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ProductCostHistory",
+          "modelEntity": "Production_ProductCostHistory",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "StartDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "EndDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "StandardCost",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ProductDescription",
+          "modelEntity": "Production_ProductDescription",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductDescriptionID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Description",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ProductDocument",
+          "modelEntity": "Production_ProductDocument",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "DocumentNode",
+              "type": "reference",
+              "references": "Production.Document",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ProductInventory",
+          "modelEntity": "Production_ProductInventory",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "LocationID",
+              "type": "reference",
+              "references": "Production.Location",
+              "meanings": []
+            },
+            {
+              "name": "Shelf",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Bin",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Quantity",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ProductListPriceHistory",
+          "modelEntity": "Production_ProductListPriceHistory",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "StartDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "EndDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ListPrice",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ProductModel",
+          "modelEntity": "Production_ProductModel",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductModelID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "CatalogDescription",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Instructions",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ProductModelIllustration",
+          "modelEntity": "Production_ProductModelIllustration",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductModelID",
+              "type": "reference",
+              "references": "Production.ProductModel",
+              "meanings": []
+            },
+            {
+              "name": "IllustrationID",
+              "type": "reference",
+              "references": "Production.Illustration",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ProductModelProductDescriptionCulture",
+          "modelEntity": "Production_ProductModelProductDescriptionCulture",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductModelID",
+              "type": "reference",
+              "references": "Production.ProductModel",
+              "meanings": []
+            },
+            {
+              "name": "ProductDescriptionID",
+              "type": "reference",
+              "references": "Production.ProductDescription",
+              "meanings": []
+            },
+            {
+              "name": "CultureID",
+              "type": "reference",
+              "references": "Production.Culture",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ProductPhoto",
+          "modelEntity": "Production_ProductPhoto",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductPhotoID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ThumbNailPhoto",
+              "type": "document",
+              "meanings": []
+            },
+            {
+              "name": "ThumbnailPhotoFileName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "LargePhoto",
+              "type": "document",
+              "meanings": []
+            },
+            {
+              "name": "LargePhotoFileName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ProductProductPhoto",
+          "modelEntity": "Production_ProductProductPhoto",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "ProductPhotoID",
+              "type": "reference",
+              "references": "Production.ProductPhoto",
+              "meanings": []
+            },
+            {
+              "name": "Primary",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ProductReview",
+          "modelEntity": "Production_ProductReview",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductReviewID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "ReviewerName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ReviewDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "EmailAddress",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Rating",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Comments",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ProductSubcategory",
+          "modelEntity": "Production_ProductSubcategory",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductSubcategoryID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ProductCategoryID",
+              "type": "reference",
+              "references": "Production.ProductCategory",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.ScrapReason",
+          "modelEntity": "Production_ScrapReason",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ScrapReasonID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.TransactionHistory",
+          "modelEntity": "Production_TransactionHistory",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "TransactionID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "ReferenceOrderID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ReferenceOrderLineID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "TransactionDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "TransactionType",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Quantity",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ActualCost",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.TransactionHistoryArchive",
+          "modelEntity": "Production_TransactionHistoryArchive",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "TransactionID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ProductID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ReferenceOrderID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ReferenceOrderLineID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "TransactionDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "TransactionType",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Quantity",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ActualCost",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.UnitMeasure",
+          "modelEntity": "Production_UnitMeasure",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "UnitMeasureCode",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.WorkOrder",
+          "modelEntity": "Production_WorkOrder",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "WorkOrderID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "OrderQty",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "StockedQty",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ScrappedQty",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "StartDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "EndDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "DueDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ScrapReasonID",
+              "type": "reference",
+              "references": "Production.ScrapReason",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Production.WorkOrderRouting",
+          "modelEntity": "Production_WorkOrderRouting",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "WorkOrderID",
+              "type": "reference",
+              "references": "Production.WorkOrder",
+              "meanings": []
+            },
+            {
+              "name": "ProductID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "OperationSequence",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "LocationID",
+              "type": "reference",
+              "references": "Production.Location",
+              "meanings": []
+            },
+            {
+              "name": "ScheduledStartDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ScheduledEndDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ActualStartDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ActualEndDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ActualResourceHrs",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "PlannedCost",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ActualCost",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Purchasing.ProductVendor",
+          "modelEntity": "Purchasing_ProductVendor",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "Purchasing.Vendor",
+              "meanings": []
+            },
+            {
+              "name": "AverageLeadTime",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "StandardPrice",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "LastReceiptCost",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "LastReceiptDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "MinOrderQty",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "MaxOrderQty",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "OnOrderQty",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "UnitMeasureCode",
+              "type": "reference",
+              "references": "Production.UnitMeasure",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Purchasing.PurchaseOrderDetail",
+          "modelEntity": "Purchasing_PurchaseOrderDetail",
+          "meanings": [
+            {
+              "graph": "adventureworks",
+              "concept": "purchase-order-line",
+              "label": "Purchase order line",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/adventureworks/purchase-order-line?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "commercial-line-item",
+                  "label": "Commercial line item",
+                  "address": "meaning://github.com/meaninggraph/core/commercial-line-item?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "PurchaseOrderID",
+              "type": "reference",
+              "references": "Purchasing.PurchaseOrderHeader",
+              "meanings": []
+            },
+            {
+              "name": "PurchaseOrderDetailID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "DueDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "OrderQty",
+              "type": "int",
+              "meanings": [
+                {
+                  "graph": "adventureworks",
+                  "concept": "purchase-order-quantity",
+                  "label": "Purchase order quantity",
+                  "role": "value",
+                  "address": "meaning://github.com/demo-db/adventureworks/purchase-order-quantity?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "quantity",
+                      "label": "Quantity",
+                      "address": "meaning://github.com/meaninggraph/core/quantity?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "UnitPrice",
+              "type": "decimal",
+              "meanings": [
+                {
+                  "graph": "adventureworks",
+                  "concept": "purchase-order-unit-price",
+                  "label": "Purchase order unit price",
+                  "role": "value",
+                  "address": "meaning://github.com/demo-db/adventureworks/purchase-order-unit-price?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "price",
+                      "label": "Price",
+                      "address": "meaning://github.com/meaninggraph/core/price?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    },
+                    {
+                      "graph": "core",
+                      "concept": "money-amount",
+                      "label": "Money amount",
+                      "address": "meaning://github.com/meaninggraph/core/money-amount?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "LineTotal",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ReceivedQty",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "RejectedQty",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "StockedQty",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Purchasing.PurchaseOrderHeader",
+          "modelEntity": "Purchasing_PurchaseOrderHeader",
+          "meanings": [
+            {
+              "graph": "adventureworks",
+              "concept": "purchase-order",
+              "label": "Purchase order",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/adventureworks/purchase-order?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "order",
+                  "label": "Order",
+                  "address": "meaning://github.com/meaninggraph/core/order?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "PurchaseOrderID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "RevisionNumber",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Status",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "EmployeeID",
+              "type": "reference",
+              "references": "HumanResources.Employee",
+              "meanings": []
+            },
+            {
+              "name": "VendorID",
+              "type": "reference",
+              "references": "Purchasing.Vendor",
+              "meanings": []
+            },
+            {
+              "name": "ShipMethodID",
+              "type": "reference",
+              "references": "Purchasing.ShipMethod",
+              "meanings": []
+            },
+            {
+              "name": "OrderDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ShipDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "SubTotal",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "TaxAmt",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "Freight",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "TotalDue",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Purchasing.ShipMethod",
+          "modelEntity": "Purchasing_ShipMethod",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ShipMethodID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ShipBase",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ShipRate",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Purchasing.Vendor",
+          "modelEntity": "Purchasing_Vendor",
+          "meanings": [
+            {
+              "graph": "adventureworks",
+              "concept": "supplier",
+              "label": "Supplier",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/adventureworks/supplier?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "organization",
+                  "label": "Organization",
+                  "address": "meaning://github.com/meaninggraph/core/organization?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "Person.BusinessEntity",
+              "meanings": []
+            },
+            {
+              "name": "AccountNumber",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "CreditRating",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "PreferredVendorStatus",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ActiveFlag",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "PurchasingWebServiceURL",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.CountryRegionCurrency",
+          "modelEntity": "Sales_CountryRegionCurrency",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "CountryRegionCode",
+              "type": "reference",
+              "references": "Person.CountryRegion",
+              "meanings": []
+            },
+            {
+              "name": "CurrencyCode",
+              "type": "reference",
+              "references": "Sales.Currency",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.CreditCard",
+          "modelEntity": "Sales_CreditCard",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "CreditCardID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "CardType",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "CardNumber",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ExpMonth",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ExpYear",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.Currency",
+          "modelEntity": "Sales_Currency",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "CurrencyCode",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.CurrencyRate",
+          "modelEntity": "Sales_CurrencyRate",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "CurrencyRateID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "CurrencyRateDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "FromCurrencyCode",
+              "type": "reference",
+              "references": "Sales.Currency",
+              "meanings": []
+            },
+            {
+              "name": "ToCurrencyCode",
+              "type": "reference",
+              "references": "Sales.Currency",
+              "meanings": []
+            },
+            {
+              "name": "AverageRate",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "EndOfDayRate",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.Customer",
+          "modelEntity": "Sales_Customer",
+          "meanings": [
+            {
+              "graph": "adventureworks",
+              "concept": "sales-customer",
+              "label": "Sales customer",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/adventureworks/sales-customer?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "customer",
+                  "label": "Customer",
+                  "address": "meaning://github.com/meaninggraph/core/customer?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "CustomerID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "PersonID",
+              "type": "reference",
+              "references": "Person.Person",
+              "meanings": []
+            },
+            {
+              "name": "StoreID",
+              "type": "reference",
+              "references": "Sales.Store",
+              "meanings": []
+            },
+            {
+              "name": "TerritoryID",
+              "type": "reference",
+              "references": "Sales.SalesTerritory",
+              "meanings": []
+            },
+            {
+              "name": "AccountNumber",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.PersonCreditCard",
+          "modelEntity": "Sales_PersonCreditCard",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "Person.Person",
+              "meanings": []
+            },
+            {
+              "name": "CreditCardID",
+              "type": "reference",
+              "references": "Sales.CreditCard",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.SalesOrderDetail",
+          "modelEntity": "Sales_SalesOrderDetail",
+          "meanings": [
+            {
+              "graph": "adventureworks",
+              "concept": "sales-order-line",
+              "label": "Sales order line",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/adventureworks/sales-order-line?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "order-line",
+                  "label": "Order line",
+                  "address": "meaning://github.com/meaninggraph/core/order-line?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                },
+                {
+                  "graph": "core",
+                  "concept": "commercial-line-item",
+                  "label": "Commercial line item",
+                  "address": "meaning://github.com/meaninggraph/core/commercial-line-item?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "SalesOrderID",
+              "type": "reference",
+              "references": "Sales.SalesOrderHeader",
+              "meanings": []
+            },
+            {
+              "name": "SalesOrderDetailID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "CarrierTrackingNumber",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "OrderQty",
+              "type": "int",
+              "meanings": [
+                {
+                  "graph": "adventureworks",
+                  "concept": "sales-order-quantity",
+                  "label": "Sales order quantity",
+                  "role": "value",
+                  "address": "meaning://github.com/demo-db/adventureworks/sales-order-quantity?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "quantity",
+                      "label": "Quantity",
+                      "address": "meaning://github.com/meaninggraph/core/quantity?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Sales.SpecialOfferProduct",
+              "meanings": []
+            },
+            {
+              "name": "SpecialOfferID",
+              "type": "reference",
+              "references": "Sales.SpecialOfferProduct",
+              "meanings": []
+            },
+            {
+              "name": "UnitPrice",
+              "type": "decimal",
+              "meanings": [
+                {
+                  "graph": "adventureworks",
+                  "concept": "sales-order-unit-price",
+                  "label": "Sales order unit price",
+                  "role": "value",
+                  "address": "meaning://github.com/demo-db/adventureworks/sales-order-unit-price?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "price",
+                      "label": "Price",
+                      "address": "meaning://github.com/meaninggraph/core/price?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    },
+                    {
+                      "graph": "core",
+                      "concept": "money-amount",
+                      "label": "Money amount",
+                      "address": "meaning://github.com/meaninggraph/core/money-amount?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "UnitPriceDiscount",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "LineTotal",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.SalesOrderHeader",
+          "modelEntity": "Sales_SalesOrderHeader",
+          "meanings": [
+            {
+              "graph": "adventureworks",
+              "concept": "sales-order",
+              "label": "Sales order",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/adventureworks/sales-order?ref=cd8dcdf2079fe31480ad6d6c024b8c17cb91beea",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "order",
+                  "label": "Order",
+                  "address": "meaning://github.com/meaninggraph/core/order?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "SalesOrderID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "RevisionNumber",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "OrderDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "DueDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ShipDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Status",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "OnlineOrderFlag",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "SalesOrderNumber",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "PurchaseOrderNumber",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "AccountNumber",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "CustomerID",
+              "type": "reference",
+              "references": "Sales.Customer",
+              "meanings": []
+            },
+            {
+              "name": "SalesPersonID",
+              "type": "reference",
+              "references": "Sales.SalesPerson",
+              "meanings": []
+            },
+            {
+              "name": "TerritoryID",
+              "type": "reference",
+              "references": "Sales.SalesTerritory",
+              "meanings": []
+            },
+            {
+              "name": "BillToAddressID",
+              "type": "reference",
+              "references": "Person.Address",
+              "meanings": []
+            },
+            {
+              "name": "ShipToAddressID",
+              "type": "reference",
+              "references": "Person.Address",
+              "meanings": []
+            },
+            {
+              "name": "ShipMethodID",
+              "type": "reference",
+              "references": "Purchasing.ShipMethod",
+              "meanings": []
+            },
+            {
+              "name": "CreditCardID",
+              "type": "reference",
+              "references": "Sales.CreditCard",
+              "meanings": []
+            },
+            {
+              "name": "CreditCardApprovalCode",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "CurrencyRateID",
+              "type": "reference",
+              "references": "Sales.CurrencyRate",
+              "meanings": []
+            },
+            {
+              "name": "SubTotal",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "TaxAmt",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "Freight",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "TotalDue",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "Comment",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.SalesOrderHeaderSalesReason",
+          "modelEntity": "Sales_SalesOrderHeaderSalesReason",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "SalesOrderID",
+              "type": "reference",
+              "references": "Sales.SalesOrderHeader",
+              "meanings": []
+            },
+            {
+              "name": "SalesReasonID",
+              "type": "reference",
+              "references": "Sales.SalesReason",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.SalesPerson",
+          "modelEntity": "Sales_SalesPerson",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "HumanResources.Employee",
+              "meanings": []
+            },
+            {
+              "name": "TerritoryID",
+              "type": "reference",
+              "references": "Sales.SalesTerritory",
+              "meanings": []
+            },
+            {
+              "name": "SalesQuota",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "Bonus",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "CommissionPct",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "SalesYTD",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "SalesLastYear",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.SalesPersonQuotaHistory",
+          "modelEntity": "Sales_SalesPersonQuotaHistory",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "Sales.SalesPerson",
+              "meanings": []
+            },
+            {
+              "name": "QuotaDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "SalesQuota",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.SalesReason",
+          "modelEntity": "Sales_SalesReason",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "SalesReasonID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ReasonType",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.SalesTaxRate",
+          "modelEntity": "Sales_SalesTaxRate",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "SalesTaxRateID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "StateProvinceID",
+              "type": "reference",
+              "references": "Person.StateProvince",
+              "meanings": []
+            },
+            {
+              "name": "TaxType",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "TaxRate",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.SalesTerritory",
+          "modelEntity": "Sales_SalesTerritory",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "TerritoryID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "CountryRegionCode",
+              "type": "reference",
+              "references": "Person.CountryRegion",
+              "meanings": []
+            },
+            {
+              "name": "Group",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "SalesYTD",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "SalesLastYear",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "CostYTD",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "CostLastYear",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.SalesTerritoryHistory",
+          "modelEntity": "Sales_SalesTerritoryHistory",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "Sales.SalesPerson",
+              "meanings": []
+            },
+            {
+              "name": "TerritoryID",
+              "type": "reference",
+              "references": "Sales.SalesTerritory",
+              "meanings": []
+            },
+            {
+              "name": "StartDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "EndDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.ShoppingCartItem",
+          "modelEntity": "Sales_ShoppingCartItem",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ShoppingCartItemID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ShoppingCartID",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Quantity",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "DateCreated",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.SpecialOffer",
+          "modelEntity": "Sales_SpecialOffer",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "SpecialOfferID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Description",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "DiscountPct",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "Type",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Category",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "StartDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "EndDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "MinQty",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "MaxQty",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.SpecialOfferProduct",
+          "modelEntity": "Sales_SpecialOfferProduct",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "SpecialOfferID",
+              "type": "reference",
+              "references": "Sales.SpecialOffer",
+              "meanings": []
+            },
+            {
+              "name": "ProductID",
+              "type": "reference",
+              "references": "Production.Product",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "Sales.Store",
+          "modelEntity": "Sales_Store",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "BusinessEntityID",
+              "type": "reference",
+              "references": "Person.BusinessEntity",
+              "meanings": []
+            },
+            {
+              "name": "Name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "SalesPersonID",
+              "type": "reference",
+              "references": "Sales.SalesPerson",
+              "meanings": []
+            },
+            {
+              "name": "Demographics",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "rowguid",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "dbo.AWBuildVersion",
+          "modelEntity": "dbo_AWBuildVersion",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "SystemInformationID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "Database_Version",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "VersionDate",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ModifiedDate",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "dbo.DatabaseLog",
+          "modelEntity": "dbo_DatabaseLog",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "DatabaseLogID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "PostTime",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "DatabaseUser",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Event",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Schema",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "Object",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "TSQL",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "XmlEvent",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "dbo.ErrorLog",
+          "modelEntity": "dbo_ErrorLog",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "ErrorLogID",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ErrorTime",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "UserName",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ErrorNumber",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ErrorSeverity",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ErrorState",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ErrorProcedure",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "ErrorLine",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "ErrorMessage",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        }
+      ]
+    },
     {
       "id": "https://demodb.dev/chinook/",
       "recordId": "chinook",
@@ -953,6 +4292,438 @@
                   ]
                 }
               ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "https://demodb.dev/employees/",
+      "recordId": "employees",
+      "localId": "employees",
+      "directoryPath": "/ovdb/demodb.dev/employees/",
+      "serverId": "https://demodb.dev/ovdb",
+      "serverDbBaseUrl": "https://demodb.dev/ovdb/db/employees/",
+      "apiUrl": "https://demodb.dev/ovdb/v1/databases/employees",
+      "title": "Employees (browser edition)",
+      "description": "A reproducible, foreign-key-closed browser edition of the MySQL Employees sample, retaining 1,024 selected employees and their associated employment history across six native tables and both source views.",
+      "status": "draft",
+      "url": "https://demodb.dev/employees/",
+      "deployment": {
+        "url": "https://cloud.openvaultdb.com/ovdb/dbs/employees",
+        "engine": "sqlite"
+      },
+      "homepage": "https://employees.demodb.dev/",
+      "repository": "https://github.com/demo-db/employees",
+      "commit": "2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+      "manifest": "ovdb.yaml",
+      "licence": "CC-BY-SA-3.0",
+      "model": {
+        "name": "employees",
+        "path": "model/employees.modelspec.hcl",
+        "address": "modelspec://github.com/demo-db/employees/employees"
+      },
+      "meaning_graph": {
+        "id": "employees",
+        "address": "meaning://github.com/demo-db/employees"
+      },
+      "recordsets": [
+        {
+          "name": "departments",
+          "modelEntity": "departments",
+          "meanings": [
+            {
+              "graph": "employees",
+              "concept": "department",
+              "label": "Department",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/employees/department?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "dept_no",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "employees",
+                  "concept": "department",
+                  "label": "Department",
+                  "role": "identifier",
+                  "address": "meaning://github.com/demo-db/employees/department?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "dept_name",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "employees",
+                  "concept": "department",
+                  "label": "Department",
+                  "role": "display-name",
+                  "address": "meaning://github.com/demo-db/employees/department?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+                  "extends": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "dept_emp",
+          "modelEntity": "dept_emp",
+          "meanings": [
+            {
+              "graph": "employees",
+              "concept": "department-assignment",
+              "label": "Department assignment",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/employees/department-assignment?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "emp_no",
+              "type": "reference",
+              "references": "employees",
+              "meanings": [
+                {
+                  "graph": "employees",
+                  "concept": "employee",
+                  "label": "Employee",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/employees/employee?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "employee",
+                      "label": "Employee",
+                      "address": "meaning://github.com/meaninggraph/core/employee?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    },
+                    {
+                      "graph": "core",
+                      "concept": "person",
+                      "label": "Person",
+                      "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "dept_no",
+              "type": "reference",
+              "references": "departments",
+              "meanings": [
+                {
+                  "graph": "employees",
+                  "concept": "department",
+                  "label": "Department",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/employees/department?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "from_date",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "to_date",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "dept_manager",
+          "modelEntity": "dept_manager",
+          "meanings": [
+            {
+              "graph": "employees",
+              "concept": "department-manager-assignment",
+              "label": "Department manager assignment",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/employees/department-manager-assignment?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "emp_no",
+              "type": "reference",
+              "references": "employees",
+              "meanings": [
+                {
+                  "graph": "employees",
+                  "concept": "employee",
+                  "label": "Employee",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/employees/employee?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "employee",
+                      "label": "Employee",
+                      "address": "meaning://github.com/meaninggraph/core/employee?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    },
+                    {
+                      "graph": "core",
+                      "concept": "person",
+                      "label": "Person",
+                      "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "dept_no",
+              "type": "reference",
+              "references": "departments",
+              "meanings": [
+                {
+                  "graph": "employees",
+                  "concept": "department",
+                  "label": "Department",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/employees/department?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "from_date",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "to_date",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "employees",
+          "modelEntity": "employees",
+          "meanings": [
+            {
+              "graph": "employees",
+              "concept": "employee",
+              "label": "Employee",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/employees/employee?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "employee",
+                  "label": "Employee",
+                  "address": "meaning://github.com/meaninggraph/core/employee?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                },
+                {
+                  "graph": "core",
+                  "concept": "person",
+                  "label": "Person",
+                  "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "emp_no",
+              "type": "int",
+              "meanings": [
+                {
+                  "graph": "employees",
+                  "concept": "employee",
+                  "label": "Employee",
+                  "role": "identifier",
+                  "address": "meaning://github.com/demo-db/employees/employee?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "employee",
+                      "label": "Employee",
+                      "address": "meaning://github.com/meaninggraph/core/employee?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    },
+                    {
+                      "graph": "core",
+                      "concept": "person",
+                      "label": "Person",
+                      "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "birth_date",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "first_name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "last_name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "gender",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "hire_date",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "salaries",
+          "modelEntity": "salaries",
+          "meanings": [
+            {
+              "graph": "employees",
+              "concept": "employee-salary-history",
+              "label": "Employee salary history",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/employees/employee-salary-history?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "emp_no",
+              "type": "reference",
+              "references": "employees",
+              "meanings": [
+                {
+                  "graph": "employees",
+                  "concept": "employee",
+                  "label": "Employee",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/employees/employee?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "employee",
+                      "label": "Employee",
+                      "address": "meaning://github.com/meaninggraph/core/employee?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    },
+                    {
+                      "graph": "core",
+                      "concept": "person",
+                      "label": "Person",
+                      "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "salary",
+              "type": "int",
+              "meanings": [
+                {
+                  "graph": "employees",
+                  "concept": "salary-amount",
+                  "label": "Salary amount",
+                  "role": "value",
+                  "address": "meaning://github.com/demo-db/employees/salary-amount?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "from_date",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "to_date",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "titles",
+          "modelEntity": "titles",
+          "meanings": [
+            {
+              "graph": "employees",
+              "concept": "employee-title-history",
+              "label": "Employee title history",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/employees/employee-title-history?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "emp_no",
+              "type": "reference",
+              "references": "employees",
+              "meanings": [
+                {
+                  "graph": "employees",
+                  "concept": "employee",
+                  "label": "Employee",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/employees/employee?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "employee",
+                      "label": "Employee",
+                      "address": "meaning://github.com/meaninggraph/core/employee?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    },
+                    {
+                      "graph": "core",
+                      "concept": "person",
+                      "label": "Person",
+                      "address": "meaning://github.com/meaninggraph/core/person?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "employees",
+                  "concept": "job-title",
+                  "label": "Job title",
+                  "role": "value",
+                  "address": "meaning://github.com/demo-db/employees/job-title?ref=2455bb327aa8444ec496d36e2fe6dcacfc58dc0a",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "from_date",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "to_date",
+              "type": "string",
+              "meanings": []
             }
           ]
         }

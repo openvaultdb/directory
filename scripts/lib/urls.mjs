@@ -130,6 +130,20 @@ export function publicHttpsProblem(value, { template = false, encodedPathSegment
       if (encodePathSegment(decoded) !== encoded || decoded === '.' || decoded === '..' || /[/\\\u0000-\u001f\u007f]/.test(decoded)) {
         return 'has a non-canonical or unsafe encoded path segment';
       }
+      // A downstream router or proxy must not be able to turn a still-encoded
+      // separator or dot segment into path syntax by decoding this segment a
+      // second (or later) time. Check each nested layer without changing the
+      // canonical spelling we publish.
+      let nested = decoded;
+      while (/%[0-9a-f]{2}/i.test(nested)) {
+        let next;
+        try { next = decodeURIComponent(nested); } catch { break; }
+        if (next === nested) break;
+        if (next === '.' || next === '..' || /[/\\\u0000-\u001f\u007f]/.test(next)) {
+          return 'has a nested percent escape that can become a path separator, control character or dot segment';
+        }
+        nested = next;
+      }
     }
   }
   // The literal text must be the URL's own spelling, so that what is checked is

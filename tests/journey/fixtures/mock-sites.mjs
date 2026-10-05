@@ -39,7 +39,7 @@ export const defects = {
   'example-cards-none-yet': 'the Directory home has three list items that say there are no example databases yet (step 6)',
   'example-cards-same-title': 'the Directory home has three cards with the same title (step 6)',
   'concept-page-omits-recordset': 'the Chinook customer concept page does not list the Customer recordset (step 5)',
-  'missing-graph': 'the graphs page lists core only (step 6)',
+  'missing-graph': 'the graphs page omits the chinook graph (step 6)',
   'no-directory-card': 'the Directory home has no Chinook card (step 6)',
 };
 
@@ -85,13 +85,13 @@ export async function startMockSites(index, { defect } = {}) {
       <script>const items = ${JSON.stringify(searchable)}; const q = document.getElementById('q'); const results = document.getElementById('results');
       q.addEventListener('input', () => { ${defect === 'no-search-results' ? 'return;' : ''}
         results.innerHTML = items.filter((item) => q.value && item.label.toLowerCase().includes(q.value.toLowerCase())).map((item) => '<li><a href="' + item.href + '">' + item.label + '</a> <span>${tag} (' + item.graph + ')</span></li>').join(''); });</script>`);
-    pages['/graphs/'] = page('Graphs', graphs.filter((graph) => !(defect === 'missing-graph' && graph !== 'core')).map((graph) => `<p><a href="/graphs/${graph}/">${graph}</a></p>`).join(''));
+    pages['/graphs/'] = page('Graphs', graphs.filter((graph) => !(defect === 'missing-graph' && graph === 'chinook')).map((graph) => `<p><a href="/graphs/${graph}/">${graph}</a></p>`).join(''));
     for (const graph of graphs) pages[`/graphs/${graph}/`] = page(graph, `<h1>${graph}</h1>`);
     for (const [key, concept] of concepts) {
       const uses = concept.uses.filter((use) => !(defect === 'concept-page-omits-recordset' && key === 'chinook/customer' && !use.field));
       const rows = uses.map(({ database, recordset, field }) => {
         const anchor = field ? `field-${recordset.name}-${field.name}` : `recordset-${recordset.name}`;
-        const broken = defect === 'wrong-field-link' && key === countryKey && field ? `${anchor}-x` : anchor;
+        const broken = defect === 'wrong-field-link' && key === countryKey && database.recordId === 'chinook' && recordset.name === 'Customer' && field?.name === 'Country' ? `${anchor}-x` : anchor;
         return `<li><a href="${dir}${databasePath(database)}#${broken}">${field ? `${recordset.name}.${field.name}` : recordset.name}</a></li>`;
       }).join('');
       // The Synonyms card as the live page marks it up: a label, then one group per language (the tag, then the synonyms).
@@ -124,7 +124,6 @@ export async function startMockSites(index, { defect } = {}) {
   const directoryPages = () => {
     const { mg } = base();
     const pages = {};
-    const database0 = index.databases[0];
     // The example cards as the live home page marks them up: a label, then a grid of articles, each with a heading
     // of its own, a description and a "Sample recordset" line; a "Browse sample databases" link; and the real databases apart.
     const exampleCard = (title, link = 'https://www.example.org/') => `<article><div><h3><a href="${link}">${title}</a></h3></div><p>Open data about ${title.toLowerCase()}.</p><div><span>Sample recordset</span></div></article>`;
@@ -137,14 +136,13 @@ export async function startMockSites(index, { defect } = {}) {
       'example-cards-none-yet': '<h2>Examples</h2><ul><li>No example databases yet</li><li>Sample databases are coming soon</li><li>Examples were removed</li></ul>',
       'example-cards-same-title': `<p>Sample catalogue content</p><div>${[1, 2, 3].map(() => exampleCard('Retail orders')).join('')}</div>`,
     }[defect] ?? `<p>Sample catalogue content</p><div>${[exampleCard('NASA Earthdata'), exampleCard('Global Health Observatory'), exampleCard('OpenStreetMap')].join('')}</div><a href="#explore">Browse sample databases \u2192</a>`;
-    pages['/'] = page('OVDB Directory', `${exampleCards}<h2>Databases</h2><ul>${defect === 'no-directory-card' ? '' : index.databases.map((database) => `<li><a href="${databasePath(database)}">${database.title}</a>${defect === 'chinook-badged-example' ? ' <span>Example</span>' : ''}</li>`).join('')}</ul>`);
+    pages['/'] = page('OVDB Directory', `${exampleCards}<h2>Databases</h2><ul>${index.databases.filter((database) => !(defect === 'no-directory-card' && database.recordId === 'chinook')).map((database) => `<li><a href="${databasePath(database)}">${database.title}</a>${defect === 'chinook-badged-example' ? ' <span>Example</span>' : ''}</li>`).join('')}</ul>`);
     const link = (graph, concept, label) => `<a href="${defect === 'wrong-concept-link' ? `${mg}/graphs/${graph}/concept/${concept}/` : conceptHref(mg, graph, concept)}">${label}</a>`;
     for (const database of index.databases) {
       pages[databasePath(database)] = page(database.title, `<h1>${database.title}</h1><p>${database.url}</p>${defect === 'no-live-deployment-link' ? '' : `<p><a href="${database.deployment.url}">Live deployment</a></p>`}<p>${database.repository} at ${database.commit.slice(0, 7)}; meaning graph ${database.meaning_graph.id}</p>${
         database.recordsets.filter((recordset) => !(defect === 'missing-recordset' && recordset.name === 'Customer')).map((recordset) => `<section><h3 ${defect === 'missing-recordset-anchor' && recordset.name === 'Customer' ? '' : `id="recordset-${recordset.name}"`}>${recordset.name}</h3><p><a href="${recordset.url}">Browse ${recordset.name}</a></p><p>${(defect === 'no-concepts-on-recordset' && recordset.name === 'Customer' ? [] : recordset.meanings).map((meaning) => [meaning, ...meaning.extends].map((entry) => link(entry.graph, entry.concept, entry.label)).join(' ')).join(' ')}</p><ul>${
           recordset.fields.map((field) => `<li id="field-${recordset.name}-${field.name}" style="margin-top:400px">${field.name} ${field.meanings.map((meaning) => [meaning, ...meaning.extends.slice(0, 1)].map((entry) => link(entry.graph, entry.concept, entry.label)).join(' ')).join(' ')}</li>`).join('')}</ul></section>`).join('')}`);
     }
-    void database0;
     return pages;
   };
 

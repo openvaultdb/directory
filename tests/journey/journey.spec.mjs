@@ -68,7 +68,9 @@ const usesOf = (graph, concept) => meanings().filter(({ meaning }) => names(mean
 function startingConcept() {
   const carriers = meanings().filter(({ field, meaning }) => field && meaning.values_of?.graph === 'core' && meaning.values_of.concept === 'country');
   expect(carriers.length, 'index.json has a field whose values are core country').toBeGreaterThan(0);
-  return { core: carriers[0].meaning.values_of, carriers };
+  const first = carriers.find(({ database, recordset, field }) => database.recordId === 'chinook' && recordset.name === 'Customer' && field.name === 'Country');
+  expect(first, 'index.json has Chinook Customer.Country as a core Country carrier').toBeTruthy();
+  return { core: first.meaning.values_of, carriers };
 }
 
 const conceptUrl = (graph, concept) => `${meaningGraphBase}/graphs/${graph}/concepts/${concept}/`;

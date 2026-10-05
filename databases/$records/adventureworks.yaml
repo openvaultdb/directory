@@ -1,0 +1,16 @@
+format: ovdb-directory/draft-1
+title: AdventureWorks OLTP
+description: >-
+  Microsoft AdventureWorks OLTP sample with 71 native physical tables and
+  759,240 source rows. The read-only SQLite fixture preserves native schema
+  names and source-view metadata; only the reviewed compatible views are
+  executable in SQLite.
+status: draft
+url: https://demodb.dev/adventureworks/
+repository: https://github.com/demo-db/adventureworks
+commit: cd8dcdf2079fe31480ad6d6c024b8c17cb91beea
+manifest: ovdb.yaml
+database_manifest: ovdb-database.json
+meaning_graph: adventureworks
+maintainers:
+  - trakhimenok
