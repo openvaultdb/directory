@@ -8,7 +8,7 @@ description: >-
 status: draft
 url: https://demodb.dev/adventureworks/
 repository: https://github.com/demo-db/adventureworks
-commit: 31bdb4eceff01367ce812b2844530ed17a7d35ae
+commit: 5028a27189b487d6fd8025fafc1307aada707fd2
 manifest: ovdb.yaml
 database_manifest: ovdb-database.json
 meaning_graph: adventureworks
