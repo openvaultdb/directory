@@ -7,7 +7,7 @@ description: >-
 status: draft
 url: https://demodb.dev/employees/
 repository: https://github.com/demo-db/employees
-commit: 2455bb327aa8444ec496d36e2fe6dcacfc58dc0a
+commit: 2069e26e8fdb60bdb16507f75569a579cf3da7cf
 manifest: ovdb.yaml
 database_manifest: ovdb-database.json
 meaning_graph: employees

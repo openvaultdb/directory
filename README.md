@@ -12,9 +12,9 @@ carry. The Directory website is a separate repository; it reads
 | `chinook` | `https://demodb.dev/chinook/` | [demo-db/chinook@26e852c](https://github.com/demo-db/chinook/tree/26e852cca00101f53a84ef8ee1f1ae389067f5cf) | draft |
 | `northwind` | `https://demodb.dev/northwind/` | [demo-db/northwind@e747265](https://github.com/demo-db/northwind/tree/e74726515c3833620b54b7a50d1d273276dd23c1) | draft |
 | `pubs` | `https://demodb.dev/pubs/` | [demo-db/pubs@6c06c5c](https://github.com/demo-db/pubs/tree/6c06c5c7395b03ff1a02c2b1a21485add3e1b65b) | draft |
-| `sakila` | `https://demodb.dev/sakila/` | [demo-db/sakila@6567d30](https://github.com/demo-db/sakila/tree/6567d30aec1592fe0917934a8bbe74ff70b04b01) | draft |
-| `adventureworks` | `https://demodb.dev/adventureworks/` | [demo-db/adventureworks@cd8dcdf](https://github.com/demo-db/adventureworks/tree/cd8dcdf2079fe31480ad6d6c024b8c17cb91beea) | draft |
-| `employees` | `https://demodb.dev/employees/` | [demo-db/employees@2455bb3](https://github.com/demo-db/employees/tree/2455bb327aa8444ec496d36e2fe6dcacfc58dc0a) | draft |
+| `sakila` | `https://demodb.dev/sakila/` | [demo-db/sakila@cb9a81a](https://github.com/demo-db/sakila/tree/cb9a81a8cbedcd8831737f281f888d5d584fae85) | draft |
+| `adventureworks` | `https://demodb.dev/adventureworks/` | [demo-db/adventureworks@31bdb4e](https://github.com/demo-db/adventureworks/tree/31bdb4eceff01367ce812b2844530ed17a7d35ae) | draft |
+| `employees` | `https://demodb.dev/employees/` | [demo-db/employees@2069e26](https://github.com/demo-db/employees/tree/2069e26e8fdb60bdb16507f75569a579cf3da7cf) | draft |
 
 ## This repository is the source of truth
 

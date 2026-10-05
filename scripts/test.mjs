@@ -914,7 +914,7 @@ test('the committed index.json has the documented shape and its own checksum', (
   assert.ok(sakilaRecord, 'the Sakila provider has a committed Directory record');
   assert.deepEqual(
     [sakilaRecord.data.url, sakilaRecord.data.repository, sakilaRecord.data.commit, sakilaRecord.data.manifest, sakilaRecord.data.database_manifest, sakilaRecord.data.meaning_graph],
-    ['https://demodb.dev/sakila/', 'https://github.com/demo-db/sakila', '6567d30aec1592fe0917934a8bbe74ff70b04b01', 'ovdb.yaml', 'ovdb-database.json', 'sakila'],
+    ['https://demodb.dev/sakila/', 'https://github.com/demo-db/sakila', 'cb9a81a8cbedcd8831737f281f888d5d584fae85', 'ovdb.yaml', 'ovdb-database.json', 'sakila'],
   );
   const sakila = committed.databases.find((database) => database.recordId === 'sakila');
   assert.ok(sakila, 'the Sakila database appears in the generated index');
@@ -935,7 +935,7 @@ test('AdventureWorks and Employees Directory records pin their exact public prov
       recordId: 'adventureworks',
       url: 'https://demodb.dev/adventureworks/',
       repository: 'https://github.com/demo-db/adventureworks',
-      commit: 'cd8dcdf2079fe31480ad6d6c024b8c17cb91beea',
+      commit: '31bdb4eceff01367ce812b2844530ed17a7d35ae',
       meaningGraph: 'adventureworks',
       title: 'AdventureWorks OLTP',
     },
@@ -943,7 +943,7 @@ test('AdventureWorks and Employees Directory records pin their exact public prov
       recordId: 'employees',
       url: 'https://demodb.dev/employees/',
       repository: 'https://github.com/demo-db/employees',
-      commit: '2455bb327aa8444ec496d36e2fe6dcacfc58dc0a',
+      commit: '2069e26e8fdb60bdb16507f75569a579cf3da7cf',
       meaningGraph: 'employees',
       title: 'Employees (browser edition)',
     },
