@@ -187,7 +187,12 @@ export function checkRepresentation(envelope, files, manifest, outerRepository, 
               }
             }
           }
-        } else if (!integerToken(tokens.snapshot?.counts?.[c.target.entity]) || provenance.snapshot?.outputs?.[c.native.dataset.path]?.sha256 !== c.native.dataset.sha256 || provenance.snapshot?.counts?.[c.target.entity] !== n?.records) bad(`${label}: native provenance original output/count mismatch`);
+        } else {
+          for (const [entity, token] of Object.entries(tokens.snapshot?.counts ?? {})) {
+            if (!signedIntegerToken(token) || !Number.isSafeInteger(provenance.snapshot.counts[entity])) bad(`${label}: implicit snapshot count ${entity} must be a lossless safe int64 integer token`);
+          }
+          if (!integerToken(tokens.snapshot?.counts?.[c.target.entity]) || provenance.snapshot?.outputs?.[c.native.dataset.path]?.sha256 !== c.native.dataset.sha256 || provenance.snapshot?.counts?.[c.target.entity] !== n?.records) bad(`${label}: native provenance original output/count mismatch`);
+        }
       }
 
     } else {
@@ -196,8 +201,13 @@ export function checkRepresentation(envelope, files, manifest, outerRepository, 
         const columns = model.entities?.[c.bridge.table]?.properties;
         if (!columns || c.bridge.raw_label_column === c.bridge.target_key_column || columns[c.bridge.raw_label_column]?.type !== 'string' || columns[c.bridge.target_key_column]?.type !== 'string' || c.bridge.serving_identity_column && (c.bridge.serving_identity_column === c.bridge.raw_label_column || c.bridge.serving_identity_column === c.bridge.target_key_column || !columns[c.bridge.serving_identity_column])) bad(`${label}: bridge columns missing or overlapping in local model`);
       }
-      const bridge = localObject(c.bridge.artifact, `${label}.bridge.artifact`);
-      const keys = localObject(c.target.keys, `${label}.target.keys`);
+      // A matching path/hash in an external repository cannot satisfy local snapshot authority.
+      const localArtifact = (ref, field) => {
+        if (!ownRef(ref)) { bad(`${label}.${field} must be provider-local`); return undefined; }
+        return localObject(ref, `${label}.${field}`);
+      };
+      const bridge = localArtifact(c.bridge.artifact, 'bridge.artifact');
+      const keys = localArtifact(c.target.keys, 'target.keys');
       let bridgeRowsValid = false;
       associated(c.bridge.artifact, 'bridge.artifact'); associated(c.target.keys, 'target.keys');
       if (bridge) {
@@ -266,6 +276,7 @@ function checkModel(model, scope, native, bad, label) {
 }
 
 const integerToken = (value) => object(value) && /^(0|[1-9][0-9]*)$/.test(value.$jsonNumberToken ?? '') && BigInt(value.$jsonNumberToken) <= 9223372036854775807n;
+const signedIntegerToken = (value) => object(value) && /^-?(0|[1-9][0-9]*)$/.test(value.$jsonNumberToken ?? '') && BigInt(value.$jsonNumberToken) >= -9223372036854775808n && BigInt(value.$jsonNumberToken) <= 9223372036854775807n;
 function strictYaml(bytes) {
   const decoded = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
   const value = parseYaml(decoded, { uniqueKeys: true }); // rejects multiple YAML documents

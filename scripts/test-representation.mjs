@@ -235,3 +235,31 @@ test('unchanged original snapshot association preserves all values and number to
     else refused(f,/snapshot|count/);
   }
 });
+
+test('both label formats refuse external bridge/key copies before opening their reader', () => {
+  for (const version of [1, 2]) for (const field of ['bridge.artifact', 'target.keys']) {
+    const local = full(version);
+    assert.deepEqual(check(local).problems, []);
+    const f = full(version);
+    const reference = field === 'bridge.artifact' ? f.contract.bridge.artifact : f.contract.target.keys;
+    f.externalFiles.set(reference.path, f.files.get(reference.path));
+    f.files.delete(reference.path);
+    Object.assign(reference, { repository: sourceRepo, revision });
+    f.repack();
+    refused(f, new RegExp(`${field.replace('.', '\\.')} must be provider-local`));
+    assert.equal(f.touched.includes(reference.path), false, `${version}/${field} must not resolve its external copy`);
+  }
+});
+
+test('every implicit snapshot count preserves signed integer tokens without rounding', () => {
+  const countFixture = (token, selected = false) => {
+    const f = full();
+    let provenance = f.files.get(f.contract.native.provenance.path).toString();
+    provenance = selected ? provenance.replace('"Entities":2', `"Entities":${token}`) : provenance.replace('"Entities":2', `"Entities":2,"Unrelated":${token}`);
+    replaceArtifact(f, f.contract.native.provenance, provenance);
+    return f;
+  };
+  for (const token of ['0', '-0', '3', '-3', '9007199254740991', '-9007199254740991']) assert.deepEqual(check(countFixture(token)).problems, [], token);
+  for (const token of ['1.5', '1.0', '1e0', '-1e0', '"1"', 'null', 'true', '[]', '{}', '9223372036854775807', '-9223372036854775808', '9223372036854775808', '-9223372036854775809', '9007199254740992', '9007199254740993', '-9007199254740992', '-9007199254740993']) refused(countFixture(token), /implicit snapshot count/, token);
+  for (const token of ['2.0', '2e0', '9007199254740993', '-2']) refused(countFixture(token, true), /count/);
+});

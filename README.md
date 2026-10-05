@@ -501,6 +501,16 @@ with a 5 MiB raw-byte limit per distinct full reference; exactly 5 MiB is allowe
 This proves file identity/hash, not JSON row validity, semantic acceptance or runtime
 eligibility. Missing external readers or any required proof refuse index generation.
 
+Bridge artifacts and target key dictionaries in formats 1/2 must be provider-local;
+an external copy with identical bytes/path/hash cannot satisfy a local snapshot.
+Every implicit native snapshot count must be an integer JSON token within int64
+bounds and JavaScript's safe integer range. Signed unrelated entity counts are
+preserved; selected/native counts remain nonnegative. Fractional/exponent tokens,
+non-number values and rounding are refused. This is conservatively narrower than
+Go's int64 range and its conversion of unrelated JSON null counts to zero.
+Explicit original-snapshot associations retain their separate
+complete value/number-token equality check.
+
 Publication owners provision dependencies explicitly, separately from attachment
 validation. Both check and index entry points accept repeatable literal bindings:
 
