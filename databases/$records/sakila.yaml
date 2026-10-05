@@ -6,7 +6,7 @@ description: >-
 status: draft
 url: https://demodb.dev/sakila/
 repository: https://github.com/demo-db/sakila
-commit: 6567d30aec1592fe0917934a8bbe74ff70b04b01
+commit: cb9a81a8cbedcd8831737f281f888d5d584fae85
 manifest: ovdb.yaml
 database_manifest: ovdb-database.json
 meaning_graph: sakila
