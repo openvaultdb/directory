@@ -1,0 +1,71 @@
+format: ovdb-source/draft-1
+title: CLDR 48 Windows timezone mappings
+description: Inactive W3 discovery for d1-cldr-windows-zones. Partial documented XML
+  attribute strings retain Windows ID, territory and the raw Unicode-zone list; no
+  timezone conversion or country-zone lookup is activated.
+status: inactive
+publisher: Unicode Consortium
+homepage: https://cldr.unicode.org/index/downloads
+resource_url: https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/supplemental/windowsZones.xml
+terms_url: https://www.unicode.org/license.txt
+access_mode: live-http-via-ovdb
+retention: none
+activation_blockers:
+  - No admitted execution route exists. live-http-via-ovdb names a proposed gateway;
+    actual GET/CORS/authentication/rate limits, redirect/DNS/resource allowlists and
+    row/byte/time budgets remain unverified.
+  - Canonical source definition, bounded decoder and source-qualified
+    ModelSpec/MeaningGraph bindings require separate acceptance. This partial
+    native-string subset does not model the complete source response, context or
+    grammar.
+  - Rights for the exact returned material and intended use and required notices remain
+    admission gates. Licence permission never authorizes source snapshots or result
+    retention in this programme.
+  - Transient RAM/current-display execution and no-store enforcement across browser,
+    adapter, OVDB, edge and intermediary sinks remain unproved. Retained
+    paging/history/export/download/fixtures/replay and data-bearing logs are not
+    authorized.
+  - Exact execution observation metadata, native context, null/missing/multiplicity
+    policy and freshness remain unverified. Resource HEAD and authored metadata pins do
+    not establish current rows or future response bytes.
+  - d1-edge-windows-zone remains unresolved. Territory/default/list expansion, CLDR
+    long-ID aliases and civil-rule runtime behavior require separate reconciliation.
+  - Official Git tree metadata confirms this file at CLDR 48 commit
+    acd6d88ae493633240e19a87a721076a8a75c310, blob
+    26a62c3f0645851fa13ebddbce9b6f20528d5777; metadata presence and HEAD do not verify
+    native XML contents.
+notices:
+  - Metadata/documentation and endpoint HEAD checked 2026-10-06. No source dataset
+    payload was requested or retained; no query service is activated.
+  - Unicode License V3 requires copyright/permission notice in copies or associated
+    documentation; Unicode names do not grant endorsement or advertising permission.
+  - "CLDR 48 documented field grammar and list/default context:
+    https://www.unicode.org/reports/tr35/tr35-76/tr35-dates.html#Windows_Zones. CLDR 48
+    is explicit, not a latest-release claim. Source pin is distinct from any execution
+    gateway."
+  - W3 selection records five inactive source opportunities only. NVD remains deferred
+    pending authoritative current terms; all unselected candidate IDs and original
+    dispositions remain in datatug/datatug spec/research/public-data-fabric. No source
+    reads, canonical binding admission or DataTug UI change is authorized by this entry.
+recordsets:
+  - name: WindowsZoneMap
+    description: Partial documented attributes on
+      /supplementalData/windowsZones/mapTimezones/mapZone in explicit CLDR 48. Actual
+      element/attribute presence and full edition schema remain unverified by a data
+      read.
+    fields:
+      - name: other
+        type: string
+        description: Native XML Windows TZID attribute string; descriptive resemblance is not
+          zone identity.
+      - name: territory
+        type: string
+        description: Native XML context attribute string. 001 default and ZZ remain distinct; no
+          sovereign-country or territory-code equivalence is admitted.
+      - name: type
+        type: string
+        description: Native XML space-delimited Unicode long timezone-ID list string. Preserve
+          aliases and list order; no scalar timezone or tzdb identity mapping is
+          accepted.
+maintainers:
+  - trakhimenok
