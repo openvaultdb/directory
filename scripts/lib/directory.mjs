@@ -17,6 +17,8 @@ import { addressMatchesRecord, identifierPattern, loadModelRegistry, modelsAtAdd
 import { directoryPagePath, encodePathSegment, globalDatabaseIdProblem, hasOvdbMarker, homepageProblem, publicHttpsProblem } from './urls.mjs';
 import { checkRepresentationEnvelope, checkRepresentation, verifySourceData } from './representation.mjs';
 
+import { sourceEntries, sourceProblems } from './source-discovery.mjs';
+
 export { repositoryHosts };
 export const directoryFormat = 'ovdb-directory/draft-1';
 export const manifestFormat = 'ovdb-manifest/draft-1';
@@ -47,7 +49,8 @@ export function readCollection(root, collection) {
 export function readDirectory(root) {
   const databases = readCollection(root, 'databases');
   const maintainers = readCollection(root, 'maintainers');
-  return { databases: databases.records, maintainers: maintainers.records, problems: [...databases.problems, ...maintainers.problems] };
+  const sources = readCollection(root, 'sources');
+  return { databases: databases.records, maintainers: maintainers.records, sources: sources.records, problems: [...databases.problems, ...maintainers.problems, ...sources.problems] };
 }
 
 // A problem with `value` as a database's canonical identity, or null. New global
@@ -837,10 +840,10 @@ const byId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 // of the databases array. The file itself is indented, so the checksum is a change
 // token (compare it as a string); to verify a file, hash the compact serialisation
 // of the parsed array.
-export function indexText(entries) {
+export function indexText(entries, sources = []) {
   const databases = [...entries].sort(byId);
   const checksum = `sha256:${createHash('sha256').update(JSON.stringify(databases)).digest('hex')}`;
-  return `${JSON.stringify({ format: directoryFormat, checksum, databases }, null, 2)}\n`;
+  return `${JSON.stringify({ format: directoryFormat, checksum, databases, ...(sources.length ? { sourcesChecksum: `sha256:${createHash('sha256').update(JSON.stringify(sources)).digest('hex')}`, sources } : {}) }, null, 2)}\n`;
 }
 
 function sharedContext({ urlFor, cacheDir, meaningRegistry, modelRegistry, representationDependencies = new Map(), fetched = new Set(), branches = new Map() }) {
@@ -858,7 +861,7 @@ function sharedContext({ urlFor, cacheDir, meaningRegistry, modelRegistry, repre
 // { problems, warnings, entries }.
 export async function analyseDirectory({ root, urlFor, cacheDir, meaningRegistry, loadRegistry = loadMeaningRegistry, modelRegistry, loadModelRegistry: loadModels = loadModelRegistry, ...rest } = {}) {
   const directory = readDirectory(root);
-  const problems = [...directory.problems, ...recordProblems(directory)];
+  const problems = [...directory.problems, ...recordProblems(directory), ...sourceProblems(directory.sources, directory.maintainers)];
   const entries = [];
   const warnings = [];
   // The git cache is the user's, outside the checkout: nothing a pull request commits is ever read as cache.
@@ -894,10 +897,10 @@ export async function analyseDirectory({ root, urlFor, cacheDir, meaningRegistry
 // What `npm run index` writes. Throws, naming every problem, when anything is wrong;
 // `onWarning` is called with each warning (a pin that differs from a registry's).
 export async function buildIndex({ onWarning, ...options } = {}) {
-  const { problems, warnings, entries } = await analyseDirectory(options);
+  const { problems, warnings, entries, directory } = await analyseDirectory(options);
   for (const warning of warnings) onWarning?.(warning);
   if (problems.length) throw new Error(`cannot build index.json:\n${problems.map((problem) => `  ${problem}`).join('\n')}`);
-  return indexText(entries);
+  return indexText(entries, sourceEntries(directory.sources));
 }
 
 // Every check: records, then each database at its commit, then index.json.
@@ -905,7 +908,7 @@ export async function checkDirectory(options = {}) {
   const { problems, warnings, entries, directory } = await analyseDirectory(options);
   const path = join(options.root, 'index.json');
   if (!existsSync(path)) problems.push('index.json is missing; run npm run index and commit it');
-  else if (problems.length === 0 && readFileSync(path, 'utf8') !== indexText(entries)) problems.push('index.json differs from what npm run index writes; run it and commit the result');
+  else if (problems.length === 0 && readFileSync(path, 'utf8') !== indexText(entries, sourceEntries(directory.sources))) problems.push('index.json differs from what npm run index writes; run it and commit the result');
   return { problems, warnings, databases: directory.databases.length };
 }
 

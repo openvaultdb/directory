@@ -33,7 +33,7 @@ const edit = (collection, key, change) => (dir) => {
 function validate(change) {
   const dir = join(scratch, `db-${count++}`);
   mkdirSync(dir);
-  for (const name of ['.ingitdb', 'databases', 'maintainers']) cpSync(join(root, name), join(dir, name), { recursive: true });
+  for (const name of ['.ingitdb', 'databases', 'maintainers', 'sources']) cpSync(join(root, name), join(dir, name), { recursive: true });
   change?.(dir);
   try {
     execFileSync(cli, ['validate', `--path=${dir}`, '--safe-diagnostics'], { stdio: 'pipe' });
@@ -53,6 +53,10 @@ test('the Directory data as committed is a valid inGitDB database', () => {
 });
 
 const cases = {
+  'sources: activation refused': edit('sources', 'ecb-daily', x => { x.status = 'published'; }),
+  'sources: copied retention refused': edit('sources', 'ecb-daily', x => { x.retention = 'snapshot'; }),
+  'sources: missing original resource': edit('sources', 'ecb-daily', x => { delete x.resource_url; }),
+  'sources: unknown maintainer': edit('sources', 'ecb-daily', x => { x.maintainers = ['nobody']; }),
   'databases: title missing (required)': edit('databases', 'chinook', (x) => { delete x.title; }),
   'databases: description missing (required)': edit('databases', 'chinook', (x) => { delete x.description; }),
   'databases: status outside its enum': edit('databases', 'chinook', (x) => { x.status = 'live'; }),

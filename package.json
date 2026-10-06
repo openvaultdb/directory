@@ -11,7 +11,7 @@
   "scripts": {
     "check": "node scripts/check.mjs",
     "index": "node scripts/build-index.mjs",
-    "test": "node --test scripts/test.mjs scripts/test-representation.mjs scripts/test-receipt-compatibility.mjs",
+    "test": "node --test scripts/test.mjs scripts/test-representation.mjs scripts/test-receipt-compatibility.mjs scripts/test-source-discovery.mjs",
     "test:ingitdb": "node --test scripts/test-ingitdb.mjs",
     "test:journey": "playwright test --config tests/journey/playwright.config.mjs",
     "test:journey:selftest": "node --test --test-concurrency=1 tests/journey/self-test.mjs"

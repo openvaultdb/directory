@@ -1,0 +1,86 @@
+titles:
+  en: Inactive source discoveries
+record_file:
+  name: "{key}.yaml"
+  format: yaml
+  type: map[string]any
+columns:
+  format:
+    type: string
+    required: true
+    min_length: 1
+    enum:
+      - ovdb-source/draft-1
+  title:
+    type: string
+    required: true
+    min_length: 1
+  description:
+    type: string
+    required: true
+    min_length: 1
+  status:
+    type: string
+    required: true
+    min_length: 1
+    enum:
+      - inactive
+  publisher:
+    type: string
+    required: true
+    min_length: 1
+  homepage:
+    type: string
+    required: true
+    min_length: 1
+  resource_url:
+    type: string
+    required: true
+    min_length: 1
+  terms_url:
+    type: string
+    required: true
+    min_length: 1
+  access_mode:
+    type: string
+    required: true
+    min_length: 1
+    enum:
+      - live-http-via-ovdb
+  retention:
+    type: string
+    required: true
+    min_length: 1
+    enum:
+      - none
+  activation_blockers:
+    type: "[]string"
+    required: true
+    min_length: 1
+  notices:
+    type: "[]string"
+    required: true
+    min_length: 1
+  maintainers:
+    type: "[]string"
+    required: true
+    min_length: 1
+    foreign_key: maintainers
+  recordsets:
+    type: any
+    required: true
+columns_order:
+  - format
+  - title
+  - description
+  - status
+  - publisher
+  - homepage
+  - resource_url
+  - terms_url
+  - access_mode
+  - retention
+  - activation_blockers
+  - notices
+  - maintainers
+  - recordsets

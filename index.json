@@ -6779,5 +6779,59 @@
         }
       ]
     }
+  ],
+  "sourcesChecksum": "sha256:d2f9cf14bdb3623f982922ff12a35b13a17d2b119374bab37d675933d202542e",
+  "sources": [
+    {
+      "id": "ecb-daily",
+      "format": "ovdb-source/draft-1",
+      "title": "ECB euro foreign exchange reference rates",
+      "description": "Preparatory discovery of the original ECB daily XML resource for a bounded live read through OVDB. The returned publication contains one reference date and quote currencies against EUR; this entry does not activate queries.",
+      "status": "inactive",
+      "publisher": "European Central Bank (ECB)",
+      "homepage": "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html",
+      "resource_url": "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml",
+      "terms_url": "https://www.ecb.europa.eu/services/using-our-site/disclaimer/html/index.en.html",
+      "access_mode": "live-http-via-ovdb",
+      "retention": "none",
+      "activation_blockers": [
+        "B1: Final definition, native-to-model binding and dynamic publisher admission need exact-artifact acceptance.",
+        "B2: Captured source rights/read evidence and enforcement of no retention across the complete execution path remain unproved.",
+        "B3: Public browser inspection/query journeys with notices, dates and teardown remain unproved.",
+        "B4: Paid applicability and any before-payment notices, or an enforced free-only route, remain unresolved."
+      ],
+      "notices": [
+        "Source: European Central Bank (ECB).",
+        "The original ECB rates are available free of charge from the ECB website.",
+        "ECB reference rates are indicative and provided for information. The ECB discourages their use for transactions.",
+        "ECB reuse conditions apply. This metadata entry grants no redistribution, retained-copy or commercial entitlement."
+      ],
+      "recordsets": [
+        {
+          "name": "FxReferenceQuote",
+          "description": "Proposed native recordset: one quoted currency on one returned reference date. Semantic grain is (time, currency), not an immutable revision or a stable point-read address. A currency-only transport locator is scoped to one transient response. EUR is explicit base context, not an invented source row. Historical lookup, transaction execution, daily-average/closing-price meanings, conversions and federation are not admitted.",
+          "fields": [
+            {
+              "name": "time",
+              "type": "string",
+              "description": "Native reference date label in YYYY-MM-DD form; not a publication instant or fetch timestamp."
+            },
+            {
+              "name": "currency",
+              "type": "string",
+              "description": "Native uppercase quoted currency code; no country, territory or transaction-currency inference."
+            },
+            {
+              "name": "rate",
+              "type": "string",
+              "description": "Native positive decimal lexical string: quote-currency units per one EUR. Preserve all digits and trailing zeros; no binary-float normalization."
+            }
+          ]
+        }
+      ],
+      "maintainers": [
+        "trakhimenok"
+      ]
+    }
   ]
 }
