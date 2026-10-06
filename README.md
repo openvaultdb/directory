@@ -753,3 +753,37 @@ A change to `index.json` on `main` notifies the sites built from it, so they red
 Everything in this repository (the records, the collection definitions,
 `index.json`, the scripts) is [CC0-1.0](LICENSE). The publishers keep their own
 licences, which each manifest states.
+
+## Inactive source discovery
+
+`sources/$records/<id>.yaml` is the canonical authored source record, validated by
+the inGitDB `sources` collection and `scripts/lib/source-discovery.mjs`. The
+generated optional `sources` array in the same `index.json` produces
+`/sources/<id>/` browse pages. It is preparatory metadata, not an admitted
+database, model registration, deployment or query capability. Only `inactive`
+status is accepted; activating a service requires the existing publisher
+manifest/database checks and separate execution/rights gates. Source discovery
+must not invent deployment URLs, retain source rows or put proposed meanings
+into validated mappings.
+
+Source records declare the original `resource_url`, provider `publisher`,
+`homepage`, custom `terms_url`, proposed access mode and retention constraint.
+`retention: none` constrains the proposed owned OVDB/client route; it does not
+certify upstream provider or intermediary cache/storage behavior. They also hold
+activation blockers, authored notices and proposed native recordset/field
+descriptions. `recordsets` is metadata checked structurally, not source data.
+Maintainers must exist in `maintainers`. Unknown fields are refused.
+
+`checksum` continues to hash only `databases`, preserving existing consumers.
+When source records exist, `sourcesChecksum` hashes compact JSON of the sorted
+`sources` array separately; exact generated-index equality checks both. Older
+indexes without sources remain valid. The website must land source support
+before the first source record, then the normal index-change notification
+rebuilds the site from the pinned canonical commit.
+
+The initial `ecb-daily` entry links to the original daily XML and preserves
+public query activation as blocked. Native `time`, `currency`, `rate` strings
+are proposed metadata with EUR base context. No copied rows/XML, bootstrap
+registration, SPDX substitute, paid entitlement or semantic acceptance follows
+from this listing. The accidental ECB bootstrap is preserved outside this
+listing pending a working replacement and authorized disposition.
