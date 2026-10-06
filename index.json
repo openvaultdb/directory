@@ -6780,8 +6780,65 @@
       ]
     }
   ],
-  "sourcesChecksum": "sha256:d2f9cf14bdb3623f982922ff12a35b13a17d2b119374bab37d675933d202542e",
+  "sourcesChecksum": "sha256:c5e22c8c746e647a0120bcae3109203a2d197b11902ed129e45ddc089949cde7",
   "sources": [
+    {
+      "id": "bigquery-world-bank-wdi",
+      "format": "ovdb-source/draft-2",
+      "title": "World Development Indicators on BigQuery",
+      "description": "Dataset-level discovery of World Bank development statistics on Google BigQuery. Native tables, observation coverage and indicator rights require verification before access.",
+      "status": "inactive",
+      "publisher": "World Bank",
+      "hosting_provider": "Google BigQuery",
+      "homepage": "https://datatopics.worldbank.org/world-development-indicators/",
+      "terms_url": "https://data.worldbank.org/summary-terms-of-use",
+      "access_mode": "bigquery-native",
+      "query_activation": "blocked",
+      "locator": {
+        "source_project": "bigquery-public-data",
+        "dataset_id": "world_bank_wdi",
+        "existence_status": "unverified",
+        "location_status": "unverified"
+      },
+      "documentation": {
+        "kind": "documented-definition",
+        "url": "https://github.com/GoogleCloudPlatform/public-datasets-pipelines/blob/14735c60589ab22361dc0d54ad7491ba7ae96a04/datasets/world_bank_wdi/pipelines/dataset.yaml",
+        "commit": "14735c60589ab22361dc0d54ad7491ba7ae96a04"
+      },
+      "access_requirements": {
+        "authentication": "required",
+        "execution_project": "unconfigured",
+        "cost_admission": "not-granted",
+        "runtime_acceptance": "pending",
+        "documentation_url": "https://docs.cloud.google.com/bigquery/public-data"
+      },
+      "owned_retention": {
+        "intent": "none",
+        "enforcement": "unverified"
+      },
+      "provider_retention": {
+        "result_storage": "materialized-results",
+        "authorization": "pending-review",
+        "documentation_url": "https://docs.cloud.google.com/bigquery/docs/cached-results"
+      },
+      "activation_blockers": [
+        "Authorized metadata-only dataset/table inspection must establish current existence, location, native schema/types/modes and an exact bounded table allowlist. No observation table is accepted here.",
+        "Indicator-specific provider rights, edition and attribution must be accepted for the exact intended use. World Bank summary terms do not grant unrestricted dataset-wide commercial entitlement.",
+        "Economy/aggregate identity, units, year coverage and semantic/model bindings require independent acceptance; no registered model is claimed.",
+        "Authentication and a separate execution project, cost admission, finite query/output limits and Go/JavaScript runtime acceptance remain pending.",
+        "Owned no-retention enforcement and explicit provider result-storage authorization are required before any query, including free jobs."
+      ],
+      "notices": [
+        "Attribution is required to the World Bank and its data providers as specified in their metadata. No World Bank endorsement is implied.",
+        "World Bank summary terms generally use CC BY 4.0 with mandatory additions, subject to dataset and indicator/provider exceptions. Some indicators require additional consent or have noncommercial restrictions.",
+        "The pinned Google-authored definition documents the dataset name; the public-program source project is a discovery candidate, not an authenticated metadata receipt. The repository is deprecated and its schedule is not a freshness guarantee.",
+        "BigQuery writes query results to destination or temporary tables. Disabling query-cache retrieval does not prevent provider materialization; typical temporary cache duration is about 24 hours, not a guaranteed maximum deletion period.",
+        "This entry serves descriptive metadata only. It contains no copied source rows, table schema assertion, query endpoint, execution credential or cost authorization."
+      ],
+      "maintainers": [
+        "trakhimenok"
+      ]
+    },
     {
       "id": "ecb-daily",
       "format": "ovdb-source/draft-1",

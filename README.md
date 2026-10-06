@@ -766,7 +766,7 @@ manifest/database checks and separate execution/rights gates. Source discovery
 must not invent deployment URLs, retain source rows or put proposed meanings
 into validated mappings.
 
-Source records declare the original `resource_url`, provider `publisher`,
+HTTP source records (`ovdb-source/draft-1`) declare the original `resource_url`, provider `publisher`,
 `homepage`, custom `terms_url`, proposed access mode and retention constraint.
 `retention: none` constrains the proposed owned OVDB/client route; it does not
 certify upstream provider or intermediary cache/storage behavior. They also hold
@@ -787,3 +787,30 @@ are proposed metadata with EUR base context. No copied rows/XML, bootstrap
 registration, SPDX substitute, paid entitlement or semantic acceptance follows
 from this listing. The accidental ECB bootstrap is preserved outside this
 listing pending a working replacement and authorized disposition.
+
+
+Dataset-level BigQuery discoveries use `ovdb-source/draft-2` with
+`access_mode: bigquery-native` in the same collection and index. Their native
+`locator` records a candidate source project/dataset separately from the original
+publisher `homepage` and pinned Google-authored `documentation`. Both current
+existence and location remain `unverified`. There is no HTTP `resource_url`,
+blanket `retention`, table allowlist or `recordsets` field in this variant: current
+schema/type/mode evidence and table scope require a later reviewed extension.
+
+BigQuery queries remain `blocked`. `access_requirements` keeps authentication
+required, execution project unconfigured, cost admission not granted and runtime
+acceptance pending. `owned_retention` separates a no-retention intent from its
+unverified enforcement. `provider_retention` records materialized results,
+pending authorization and official documentation; disabling cache retrieval does
+not prevent provider storage. The validator refuses admitted states, unknown
+nested fields, credentials, rows and fabricated schema/model claims. inGitDB
+validates shared columns; the custom checker enforces discriminated required
+fields and nested shapes. Run both checks.
+
+`bigquery-world-bank-wdi` is an inactive dataset discovery. The pinned definition
+supports the name `world_bank_wdi`, not current table existence, region, schema,
+observation coverage or freshness. The candidate public-program project needs
+an authenticated metadata-only receipt. Indicator/provider rights exceptions,
+attribution and source edition must be accepted before the exact intended use;
+this listing grants no unrestricted commercial entitlement. Land website support
+before publishing the new source format in the canonical index.
