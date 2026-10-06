@@ -794,8 +794,12 @@ Dataset-level BigQuery discoveries use `ovdb-source/draft-2` with
 `locator` records a candidate source project/dataset separately from the original
 publisher `homepage` and pinned Google-authored `documentation`. Both current
 existence and location remain `unverified`. There is no HTTP `resource_url`,
-blanket `retention`, table allowlist or `recordsets` field in this variant: current
-schema/type/mode evidence and table scope require a later reviewed extension.
+blanket `retention`, query table allowlist or `recordsets` field in this variant.
+Optional `metadata_observations` carry a separately versioned, bounded partial
+public table/schema projection; they cannot change any activation gate. The
+[public metadata contract](docs/bigquery-public-metadata.md) defines the closed
+recursive allowlist, provenance, canonical digest, bounds and fixture boundary.
+Current canonical records have no authenticated observations.
 
 BigQuery queries remain `blocked`. `access_requirements` keeps authentication
 required, execution project unconfigured, cost admission not granted and runtime

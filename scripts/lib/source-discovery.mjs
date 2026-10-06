@@ -9,10 +9,11 @@ export function registryMetadataId(field, value) {
 
 // Inactive discovery metadata only. Admission belongs to the database/manifest path.
 import { publicHttpsProblem } from './urls.mjs';
+import { observationsProblems } from './bigquery-observation.mjs';
 export const sourceFormat = 'ovdb-source/draft-1';
 const httpKeys = ['format', 'title', 'description', 'status', 'publisher', 'homepage', 'resource_url', 'terms_url', 'access_mode', 'retention', 'activation_blockers', 'notices', 'recordsets', 'maintainers', 'modelspec_url', 'meaninggraph_url'];
 const identifier = /^[A-Za-z_][A-Za-z0-9_]*$/;
-export function sourceProblems(records, maintainers) {
+export function sourceProblems(records, maintainers, observationOptions) {
   const problems = [];
   const ids = new Set();
   const resources = new Set();
@@ -34,7 +35,7 @@ export function sourceProblems(records, maintainers) {
     resources.add(resource);
     for (const field of ['activation_blockers', 'notices', 'maintainers']) if (!Array.isArray(data[field]) || !data[field].length || !data[field].every(str)) bad(`${field} must be a non-empty string array`);
     if (Array.isArray(data.maintainers)) for (const handle of data.maintainers) if (!handles.has(handle)) bad(`maintainer ${handle} has no record`);
-    if (bigquery) { bigQueryProblems(data).forEach(bad); continue; }
+    if (bigquery) { bigQueryProblems(data).forEach(bad); if (Object.hasOwn(data, 'metadata_observations')) observationsProblems(data.metadata_observations, { id: key, locator: data.locator }, observationOptions).forEach(bad); continue; }
     for (const field of ['modelspec_url', 'meaninggraph_url']) {
       if (Object.hasOwn(data, field) && !registryMetadataId(field, data[field])) bad(`${field} must be a canonical registry metadata detail URL`);
     }
@@ -53,10 +54,13 @@ export function sourceProblems(records, maintainers) {
   }
   return problems;
 }
-export const sourceEntries = records => records.map(({ key, data }) => ({ id: key, ...data })).sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+export const sourceEntries = records => records.map(({ key, data }) => {
+  if (Object.hasOwn(data, 'metadata_observations') && observationsProblems(data.metadata_observations, { id: key, locator: data.locator }).length) throw new Error('invalid public metadata observation; synthetic evidence cannot enter the canonical index');
+  return { id: key, ...data };
+}).sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
-// Dataset-level only: table/field shapes and observed metadata require a later contract.
-const bigQueryKeys = ['format', 'title', 'description', 'status', 'publisher', 'hosting_provider', 'homepage', 'terms_url', 'access_mode', 'query_activation', 'locator', 'documentation', 'access_requirements', 'owned_retention', 'provider_retention', 'activation_blockers', 'notices', 'maintainers'];
+// Candidate locators stay unverified; separate evidence never admits queries.
+const bigQueryKeys = ['format', 'title', 'description', 'status', 'publisher', 'hosting_provider', 'homepage', 'terms_url', 'access_mode', 'query_activation', 'locator', 'documentation', 'access_requirements', 'owned_retention', 'provider_retention', 'activation_blockers', 'notices', 'maintainers', 'metadata_observations'];
 export function bigQueryProblems(data) {
   const errors = [];
   const exact = (value, keys) => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === keys.length && keys.every(k => Object.hasOwn(value, k));
