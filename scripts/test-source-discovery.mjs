@@ -123,7 +123,7 @@ test('W2 discoveries retain documented native subsets without admission or unver
     assert.ok(r, id);
     assert.equal(r.data.status, 'inactive');
     assert.equal(r.data.retention, 'none');
-    assert.equal(r.data.recordsets.length, 1);
+    assert.ok(r.data.recordsets.length >= 1);
     assert.equal(r.data.recordsets[0].name, name);
     assert.deepEqual(r.data.recordsets[0].fields.map(field => field.name), fields);
     assert.equal(r.data.modelspec_url, undefined);
@@ -140,6 +140,7 @@ test('W2 discoveries retain documented native subsets without admission or unver
     }
   }
   const gleif = all.sources.find(r => r.key === 'gleif-lei-entities').data;
+  assert.equal(gleif.recordsets.length, 1);
   assert.equal(gleif.resource_url, 'https://api.gleif.org/api/v1/lei-records');
   assert.equal(gleif.terms_url, 'https://www.gleif.org/en/meta/lei-data-terms-of-use');
   assert.equal(gleif.publisher, 'Global Legal Entity Identifier Foundation (GLEIF)');
@@ -149,7 +150,15 @@ test('W2 discoveries retain documented native subsets without admission or unver
   assert.equal(cldr.resource_url, 'https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/supplemental/supplementalData.xml');
   assert.equal(cldr.terms_url, 'https://www.unicode.org/license.txt');
   assert.equal(cldr.publisher, 'Unicode Consortium');
+  assert.deepEqual(cldr.recordsets.map(rs => [rs.name, rs.fields.map(field => field.name)]), [
+    ['TerritoryCode', ['type', 'numeric', 'alpha3']],
+    ['RegionCurrency', ['iso3166', 'iso4217', 'from', 'to', 'tender']],
+    ['CurrencyFraction', ['iso4217', 'digits', 'rounding', 'cashDigits', 'cashRounding']],
+  ]);
   assert.match(cldr.recordsets[0].description, /\/supplementalData\/codeMappings\/territoryCodes/);
+  assert.match(cldr.recordsets[1].description, /\/supplementalData\/currencyData\/region\/currency/);
+  assert.match(cldr.recordsets[2].description, /\/supplementalData\/currencyData\/fractions\/info/);
+  assert.match(cldr.activation_blockers.join(' '), /before any lookup, comparison or FX join/);
   assert.match(cldr.activation_blockers.join(' '), /not a read/);
   assert.match(cldr.notices.join(' '), /Unicode License V3/);
 });

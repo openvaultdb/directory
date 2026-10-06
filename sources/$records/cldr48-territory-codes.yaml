@@ -1,8 +1,8 @@
 format: ovdb-source/draft-1
-title: CLDR 48 territory code mappings
-description: Inactive W2 discovery for d1-cldr-codes. This documentation-qualified
-  CLDR 48 subset describes only the type, numeric and alpha3 XML attributes of
-  supplementalData/codeMappings/territoryCodes; no code conversion or join is activated.
+title: CLDR 48 territory codes and currency metadata
+description: Inactive discovery of documented territory-code attributes and two
+  proposed currencyData subsets in one pinned CLDR 48 supplementalData.xml resource.
+  No code conversion, currency validity lookup, formatting or join is activated.
 status: inactive
 publisher: Unicode Consortium
 homepage: https://cldr.unicode.org/index/downloads
@@ -20,6 +20,10 @@ activation_blockers:
   - Canonical source definition and source-qualified ModelSpec/MeaningGraph artifacts
     require separate acceptance. XML attributes remain native strings; no country,
     economy, territory, historical or deprecated/reserved-code equivalence is accepted.
+  - Currency-region intervals and fractions are documentation-qualified proposals only.
+    Exact CLDR 48 attributes, parent-region context, optional values, ordering,
+    interval boundaries, time zones and formatting defaults require source-specific
+    validation before any lookup, comparison or FX join.
   - Rights for the exact material and intended use and the applicable copyright and
     permission notice remain admission gates. Licence permission does not authorize
     source snapshots or result retention in this programme.
@@ -43,9 +47,14 @@ notices:
     https://www.unicode.org/reports/tr35/tr35-info.html#Supplemental_Code_Mapping
     defines the attributes and warns that supplemental file splitting may change.
     The release-specific path and binding remain unverified by a data read."
-  - Only the documented type, numeric and alpha3 subset is described. Optional fips10,
-    deprecated internet, aliases, containment, locale, language, currency and other CLDR
-    candidates remain outside this entry and preserved in the research backlog.
+  - "CLDR 48 LDML Numbers: https://www.unicode.org/reports/tr35/tr35-76/tr35-numbers.html#Supplemental_Currency_Data
+    documents supplementalData/currencyData/region/currency and
+    supplementalData/currencyData/fractions/info with the named XML attributes.
+    The documented grammar is not an observation of this pinned file's data."
+  - The existing territory-code subset and proposed currency subsets do not
+    establish ISO currency validity, a country-to-currency assignment, ECB rate
+    compatibility or monetary formatting for any demo field. SIX and all other
+    unselected candidates remain in the DataTug research backlog.
 recordsets:
   - name: TerritoryCode
     description: "Partial documentation-qualified XML attribute subset at
@@ -65,5 +74,58 @@ recordsets:
         type: string
         description: Documented native XML alpha3 attribute as a lexical string;
           no accepted country/economy bridge follows from the attribute name.
+  - name: RegionCurrency
+    description: "Proposed documented XML attributes at
+      /supplementalData/currencyData/region/currency. The parent region's iso3166
+      attribute is context, not an independent currency-row key. Optional dates,
+      time zones, tender flags, order, values and complete CLDR 48 edition presence
+      remain unverified by a data read; no currency-validity join is admitted."
+    fields:
+      - name: iso3166
+        type: string
+        description: Documented parent region XML attribute; CLDR region context is
+          not by itself an accepted sovereign-country or transaction-currency key.
+      - name: iso4217
+        type: string
+        description: Documented child currency XML attribute; preserve its lexical
+          code without assuming a current ISO currency or ECB quote match.
+      - name: from
+        type: string
+        description: Optional documented XML from attribute; preserve the original
+          date or datetime label without inferring a UTC instant.
+      - name: to
+        type: string
+        description: Optional documented XML to attribute; interval boundary and
+          applicable timezone need separate interpretation before comparison.
+      - name: tender
+        type: string
+        description: Optional documented XML tender attribute; absence has an LDML
+          default but this raw metadata proposal does not fill it in.
+  - name: CurrencyFraction
+    description: "Proposed documented XML attributes at
+      /supplementalData/currencyData/fractions/info. These are formatting metadata,
+      not denomination, an observed FX rate, or permission to round money values.
+      Optional attributes and the complete CLDR 48 edition remain unverified."
+    fields:
+      - name: iso4217
+        type: string
+        description: Documented XML currency-code attribute scoped to one
+          fraction-settings item; no currency identity bridge is accepted.
+      - name: digits
+        type: string
+        description: Optional documented XML digits attribute as a lexical string;
+          LDML default handling is outside this source discovery.
+      - name: rounding
+        type: string
+        description: Optional documented XML rounding attribute as a lexical string;
+          do not apply it to stored amounts or FX arithmetic.
+      - name: cashDigits
+        type: string
+        description: Optional documented XML cashDigits attribute as a lexical string;
+          cash-formatting semantics are not an amount-conversion rule.
+      - name: cashRounding
+        type: string
+        description: Optional documented XML cashRounding attribute as a lexical string;
+          no rounding operation is activated by this entry.
 maintainers:
   - trakhimenok
