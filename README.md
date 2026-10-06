@@ -814,3 +814,21 @@ an authenticated metadata-only receipt. Indicator/provider rights exceptions,
 attribution and source edition must be accepted before the exact intended use;
 this listing grants no unrestricted commercial entitlement. Land website support
 before publishing the new source format in the canonical index.
+
+The W1 geography/affiliation discoveries are `geonames-countries`,
+`geonames-places`, `geonames-admin1`, `geonames-alternates` and
+`ror-organisations`. They cover only the five selected research candidates;
+every other candidate stays in the existing research backlog. GeoNames records
+link exact documented extracts, not an accepted keyed query service. ROR links
+its original organizations API; list defaults, all-status/keyed access,
+multi-location behavior and complete GeoNames reference closure still need
+acceptance. No W1 ModelSpec or MeaningGraph metadata links are asserted while
+their canonical artifacts and bindings remain dependencies.
+
+These entries preserve copied-provider activation as frozen and make no new
+source reads, refreshes, imports or retention authorizations. Proposed
+`live-http-via-ovdb` access and `retention: none` are unverified requirements,
+not deployed behavior. GeoNames attribution is retained; ROR's API schema
+documentation and reviewed release disagree on the embedded GeoNames licence
+version, so exact API rights remain unresolved. Land the provider-neutral
+website renderer before publishing these source records.

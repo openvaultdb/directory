@@ -1,0 +1,66 @@
+format: ovdb-source/draft-1
+title: GeoNames places and geographic features
+description: Inactive W1 discovery for d1-geo-places. allCountries is the documented
+  worldwide feature extract, not an admitted city-only service or completed ROR location
+  closure.
+status: inactive
+publisher: GeoNames
+homepage: https://www.geonames.org/export/
+resource_url: https://download.geonames.org/export/dump/allCountries.zip
+terms_url: https://download.geonames.org/export/dump/readme.txt
+access_mode: live-http-via-ovdb
+retention: none
+activation_blockers:
+  - Copied-provider activation is frozen. A working bounded original-resource route or
+    specific user retention authorization is required; existing copies remain inactive and
+    preserved.
+  - No admitted execution gateway exists. The access_mode names a proposed OVDB Go proxy
+    route only; direct-browser CORS/authentication, exact resource reads, redirect/DNS
+    allowlists and row/byte/time budgets remain unverified.
+  - Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact
+    native-field bindings require separate acceptance. No registry links or accepted
+    mappings are asserted here.
+  - Rights for the exact returned material and intended use, attribution/change notices,
+    full W1 reference closure and missing-reference behavior remain admission gates.
+  - Transient RAM/current-display execution and no-store enforcement across browser, OVDB,
+    adapter, edge and intermediary sinks remain unproved. Retained paging, histories,
+    exports, fixtures, replay caches and data-bearing logs are not authorized.
+  - The documented extract is not a keyed query API. Economical bounded original-resource
+    access without retained indexes, archives or fallback copies is unresolved. GeoNames
+    webservices are a distinct unadmitted alternative requiring a username and
+    service-credit review.
+notices:
+  - "Source: GeoNames, https://www.geonames.org/. Documentation and resource listing
+    checked on 2026-10-06; no source data was read or retained for this entry."
+  - "The extract README states CC BY 4.0: https://creativecommons.org/licenses/by/4.0/.
+    Credit GeoNames, link the licence and indicate changes. Commercial reuse is permitted
+    under those conditions; no warranty of accuracy, timeliness or completeness is given."
+  - Provider licence permission does not grant the user authorization required for source
+    or result retention. This entry authorizes no download, import, refresh, snapshot or
+    copied-provider activation.
+  - GeoNames documents daily extracts. These are mutable original resources; listing dates
+    and cadence do not establish row observation dates, historical geography or guaranteed
+    freshness.
+recordsets:
+  - name: Geoname
+    description: Partial proposed string-column metadata from the GeoNames gazetteer
+      documentation. All feature classes remain source-specific; place must not be
+      silently equated with city. Authored underscore labels below describe documented
+      columns and are not validated native-to-model bindings.
+    fields:
+      - name: geonameid
+        type: string
+        description: Lexical identifier of a geographic feature.
+      - name: name
+        type: string
+        description: Native geographic-point display name.
+      - name: country_code
+        type: string
+        description: Authored label for the documented two-letter country code column; exact
+          binding pending.
+      - name: admin1_code
+        type: string
+        description: Authored label for the documented first administrative code; code system is
+          source-specific and may differ by country.
+maintainers:
+  - trakhimenok

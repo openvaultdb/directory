@@ -6780,7 +6780,7 @@
       ]
     }
   ],
-  "sourcesChecksum": "sha256:25efceb59299c6df09368ac1bdefd6fa5e46437c120e83c330e7d37d9aa3c351",
+  "sourcesChecksum": "sha256:50ef1d0b444841838987db9d85d24b3f26d7af53b66a96775983faf8ec912b4d",
   "sources": [
     {
       "id": "bigquery-world-bank-wdi",
@@ -6891,6 +6891,284 @@
       ],
       "modelspec_url": "https://modelspec.org/registry/models/ecb-daily/",
       "meaninggraph_url": "https://meaninggraph.io/graphs/ecb-daily/"
+    },
+    {
+      "id": "geonames-admin1",
+      "format": "ovdb-source/draft-1",
+      "title": "GeoNames first administrative divisions",
+      "description": "Inactive W1 discovery for d1-geo-admin1. The original admin1CodesASCII extract documents first-level administrative display names and keys; accepted scoped source relationships do not activate joins.",
+      "status": "inactive",
+      "publisher": "GeoNames",
+      "homepage": "https://www.geonames.org/export/",
+      "resource_url": "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
+      "terms_url": "https://download.geonames.org/export/dump/readme.txt",
+      "access_mode": "live-http-via-ovdb",
+      "retention": "none",
+      "activation_blockers": [
+        "Copied-provider activation is frozen. A working bounded original-resource route or specific user retention authorization is required; existing copies remain inactive and preserved.",
+        "No admitted execution gateway exists. The access_mode names a proposed OVDB Go proxy route only; direct-browser CORS/authentication, exact resource reads, redirect/DNS allowlists and row/byte/time budgets remain unverified.",
+        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. No registry links or accepted mappings are asserted here.",
+        "Rights for the exact returned material and intended use, attribution/change notices, full W1 reference closure and missing-reference behavior remain admission gates.",
+        "Transient RAM/current-display execution and no-store enforcement across browser, OVDB, adapter, edge and intermediary sinks remain unproved. Retained paging, histories, exports, fixtures, replay caches and data-bearing logs are not authorized.",
+        "The documented extract is not a keyed query API. Economical bounded original-resource access without retained indexes, archives or fallback copies is unresolved. GeoNames webservices are a distinct unadmitted alternative requiring a username and service-credit review."
+      ],
+      "notices": [
+        "Source: GeoNames, https://www.geonames.org/. Documentation and resource listing checked on 2026-10-06; no source data was read or retained for this entry.",
+        "The extract README states CC BY 4.0: https://creativecommons.org/licenses/by/4.0/. Credit GeoNames, link the licence and indicate changes. Commercial reuse is permitted under those conditions; no warranty of accuracy, timeliness or completeness is given.",
+        "Provider licence permission does not grant the user authorization required for source or result retention. This entry authorizes no download, import, refresh, snapshot or copied-provider activation.",
+        "GeoNames documents daily extracts. These are mutable original resources; listing dates and cadence do not establish row observation dates, historical geography or guaranteed freshness."
+      ],
+      "recordsets": [
+        {
+          "name": "Admin1Code",
+          "description": "Partial proposed metadata for the documented administrative code/name/geonameid columns. Code namespaces require country context; these codes must not be globally equated with ISO subdivisions. The exact code parser, native bindings and missing-reference behavior remain unaccepted.",
+          "fields": [
+            {
+              "name": "code",
+              "type": "string",
+              "description": "Native combined administrative key; exact decomposition and namespace acceptance pending."
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "description": "Documented administrative display name."
+            },
+            {
+              "name": "geonameid",
+              "type": "string",
+              "description": "Lexical GeoNames feature identifier; closure against the place resource remains unverified."
+            }
+          ]
+        }
+      ],
+      "maintainers": [
+        "trakhimenok"
+      ]
+    },
+    {
+      "id": "geonames-alternates",
+      "format": "ovdb-source/draft-1",
+      "title": "GeoNames alternate names",
+      "description": "Inactive W1 discovery for d1-geo-alternates. The documented alternateNamesV2 archive carries source-qualified aliases and intervals. No universal label matching, geocoding or language equivalence is established.",
+      "status": "inactive",
+      "publisher": "GeoNames",
+      "homepage": "https://www.geonames.org/export/",
+      "resource_url": "https://download.geonames.org/export/dump/alternateNamesV2.zip",
+      "terms_url": "https://download.geonames.org/export/dump/readme.txt",
+      "access_mode": "live-http-via-ovdb",
+      "retention": "none",
+      "activation_blockers": [
+        "Copied-provider activation is frozen. A working bounded original-resource route or specific user retention authorization is required; existing copies remain inactive and preserved.",
+        "No admitted execution gateway exists. The access_mode names a proposed OVDB Go proxy route only; direct-browser CORS/authentication, exact resource reads, redirect/DNS allowlists and row/byte/time budgets remain unverified.",
+        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. No registry links or accepted mappings are asserted here.",
+        "Rights for the exact returned material and intended use, attribution/change notices, full W1 reference closure and missing-reference behavior remain admission gates.",
+        "Transient RAM/current-display execution and no-store enforcement across browser, OVDB, adapter, edge and intermediary sinks remain unproved. Retained paging, histories, exports, fixtures, replay caches and data-bearing logs are not authorized.",
+        "The documented extract is not a keyed query API. Economical bounded original-resource access without retained indexes, archives or fallback copies is unresolved. GeoNames webservices are a distinct unadmitted alternative requiring a username and service-credit review."
+      ],
+      "notices": [
+        "Source: GeoNames, https://www.geonames.org/. Documentation and resource listing checked on 2026-10-06; no source data was read or retained for this entry.",
+        "The extract README states CC BY 4.0: https://creativecommons.org/licenses/by/4.0/. Credit GeoNames, link the licence and indicate changes. Commercial reuse is permitted under those conditions; no warranty of accuracy, timeliness or completeness is given.",
+        "Provider licence permission does not grant the user authorization required for source or result retention. This entry authorizes no download, import, refresh, snapshot or copied-provider activation.",
+        "GeoNames documents daily extracts. These are mutable original resources; listing dates and cadence do not establish row observation dates, historical geography or guaranteed freshness."
+      ],
+      "recordsets": [
+        {
+          "name": "AlternateName",
+          "description": "Partial proposed metadata from the alternate-name documentation. Source flags and interval interpretation need accepted bindings. The isolanguage column also contains non-language categories such as links or identifier codes; it must not be collapsed into a language meaning. Names may have many variants per feature.",
+          "fields": [
+            {
+              "name": "alternateNameId",
+              "type": "string",
+              "description": "Lexical identifier for an alternate-name row."
+            },
+            {
+              "name": "geonameid",
+              "type": "string",
+              "description": "Referenced GeoNames feature identifier; missing references must stay visible."
+            },
+            {
+              "name": "isolanguage",
+              "type": "string",
+              "description": "Source-qualified language or special category code, not a universally accepted language identifier."
+            },
+            {
+              "name": "from",
+              "type": "string",
+              "description": "Native interval label; exact date/period semantics remain pending."
+            },
+            {
+              "name": "to",
+              "type": "string",
+              "description": "Native interval label; null/open-bound interpretation remains pending."
+            }
+          ]
+        }
+      ],
+      "maintainers": [
+        "trakhimenok"
+      ]
+    },
+    {
+      "id": "geonames-countries",
+      "format": "ovdb-source/draft-1",
+      "title": "GeoNames country references",
+      "description": "Inactive W1 discovery for d1-geo-countries. The original countryInfo extract is a candidate country lookup foundation; exact decoder, keys, semantics and bounded access remain unaccepted.",
+      "status": "inactive",
+      "publisher": "GeoNames",
+      "homepage": "https://www.geonames.org/export/",
+      "resource_url": "https://download.geonames.org/export/dump/countryInfo.txt",
+      "terms_url": "https://download.geonames.org/export/dump/readme.txt",
+      "access_mode": "live-http-via-ovdb",
+      "retention": "none",
+      "activation_blockers": [
+        "Copied-provider activation is frozen. A working bounded original-resource route or specific user retention authorization is required; existing copies remain inactive and preserved.",
+        "No admitted execution gateway exists. The access_mode names a proposed OVDB Go proxy route only; direct-browser CORS/authentication, exact resource reads, redirect/DNS allowlists and row/byte/time budgets remain unverified.",
+        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. No registry links or accepted mappings are asserted here.",
+        "Rights for the exact returned material and intended use, attribution/change notices, full W1 reference closure and missing-reference behavior remain admission gates.",
+        "Transient RAM/current-display execution and no-store enforcement across browser, OVDB, adapter, edge and intermediary sinks remain unproved. Retained paging, histories, exports, fixtures, replay caches and data-bearing logs are not authorized.",
+        "The documented extract is not a keyed query API. Economical bounded original-resource access without retained indexes, archives or fallback copies is unresolved. GeoNames webservices are a distinct unadmitted alternative requiring a username and service-credit review."
+      ],
+      "notices": [
+        "Source: GeoNames, https://www.geonames.org/. Documentation and resource listing checked on 2026-10-06; no source data was read or retained for this entry.",
+        "The extract README states CC BY 4.0: https://creativecommons.org/licenses/by/4.0/. Credit GeoNames, link the licence and indicate changes. Commercial reuse is permitted under those conditions; no warranty of accuracy, timeliness or completeness is given.",
+        "Provider licence permission does not grant the user authorization required for source or result retention. This entry authorizes no download, import, refresh, snapshot or copied-provider activation.",
+        "GeoNames documents daily extracts. These are mutable original resources; listing dates and cadence do not establish row observation dates, historical geography or guaranteed freshness."
+      ],
+      "recordsets": [
+        {
+          "name": "CountryInfo",
+          "description": "Partial proposed metadata for the countryInfo tab-delimited extract. Field labels follow retained research and require exact-column verification before binding; this is not a complete accepted schema. Country, territory and sovereign-state identity must remain distinct. Undated population and currency/language context do not establish dated observations or transaction currencies.",
+          "fields": [
+            {
+              "name": "ISO",
+              "type": "string",
+              "description": "Proposed lexical ISO alpha-2 country label; exact native-column binding and coverage remain pending."
+            },
+            {
+              "name": "Country",
+              "type": "string",
+              "description": "Proposed country display label; a name is not a globally unique identity or a universal user-text join."
+            },
+            {
+              "name": "geonameid",
+              "type": "string",
+              "description": "Proposed lexical GeoNames identifier for the country feature; no current row or referential closure has been read."
+            }
+          ]
+        }
+      ],
+      "maintainers": [
+        "trakhimenok"
+      ]
+    },
+    {
+      "id": "geonames-places",
+      "format": "ovdb-source/draft-1",
+      "title": "GeoNames places and geographic features",
+      "description": "Inactive W1 discovery for d1-geo-places. allCountries is the documented worldwide feature extract, not an admitted city-only service or completed ROR location closure.",
+      "status": "inactive",
+      "publisher": "GeoNames",
+      "homepage": "https://www.geonames.org/export/",
+      "resource_url": "https://download.geonames.org/export/dump/allCountries.zip",
+      "terms_url": "https://download.geonames.org/export/dump/readme.txt",
+      "access_mode": "live-http-via-ovdb",
+      "retention": "none",
+      "activation_blockers": [
+        "Copied-provider activation is frozen. A working bounded original-resource route or specific user retention authorization is required; existing copies remain inactive and preserved.",
+        "No admitted execution gateway exists. The access_mode names a proposed OVDB Go proxy route only; direct-browser CORS/authentication, exact resource reads, redirect/DNS allowlists and row/byte/time budgets remain unverified.",
+        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. No registry links or accepted mappings are asserted here.",
+        "Rights for the exact returned material and intended use, attribution/change notices, full W1 reference closure and missing-reference behavior remain admission gates.",
+        "Transient RAM/current-display execution and no-store enforcement across browser, OVDB, adapter, edge and intermediary sinks remain unproved. Retained paging, histories, exports, fixtures, replay caches and data-bearing logs are not authorized.",
+        "The documented extract is not a keyed query API. Economical bounded original-resource access without retained indexes, archives or fallback copies is unresolved. GeoNames webservices are a distinct unadmitted alternative requiring a username and service-credit review."
+      ],
+      "notices": [
+        "Source: GeoNames, https://www.geonames.org/. Documentation and resource listing checked on 2026-10-06; no source data was read or retained for this entry.",
+        "The extract README states CC BY 4.0: https://creativecommons.org/licenses/by/4.0/. Credit GeoNames, link the licence and indicate changes. Commercial reuse is permitted under those conditions; no warranty of accuracy, timeliness or completeness is given.",
+        "Provider licence permission does not grant the user authorization required for source or result retention. This entry authorizes no download, import, refresh, snapshot or copied-provider activation.",
+        "GeoNames documents daily extracts. These are mutable original resources; listing dates and cadence do not establish row observation dates, historical geography or guaranteed freshness."
+      ],
+      "recordsets": [
+        {
+          "name": "Geoname",
+          "description": "Partial proposed string-column metadata from the GeoNames gazetteer documentation. All feature classes remain source-specific; place must not be silently equated with city. Authored underscore labels below describe documented columns and are not validated native-to-model bindings.",
+          "fields": [
+            {
+              "name": "geonameid",
+              "type": "string",
+              "description": "Lexical identifier of a geographic feature."
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "description": "Native geographic-point display name."
+            },
+            {
+              "name": "country_code",
+              "type": "string",
+              "description": "Authored label for the documented two-letter country code column; exact binding pending."
+            },
+            {
+              "name": "admin1_code",
+              "type": "string",
+              "description": "Authored label for the documented first administrative code; code system is source-specific and may differ by country."
+            }
+          ]
+        }
+      ],
+      "maintainers": [
+        "trakhimenok"
+      ]
+    },
+    {
+      "id": "ror-organisations",
+      "format": "ovdb-source/draft-1",
+      "title": "ROR research organization references",
+      "description": "Inactive W1 discovery for d1-ror-organisations. The original ROR organizations API is a candidate exact-key affiliation reference with GeoNames locations; no query or ROR-to-place closure is activated.",
+      "status": "inactive",
+      "publisher": "Research Organization Registry (ROR)",
+      "homepage": "https://ror.org/",
+      "resource_url": "https://api.ror.org/v2/organizations",
+      "terms_url": "https://ror.org/about/terms/",
+      "access_mode": "live-http-via-ovdb",
+      "retention": "none",
+      "activation_blockers": [
+        "Copied-provider activation is frozen. A working bounded original-resource route or specific user retention authorization is required; existing copies remain inactive and preserved.",
+        "No admitted execution gateway exists. The access_mode names a proposed OVDB Go proxy route only; direct-browser CORS/authentication, exact resource reads, redirect/DNS allowlists and row/byte/time budgets remain unverified.",
+        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. No registry links or accepted mappings are asserted here.",
+        "Rights for the exact returned material and intended use, attribution/change notices, full W1 reference closure and missing-reference behavior remain admission gates.",
+        "Transient RAM/current-display execution and no-store enforcement across browser, OVDB, adapter, edge and intermediary sinks remain unproved. Retained paging, histories, exports, fixtures, replay caches and data-bearing logs are not authorized.",
+        "Exact API rights for embedded GeoNames locations need clarification: the current data-structure page names CC BY 3.0 while reviewed ROR data release 2.13 on Zenodo names CC BY 4.0. Preserve attribution and source-specific evidence; do not infer a blanket CC0 exemption.",
+        "The base list defaults to active records. All-status and exact-ID access, multi-location cardinality, complete references and missing/inactive/withdrawn behavior require runtime acceptance; a list or dump alone cannot prove bounded W1 closure."
+      ],
+      "notices": [
+        "Source: Research Organization Registry (ROR). Documentation checked on 2026-10-06; no organization rows or release archive were read or retained.",
+        "ROR terms provide IDs and metadata under CC0 1.0; website prose is separately CC BY 4.0. Embedded GeoNames geography requires distinct attribution and material-specific licence acceptance.",
+        "Rights discrepancy: https://ror.readme.io/docs/ror-data-structure lists GeoNames CC BY 3.0; https://zenodo.org/records/22902037 states CC BY 4.0 for location data in ROR data release 2.13. This release is rights evidence only, not the original live API resource or an admitted snapshot.",
+        "API documentation: https://ror.readme.io/docs/rest-api and https://ror.readme.io/docs/api-single. Single-ID requests can return inactive/withdrawn records; list calls default to active unless all_status is requested. API search/list limits do not establish full-registry access.",
+        "Documented API rate limit: 2000 requests per five minutes per IP. Registration requirements, CORS, response schema, availability and future changes must be revalidated before activation.",
+        "Research organization identity does not establish legal-entity identity, ROR/LEI equivalence or resolution of names and local demo IDs. Locations and relationships are native arrays and must not be flattened into false scalar fields or counted as organizations."
+      ],
+      "recordsets": [
+        {
+          "name": "Organization",
+          "description": "Partial proposed native scalar metadata only: id and status. ROR schema 2.1 documents names, locations and relationships as arrays, including locations.geonames_id and relationship id/type. Their models, multiplicity, missing references and exact field bindings are dependencies, not accepted scalar projections in this entry.",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string",
+              "description": "Native full ROR identifier string; an exact namespace key rather than a fuzzy organization-name match."
+            },
+            {
+              "name": "status",
+              "type": "string",
+              "description": "Native status string: active, inactive or withdrawn. Source status is distinct from this discovery entry being inactive."
+            }
+          ]
+        }
+      ],
+      "maintainers": [
+        "trakhimenok"
+      ]
     }
   ]
 }
