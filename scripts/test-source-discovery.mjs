@@ -52,7 +52,7 @@ test('W1 discoveries preserve original resources, inactive gates and explicit re
 test('canonical source metadata checks without source fetches and has one ID', () => {
   const r = record();
   assert.deepEqual(sourceProblems([r], maintainers), []);
-  assert.equal(readDirectory(root.pathname).sources.length, 14);
+  assert.equal(readDirectory(root.pathname).sources.length, 16);
   assert.equal(sourceEntries([r])[0].id, 'ecb-daily');
   assert.equal(r.data.resource_url, 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml');
   assert.deepEqual(r.data.recordsets[0].fields.map(f => [f.name, f.type]), [['time','string'],['currency','string'],['rate','string']]);
@@ -232,5 +232,60 @@ test('W3 remains inactive, refuses retained data and invents no source capabilit
       const bad = structuredClone(r); mutate(bad.data);
       assert.ok(sourceProblems([bad], maintainers).length, r.key);
     }
+  }
+});
+
+const bqWave = {
+  'bigquery-google-trends': ['google_trends', 'Google', 'https://support.google.com/trends/answer/4365538'],
+  'bigquery-new-york-citibike': ['new_york', 'Lyft Bikes and Scooters, LLC (Citi Bike candidates only)', 'https://citibikenyc.com/data-sharing-policy'],
+};
+test('BigQuery wave keeps source-specific scope and unresolved native/rights gates', () => {
+  const all = readDirectory(root.pathname);
+  for (const [id, [dataset, publisher, terms]] of Object.entries(bqWave)) {
+    const r = all.sources.find(x => x.key === id); assert.ok(r, id);
+    assert.deepEqual(sourceProblems([r], all.maintainers), []);
+    assert.equal(r.data.format, 'ovdb-source/draft-2');
+    assert.equal(r.data.status, 'inactive'); assert.equal(r.data.query_activation, 'blocked');
+    assert.equal(r.data.publisher, publisher); assert.equal(r.data.terms_url, terms);
+    assert.deepEqual(r.data.locator, { source_project: 'bigquery-public-data', dataset_id: dataset, existence_status: 'unverified', location_status: 'unverified' });
+    assert.equal(r.data.documentation.commit, '14735c60589ab22361dc0d54ad7491ba7ae96a04');
+    assert.equal(r.data.documentation.url, `https://github.com/GoogleCloudPlatform/public-datasets-pipelines/blob/${r.data.documentation.commit}/datasets/${dataset}/pipelines/dataset.yaml`);
+    assert.equal(r.data.access_requirements.cost_admission, 'not-granted');
+    assert.equal(r.data.access_requirements.runtime_acceptance, 'pending');
+    assert.equal(r.data.provider_retention.authorization, 'pending-review');
+    for (const field of ['recordsets','resource_url','retention','modelspec_url','meaninggraph_url']) assert.equal(r.data[field], undefined);
+    assert.match(r.data.activation_blockers.join(' '), /separately authorized metadata-only evidence/);
+    assert.match(r.data.notices.join(' '), /not a guaranteed maximum deletion period/);
+  }
+  const trends = all.sources.find(x => x.key === 'bigquery-google-trends').data;
+  assert.match(trends.notices.join(' '), /top_terms.*candidate only/);
+  assert.match(trends.notices.join(' '), /requires attribution.*no independent data licence/);
+  const bike = all.sources.find(x => x.key === 'bigquery-new-york-citibike').data;
+  assert.match(bike.title, /Citi Bike candidates within BigQuery new_york/);
+  assert.match(bike.description, /apply only to the Citi Bike candidates; unrelated New York data is outside/);
+  assert.match(bike.notices.join(' '), /new_york_citibike.*different native dataset/);
+  assert.match(bike.notices.join(' '), /unaccepted documentation-backed candidates only/);
+  assert.match(bike.activation_blockers.join(' '), /authorized interfaces, extraction and redistribution restrictions/);
+});
+
+test('both BigQuery wave records reject activation, invented scope/binding and unsafe external URLs', () => {
+  const sources = readDirectory(root.pathname).sources.filter(x => Object.hasOwn(bqWave, x.key));
+  for (const r of sources) {
+    for (const mutate of [
+      d => { d.status='active'; }, d => { d.query_activation='active'; },
+      d => { d.locator.location='US'; }, d => { d.locator.table_id='invented'; },
+      d => { d.recordsets=[]; }, d => { d.schema={}; }, d => { d.rows=[]; },
+      d => { d.modelspec_url='https://modelspec.org/registry/models/invented/'; },
+      d => { d.access_requirements.authentication='anonymous'; },
+      d => { d.provider_retention.authorization='granted'; },
+      d => { d.owned_retention.enforcement='verified'; },
+    ]) { const bad=structuredClone(r); mutate(bad.data); assert.ok(sourceProblems([bad], maintainers).length, r.key); }
+    for (const field of ['homepage','terms_url']) for (const url of ['http://example.org/', 'https://localhost/', 'https://127.0.0.1/', 'https://user:pass@example.org/', 'https://example.org/?token=x', 'https://example.org/#data']) {
+      const bad=structuredClone(r); bad.data[field]=url; assert.ok(sourceProblems([bad], maintainers).length, `${r.key} ${field} ${url}`);
+    }
+    for (const field of ['documentation','access_requirements','provider_retention']) {
+      const bad=structuredClone(r); bad.data[field][field === 'documentation' ? 'url' : 'documentation_url']='https://localhost/'; assert.ok(sourceProblems([bad], maintainers).length);
+    }
+    assert.ok(sourceProblems([r, {...structuredClone(r), key: r.key+'-duplicate'}], maintainers).length);
   }
 });
