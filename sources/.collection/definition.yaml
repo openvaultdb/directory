@@ -11,6 +11,7 @@ columns:
     min_length: 1
     enum:
       - ovdb-source/draft-1
+      - ovdb-source/draft-2
   title:
     type: string
     required: true
@@ -35,7 +36,6 @@ columns:
     min_length: 1
   resource_url:
     type: string
-    required: true
     min_length: 1
   terms_url:
     type: string
@@ -47,9 +47,9 @@ columns:
     min_length: 1
     enum:
       - live-http-via-ovdb
+      - bigquery-native
   retention:
     type: string
-    required: true
     min_length: 1
     enum:
       - none
@@ -68,7 +68,20 @@ columns:
     foreign_key: maintainers
   recordsets:
     type: any
-    required: true
+  hosting_provider:
+    type: string
+  query_activation:
+    type: string
+  locator:
+    type: any
+  documentation:
+    type: any
+  access_requirements:
+    type: any
+  owned_retention:
+    type: any
+  provider_retention:
+    type: any
 columns_order:
   - format
   - title
@@ -84,3 +97,10 @@ columns_order:
   - notices
   - maintainers
   - recordsets
+  - hosting_provider
+  - query_activation
+  - locator
+  - documentation
+  - access_requirements
+  - owned_retention
+  - provider_retention

@@ -53,9 +53,9 @@ test('the Directory data as committed is a valid inGitDB database', () => {
 });
 
 const cases = {
+  'sources: BigQuery activation refused': edit('sources', 'bigquery-world-bank-wdi', x => { x.status = 'published'; }),
   'sources: activation refused': edit('sources', 'ecb-daily', x => { x.status = 'published'; }),
   'sources: copied retention refused': edit('sources', 'ecb-daily', x => { x.retention = 'snapshot'; }),
-  'sources: missing original resource': edit('sources', 'ecb-daily', x => { delete x.resource_url; }),
   'sources: unknown maintainer': edit('sources', 'ecb-daily', x => { x.maintainers = ['nobody']; }),
   'databases: title missing (required)': edit('databases', 'chinook', (x) => { delete x.title; }),
   'databases: description missing (required)': edit('databases', 'chinook', (x) => { delete x.description; }),
