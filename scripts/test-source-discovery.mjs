@@ -49,7 +49,7 @@ test('W1 discoveries preserve original resources, inactive gates and absent unve
 test('canonical source metadata checks without source fetches and has one ID', () => {
   const r = record();
   assert.deepEqual(sourceProblems([r], maintainers), []);
-  assert.equal(readDirectory(root.pathname).sources.length, 7);
+  assert.equal(readDirectory(root.pathname).sources.length, 9);
   assert.equal(sourceEntries([r])[0].id, 'ecb-daily');
   assert.equal(r.data.resource_url, 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml');
   assert.deepEqual(r.data.recordsets[0].fields.map(f => [f.name, f.type]), [['time','string'],['currency','string'],['rate','string']]);
@@ -106,4 +106,47 @@ test('optional HTTP source registry links are exact source-qualified canonical m
     }
   }
   const bq=bigqueryRecord();bq.data.modelspec_url='https://modelspec.org/registry/models/bigquery-world-bank-wdi/';assert.ok(sourceProblems([bq],maintainers).length);
+});
+
+const w2Subsets = {
+  'gleif-lei-entities': ['LeiEntity', ['lei']],
+  'cldr48-territory-codes': ['TerritoryCode', ['type', 'numeric', 'alpha3']],
+};
+test('W2 discoveries retain documented native subsets without admission or unverified registry links', () => {
+  const all = readDirectory(root.pathname);
+  assert.deepEqual(sourceProblems(all.sources, all.maintainers), []);
+  for (const [id, [name, fields]] of Object.entries(w2Subsets)) {
+    const r = all.sources.find(record => record.key === id);
+    assert.ok(r, id);
+    assert.equal(r.data.status, 'inactive');
+    assert.equal(r.data.retention, 'none');
+    assert.equal(r.data.recordsets.length, 1);
+    assert.equal(r.data.recordsets[0].name, name);
+    assert.deepEqual(r.data.recordsets[0].fields.map(field => field.name), fields);
+    assert.equal(r.data.modelspec_url, undefined);
+    assert.equal(r.data.meaninggraph_url, undefined);
+    assert.match(r.data.activation_blockers.join(' '), /proposed OVDB Go proxy/);
+    assert.match(r.data.activation_blockers.join(' '), /no-store enforcement/);
+    for (const url of ['http://api.gleif.org/data', 'https://localhost/data', 'https://127.0.0.1/data', 'https://user:pass@example.org/data', 'https://example.org/data#rows', 'https://api.gleif.org/api/v1/lei-records?page%5Bsize%5D=1']) {
+      const bad = structuredClone(r); bad.data.resource_url = url;
+      assert.ok(sourceProblems([bad], maintainers).length, `${id}: ${url}`);
+    }
+    for (const mutate of [d => { d.status = 'published'; }, d => { d.retention = 'snapshot'; }, d => { d.rows = []; }, d => { d.recordsets[0].fields[0].meanings = []; }]) {
+      const bad = structuredClone(r); mutate(bad.data);
+      assert.ok(sourceProblems([bad], maintainers).length, id);
+    }
+  }
+  const gleif = all.sources.find(r => r.key === 'gleif-lei-entities').data;
+  assert.equal(gleif.resource_url, 'https://api.gleif.org/api/v1/lei-records');
+  assert.equal(gleif.terms_url, 'https://www.gleif.org/en/meta/lei-data-terms-of-use');
+  assert.equal(gleif.publisher, 'Global Legal Entity Identifier Foundation (GLEIF)');
+  assert.match(gleif.recordsets[0].fields[0].description, /data\[\]\.attributes\.lei/);
+  assert.match(gleif.notices.join(' '), /CC0 1.0.*Technical restrictions/s);
+  const cldr = all.sources.find(r => r.key === 'cldr48-territory-codes').data;
+  assert.equal(cldr.resource_url, 'https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/supplemental/supplementalData.xml');
+  assert.equal(cldr.terms_url, 'https://www.unicode.org/license.txt');
+  assert.equal(cldr.publisher, 'Unicode Consortium');
+  assert.match(cldr.recordsets[0].description, /\/supplementalData\/codeMappings\/territoryCodes/);
+  assert.match(cldr.activation_blockers.join(' '), /not a read/);
+  assert.match(cldr.notices.join(' '), /Unicode License V3/);
 });
