@@ -6780,7 +6780,7 @@
       ]
     }
   ],
-  "sourcesChecksum": "sha256:c5e22c8c746e647a0120bcae3109203a2d197b11902ed129e45ddc089949cde7",
+  "sourcesChecksum": "sha256:25efceb59299c6df09368ac1bdefd6fa5e46437c120e83c330e7d37d9aa3c351",
   "sources": [
     {
       "id": "bigquery-world-bank-wdi",
@@ -6888,7 +6888,9 @@
       ],
       "maintainers": [
         "trakhimenok"
-      ]
+      ],
+      "modelspec_url": "https://modelspec.org/registry/models/ecb-daily/",
+      "meaninggraph_url": "https://meaninggraph.io/graphs/ecb-daily/"
     }
   ]
 }

@@ -82,6 +82,12 @@ columns:
     type: any
   provider_retention:
     type: any
+  modelspec_url:
+    type: string
+    min_length: 1
+  meaninggraph_url:
+    type: string
+    min_length: 1
 columns_order:
   - format
   - title
@@ -104,3 +110,5 @@ columns_order:
   - access_requirements
   - owned_retention
   - provider_retention
+  - modelspec_url
+  - meaninggraph_url

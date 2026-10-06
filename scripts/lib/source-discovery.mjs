@@ -1,7 +1,7 @@
 // Inactive discovery metadata only. Admission belongs to the database/manifest path.
 import { publicHttpsProblem } from './urls.mjs';
 export const sourceFormat = 'ovdb-source/draft-1';
-const httpKeys = ['format', 'title', 'description', 'status', 'publisher', 'homepage', 'resource_url', 'terms_url', 'access_mode', 'retention', 'activation_blockers', 'notices', 'recordsets', 'maintainers'];
+const httpKeys = ['format', 'title', 'description', 'status', 'publisher', 'homepage', 'resource_url', 'terms_url', 'access_mode', 'retention', 'activation_blockers', 'notices', 'recordsets', 'maintainers', 'modelspec_url', 'meaninggraph_url'];
 const identifier = /^[A-Za-z_][A-Za-z0-9_]*$/;
 export function sourceProblems(records, maintainers) {
   const problems = [];
@@ -26,6 +26,12 @@ export function sourceProblems(records, maintainers) {
     for (const field of ['activation_blockers', 'notices', 'maintainers']) if (!Array.isArray(data[field]) || !data[field].length || !data[field].every(str)) bad(`${field} must be a non-empty string array`);
     if (Array.isArray(data.maintainers)) for (const handle of data.maintainers) if (!handles.has(handle)) bad(`maintainer ${handle} has no record`);
     if (bigquery) { bigQueryProblems(data).forEach(bad); continue; }
+    for (const [field, expected] of Object.entries({
+      modelspec_url: `https://modelspec.org/registry/models/${key}/`,
+      meaninggraph_url: `https://meaninggraph.io/graphs/${key}/`,
+    })) {
+      if (Object.hasOwn(data, field) && data[field] !== expected) bad(`${field} must be the canonical registry metadata route for this source id`);
+    }
     const names = new Set();
     if (!Array.isArray(data.recordsets) || !data.recordsets.length) { bad('recordsets must be a non-empty array'); continue; }
     for (const rs of data.recordsets) {
