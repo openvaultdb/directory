@@ -17,7 +17,7 @@ import { addressMatchesRecord, identifierPattern, loadModelRegistry, modelsAtAdd
 import { directoryPagePath, encodePathSegment, globalDatabaseIdProblem, hasOvdbMarker, homepageProblem, publicHttpsProblem } from './urls.mjs';
 import { checkRepresentationEnvelope, checkRepresentation, verifySourceData } from './representation.mjs';
 
-import { sourceEntries, sourceProblems } from './source-discovery.mjs';
+import { sourceEntries, sourceProblems, sourceRegistryProblems } from './source-discovery.mjs';
 
 export { repositoryHosts };
 export const directoryFormat = 'ovdb-directory/draft-1';
@@ -880,6 +880,10 @@ export async function analyseDirectory({ root, urlFor, cacheDir, meaningRegistry
   // One read of the ModelSpec registry for the run, shared by every database that needs it.
   let loading;
   const modelIndex = () => (modelRegistry ? Promise.resolve(modelRegistry) : (loading ??= loadModels()));
+  if (directory.sources.some(({ data }) => data.modelspec_url || data.meaninggraph_url)) {
+    try { problems.push(...sourceRegistryProblems(directory.sources, registryIndex, await modelIndex())); }
+    catch (error) { problems.push(`Source metadata registries: ${error.message}`); }
+  }
   const context = sharedContext({ urlFor, cacheDir, meaningRegistry: registryIndex, modelRegistry: modelIndex, ...rest });
   const claimed = [];
   for (const record of directory.databases) {
