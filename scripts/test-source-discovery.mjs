@@ -52,7 +52,7 @@ test('W1 discoveries preserve original resources, inactive gates and explicit re
 test('canonical source metadata checks without source fetches and has one ID', () => {
   const r = record();
   assert.deepEqual(sourceProblems([r], maintainers), []);
-  assert.equal(readDirectory(root.pathname).sources.length, 9);
+  assert.equal(readDirectory(root.pathname).sources.length, 14);
   assert.equal(sourceEntries([r])[0].id, 'ecb-daily');
   assert.equal(r.data.resource_url, 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml');
   assert.deepEqual(r.data.recordsets[0].fields.map(f => [f.name, f.type]), [['time','string'],['currency','string'],['rate','string']]);
@@ -165,5 +165,72 @@ test('related projection IDs can differ and unknown registry targets are rejecte
     r.data[field] = r.data[field].replace('ecb-daily', 'not-registered');
     assert.deepEqual(sourceProblems([r], maintainers), []);
     assert.match(sourceRegistryProblems([r], meanings, models).join(' '), /unregistered metadata ID not-registered/);
+  }
+});
+
+const w3 = {
+  'cisa-kev': ['https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json', 'https://www.cisa.gov/sites/default/files/licenses/kev/license.txt', { KevVulnerability: ['cveID', 'dateAdded', 'vulnerabilityName', 'knownRansomwareCampaignUse'] }],
+  'govuk-bank-holidays': ['https://www.gov.uk/bank-holidays.json', 'https://www.gov.uk/help/reuse-govuk-content', { HolidayDivision: ['division'], HolidayEvent: ['title', 'date', 'notes'] }],
+  'cldr48-windows-zones': ['https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/supplemental/windowsZones.xml', 'https://www.unicode.org/license.txt', { WindowsZoneMap: ['other', 'territory', 'type'] }],
+  'iana-http-status-codes': ['https://www.iana.org/assignments/http-status-codes/http-status-codes-1.csv', 'https://www.iana.org/help/licensing-terms', { HttpStatusRegistryRow: ['Value', 'Description', 'Reference'] }],
+  'iana-application-media-types': ['https://www.iana.org/assignments/media-types/application.csv', 'https://www.iana.org/help/licensing-terms', { ApplicationMediaRegistryRow: ['Name', 'Template', 'Reference'] }],
+};
+
+test('W3 listings preserve original resources, rights links and native partial extraction scopes', () => {
+  const { sources } = readDirectory(root.pathname);
+  for (const [id, [resource, terms, shape]] of Object.entries(w3)) {
+    const r = sources.find(x => x.key === id);
+    assert.ok(r, id);
+    assert.equal(r.data.resource_url, resource);
+    assert.equal(r.data.terms_url, terms);
+    assert.deepEqual(Object.fromEntries(r.data.recordsets.map(rs => [rs.name, rs.fields.map(f => f.name)])), shape);
+    assert.ok(r.data.recordsets.every(rs => rs.fields.every(f => f.type === 'string')));
+    assert.equal(r.data.modelspec_url, undefined);
+    assert.equal(r.data.meaninggraph_url, undefined);
+  }
+  const data = id => sources.find(x => x.key === id).data;
+  const govuk = data('govuk-bank-holidays');
+  assert.match(govuk.recordsets[0].description, /not a native scalar field within its events\[\] children/);
+  assert.match(govuk.recordsets[1].description, /no flattened division field/);
+  assert.match(govuk.notices.join(' '), /Proposed parent\/event field inventory reflects dated evidence/);
+  assert.match(govuk.notices.join(' '), /exact current returned structure has not been read or accepted/);
+  const cldr = data('cldr48-windows-zones');
+  assert.match(cldr.notices.join(' '), /https:\/\/www\.unicode\.org\/reports\/tr35\/tr35-76\/tr35-dates\.html#Windows_Zones/);
+  assert.doesNotMatch(cldr.notices.join(' '), /unicode-org\.github\.io\/cldr\/ldml/);
+  assert.match(cldr.recordsets[0].fields.find(f => f.name === 'type').description, /space-delimited.*list/);
+  for (const [id, candidate] of [['iana-http-status-codes', 'd2-rs-iana-http'], ['iana-application-media-types', 'd2-rs-iana-media']]) {
+    assert.ok(data(id).notices.some(notice => notice.includes(`dated candidate ${candidate}, supported by evidence d2-e-iana`)));
+    assert.match(data(id).notices.join(' '), /not current headers\/rows or browser GET access/);
+    assert.match(data(id).notices.join(' '), /excludes linked RFC text/);
+  }
+  assert.match(data('iana-http-status-codes').recordsets[0].fields[0].description, /range\/reserved\/unassigned/);
+  assert.match(data('iana-application-media-types').activation_blockers.join(' '), /registration is not proof of actual file content/);
+  assert.match(data('cisa-kev').recordsets[0].fields[3].description, /Unknown does not mean false/);
+  assert.match(data('cisa-kev').notices.join(' '), /Third-party|third-party/);
+});
+
+test('W3 remains inactive, refuses retained data and invents no source capabilities', () => {
+  const sources = readDirectory(root.pathname).sources.filter(x => Object.hasOwn(w3, x.key));
+  assert.equal(sources.length, 5);
+  assert.deepEqual(sourceProblems(sources, maintainers), []);
+  for (const r of sources) {
+    assert.equal(r.data.status, 'inactive');
+    assert.equal(r.data.retention, 'none');
+    assert.equal(r.data.access_mode, 'live-http-via-ovdb');
+    const blockers = r.data.activation_blockers.join(' ');
+    assert.match(blockers, /No admitted execution route/);
+    assert.match(blockers, /no-store enforcement/);
+    assert.match(blockers, /Retained paging\/history\/export\/download\/fixtures\/replay/);
+    assert.match(r.data.notices.join(' '), /NVD remains deferred/);
+    for (const mutate of [
+      d => { d.status = 'active'; }, d => { d.retention = 'snapshot'; },
+      d => { d.activation_blockers = []; }, d => { d.rows = [{ id: 'synthetic' }]; },
+      d => { d.deployment = { url: 'https://query.example.org/' }; },
+      d => { d.recordsets[0].fields[0].type = 'number'; },
+      d => { d.recordsets[0].fields[0].meanings = ['invented']; },
+    ]) {
+      const bad = structuredClone(r); mutate(bad.data);
+      assert.ok(sourceProblems([bad], maintainers).length, r.key);
+    }
   }
 });

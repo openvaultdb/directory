@@ -1,0 +1,77 @@
+format: ovdb-source/draft-1
+title: GOV.UK division-scoped bank holidays
+description: Inactive W3 discovery for d1-govuk-holidays. Native division and event
+  strings retain their separate extraction roots; this metadata does not provide a
+  complete calendar or business-closure test.
+status: inactive
+publisher: Government Digital Service (GOV.UK)
+homepage: https://www.api.gov.uk/gds/bank-holidays/
+resource_url: https://www.gov.uk/bank-holidays.json
+terms_url: https://www.gov.uk/help/reuse-govuk-content
+access_mode: live-http-via-ovdb
+retention: none
+activation_blockers:
+  - No admitted execution route exists. live-http-via-ovdb names a proposed gateway;
+    actual GET/CORS/authentication/rate limits, redirect/DNS/resource allowlists and
+    row/byte/time budgets remain unverified.
+  - Canonical source definition, bounded decoder and source-qualified
+    ModelSpec/MeaningGraph bindings require separate acceptance. This partial
+    native-string subset does not model the complete source response, context or
+    grammar.
+  - Rights for the exact returned material and intended use and required notices remain
+    admission gates. Licence permission never authorizes source snapshots or result
+    retention in this programme.
+  - Transient RAM/current-display execution and no-store enforcement across browser,
+    adapter, OVDB, edge and intermediary sinks remain unproved. Retained
+    paging/history/export/download/fixtures/replay and data-bearing logs are not
+    authorized.
+  - Exact execution observation metadata, native context, null/missing/multiplicity
+    policy and freshness remain unverified. Resource HEAD and authored metadata pins do
+    not establish current rows or future response bytes.
+  - The decoder must preserve parent division context and admit event multiplicity and
+    date parsing. Boolean bunting and any derived flattened division field remain
+    unmodelled.
+  - Earlier ledger coverage 2019-2028 is historical evidence only; current coverage was
+    not read. Northwind/Pubs historical compatibility and any Chinook jurisdiction
+    context remain unaccepted.
+notices:
+  - Metadata/documentation and endpoint HEAD checked 2026-10-06. No source dataset
+    payload was requested or retained; no query service is activated.
+  - "GOV.UK content reuse links Open Government Licence 3.0: preserve applicable
+    attribution/licence link, exceptions and no endorsement. The endpoint is documented
+    at https://www.api.gov.uk/gds/bank-holidays/."
+  - The ledger d1-mapping-holiday accepts a division-scoped bank-holiday event only.
+    Proposed parent/event field inventory reflects dated evidence d1-govuk at hub
+    95a41f656040694d31c3b118cd8f220126931cf5; exact current returned structure has not
+    been read or accepted.
+  - W3 selection records five inactive source opportunities only. NVD remains deferred
+    pending authoritative current terms; all unselected candidate IDs and original
+    dispositions remain in datatug/datatug spec/research/public-data-fabric. No source
+    reads, canonical binding admission or DataTug UI change is authorized by this entry.
+recordsets:
+  - name: HolidayDivision
+    description: Partial native string at each top-level division object. Parent division
+      context is not a native scalar field within its events[] children.
+    fields:
+      - name: division
+        type: string
+        description: Native division identifier string on the enclosing object; preserve source
+          namespace and do not infer a division from UK country labels.
+  - name: HolidayEvent
+    description: Partial native strings relative to events[] within a division object. Event
+      meaning requires parent division context; no flattened division field or accepted
+      relationship binding is created.
+    fields:
+      - name: title
+        type: string
+        description: Native event title string. It is not a universal or unique event identifier.
+      - name: date
+        type: string
+        description: Native event date string. Parse policy and division-qualified grain need
+          admission; do not infer instant/timezone semantics.
+      - name: notes
+        type: string
+        description: Native notes string, including empty strings. No legal obligation or
+          closure inference.
+maintainers:
+  - trakhimenok

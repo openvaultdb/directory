@@ -1,0 +1,71 @@
+format: ovdb-source/draft-1
+title: CISA Known Exploited Vulnerabilities identifiers
+description: Inactive W3 discovery for d2-rs-cisa. Partial vulnerabilities[] native
+  strings describe catalogued CVE identity and source context; no vulnerability lookup
+  or mitigation workflow is activated.
+status: inactive
+publisher: Cybersecurity and Infrastructure Security Agency (CISA)
+homepage: https://www.cisa.gov/known-exploited-vulnerabilities-catalog
+resource_url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+terms_url: https://www.cisa.gov/sites/default/files/licenses/kev/license.txt
+access_mode: live-http-via-ovdb
+retention: none
+activation_blockers:
+  - No admitted execution route exists. live-http-via-ovdb names a proposed gateway;
+    actual GET/CORS/authentication/rate limits, redirect/DNS/resource allowlists and
+    row/byte/time budgets remain unverified.
+  - Canonical source definition, bounded decoder and source-qualified
+    ModelSpec/MeaningGraph bindings require separate acceptance. This partial
+    native-string subset does not model the complete source response, context or
+    grammar.
+  - Rights for the exact returned material and intended use and required notices remain
+    admission gates. Licence permission never authorizes source snapshots or result
+    retention in this programme.
+  - Transient RAM/current-display execution and no-store enforcement across browser,
+    adapter, OVDB, edge and intermediary sinks remain unproved. Retained
+    paging/history/export/download/fixtures/replay and data-bearing logs are not
+    authorized.
+  - Exact execution observation metadata, native context, null/missing/multiplicity
+    policy and freshness remain unverified. Resource HEAD and authored metadata pins do
+    not establish current rows or future response bytes.
+  - Accepted research assertion d2-edge-cisa-nvd concerns exact CVE identity only. NVD
+    rights remain unresolved; catalog absence never proves unexploited. No actual demo
+    CVE-key journey is accepted.
+notices:
+  - Metadata/documentation and endpoint HEAD checked 2026-10-06. No source dataset
+    payload was requested or retained; no query service is activated.
+  - CISA KEV licence identifies CC0; linked third-party material retains separate terms
+    and CISA logo/DHS seal/endorsement are excluded. Official CISA licence URL returned
+    403 to the web tool; publisher mirror verified at
+    https://github.com/cisagov/kev-data/blob/develop/LICENSE.
+  - "Native field documentation:
+    https://github.com/cisagov/kev-data/blob/develop/known_exploited_vulnerabilities_sc\
+    hema.json. No CWE-array, product matching, universal deadline or complete-source
+    interpretation is claimed."
+  - W3 selection records five inactive source opportunities only. NVD remains deferred
+    pending authoritative current terms; all unselected candidate IDs and original
+    dispositions remain in datatug/datatug spec/research/public-data-fabric. No source
+    reads, canonical binding admission or DataTug UI change is authorized by this entry.
+recordsets:
+  - name: KevVulnerability
+    description: Partial string subset relative to each vulnerabilities[] object. Grain is a
+      catalogued CVE within an enclosing catalog version; envelope/version and the full
+      vulnerability model remain outside this entry.
+    fields:
+      - name: cveID
+        type: string
+        description: Native CVE identifier string. Preserve exact CVE namespace; vendor/product
+          names are not identity keys.
+      - name: dateAdded
+        type: string
+        description: Native date string for entry addition, distinct from vulnerability
+          publication, modification and action due dates.
+      - name: vulnerabilityName
+        type: string
+        description: Native descriptive title string; no unique-name or product identity claim.
+      - name: knownRansomwareCampaignUse
+        type: string
+        description: Native source classification string. Unknown does not mean false;
+          optionality and current vocabulary remain admission gates.
+maintainers:
+  - trakhimenok

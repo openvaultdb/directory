@@ -1,0 +1,63 @@
+format: ovdb-source/draft-1
+title: IANA HTTP status registry rows
+description: Inactive W3 discovery for d2-rs-iana-http. Partial CSV native strings
+  include status values and ranges; this listing does not accept a scalar-code meaning
+  or log-enrichment query.
+status: inactive
+publisher: Internet Assigned Numbers Authority (IANA)
+homepage: https://www.iana.org/assignments/http-status-codes/
+resource_url: https://www.iana.org/assignments/http-status-codes/http-status-codes-1.csv
+terms_url: https://www.iana.org/help/licensing-terms
+access_mode: live-http-via-ovdb
+retention: none
+activation_blockers:
+  - No admitted execution route exists. live-http-via-ovdb names a proposed gateway;
+    actual GET/CORS/authentication/rate limits, redirect/DNS/resource allowlists and
+    row/byte/time budgets remain unverified.
+  - Canonical source definition, bounded decoder and source-qualified
+    ModelSpec/MeaningGraph bindings require separate acceptance. This partial
+    native-string subset does not model the complete source response, context or
+    grammar.
+  - Rights for the exact returned material and intended use and required notices remain
+    admission gates. Licence permission never authorizes source snapshots or result
+    retention in this programme.
+  - Transient RAM/current-display execution and no-store enforcement across browser,
+    adapter, OVDB, edge and intermediary sinks remain unproved. Retained
+    paging/history/export/download/fixtures/replay and data-bearing logs are not
+    authorized.
+  - Exact execution observation metadata, native context, null/missing/multiplicity
+    policy and freshness remain unverified. Resource HEAD and authored metadata pins do
+    not establish current rows or future response bytes.
+  - d2-map-iana-status remains unresolved because Value includes ranges. Exact
+    scalar-code projection and actual log-field binding require reconciliation.
+notices:
+  - Metadata/documentation and endpoint HEAD checked 2026-10-06. No source dataset
+    payload was requested or retained; no query service is activated.
+  - IANA/IETF CC0 statement covers applicable protocol-registry rights and excludes
+    linked RFC text/other material. No trademark/patent/third-party guarantee follows.
+  - Proposed CSV header names are recorded in dated candidate d2-rs-iana-http, supported
+    by evidence d2-e-iana, at hub 95a41f656040694d31c3b118cd8f220126931cf5. Current HEAD
+    confirms a CSV resource, not current headers/rows or browser GET access.
+  - W3 selection records five inactive source opportunities only. NVD remains deferred
+    pending authoritative current terms; all unselected candidate IDs and original
+    dispositions remain in datatug/datatug spec/research/public-data-fabric. No source
+    reads, canonical binding admission or DataTug UI change is authorized by this entry.
+recordsets:
+  - name: HttpStatusRegistryRow
+    description: Native CSV row subset with lexical status values/ranges. RFC-compliant CSV
+      parsing, reserved/unassigned rows and current headers remain admission gates.
+    fields:
+      - name: Value
+        type: string
+        description: Native lexical CSV value, potentially a range/reserved/unassigned entry. Do
+          not coerce every row to one integer or accept whole-column scalar semantics.
+      - name: Description
+        type: string
+        description: Native CSV descriptive text; preserve assignment status and strings without
+          treating them as observed response content.
+      - name: Reference
+        type: string
+        description: Native CSV reference text only; referenced RFCs/other material are outside
+          the registry-data rights scope and must not be fetched implicitly.
+maintainers:
+  - trakhimenok
