@@ -1,0 +1,68 @@
+format: ovdb-source/draft-1
+title: GeoNames alternate names
+description: Inactive W1 discovery for d1-geo-alternates. The documented alternateNamesV2
+  archive carries source-qualified aliases and intervals. No universal label matching,
+  geocoding or language equivalence is established.
+status: inactive
+publisher: GeoNames
+homepage: https://www.geonames.org/export/
+resource_url: https://download.geonames.org/export/dump/alternateNamesV2.zip
+terms_url: https://download.geonames.org/export/dump/readme.txt
+access_mode: live-http-via-ovdb
+retention: none
+activation_blockers:
+  - Copied-provider activation is frozen. A working bounded original-resource route or
+    specific user retention authorization is required; existing copies remain inactive and
+    preserved.
+  - No admitted execution gateway exists. The access_mode names a proposed OVDB Go proxy
+    route only; direct-browser CORS/authentication, exact resource reads, redirect/DNS
+    allowlists and row/byte/time budgets remain unverified.
+  - Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact
+    native-field bindings require separate acceptance. No registry links or accepted
+    mappings are asserted here.
+  - Rights for the exact returned material and intended use, attribution/change notices,
+    full W1 reference closure and missing-reference behavior remain admission gates.
+  - Transient RAM/current-display execution and no-store enforcement across browser, OVDB,
+    adapter, edge and intermediary sinks remain unproved. Retained paging, histories,
+    exports, fixtures, replay caches and data-bearing logs are not authorized.
+  - The documented extract is not a keyed query API. Economical bounded original-resource
+    access without retained indexes, archives or fallback copies is unresolved. GeoNames
+    webservices are a distinct unadmitted alternative requiring a username and
+    service-credit review.
+notices:
+  - "Source: GeoNames, https://www.geonames.org/. Documentation and resource listing
+    checked on 2026-10-06; no source data was read or retained for this entry."
+  - "The extract README states CC BY 4.0: https://creativecommons.org/licenses/by/4.0/.
+    Credit GeoNames, link the licence and indicate changes. Commercial reuse is permitted
+    under those conditions; no warranty of accuracy, timeliness or completeness is given."
+  - Provider licence permission does not grant the user authorization required for source
+    or result retention. This entry authorizes no download, import, refresh, snapshot or
+    copied-provider activation.
+  - GeoNames documents daily extracts. These are mutable original resources; listing dates
+    and cadence do not establish row observation dates, historical geography or guaranteed
+    freshness.
+recordsets:
+  - name: AlternateName
+    description: Partial proposed metadata from the alternate-name documentation. Source flags
+      and interval interpretation need accepted bindings. The isolanguage column also
+      contains non-language categories such as links or identifier codes; it must not be
+      collapsed into a language meaning. Names may have many variants per feature.
+    fields:
+      - name: alternateNameId
+        type: string
+        description: Lexical identifier for an alternate-name row.
+      - name: geonameid
+        type: string
+        description: Referenced GeoNames feature identifier; missing references must stay visible.
+      - name: isolanguage
+        type: string
+        description: Source-qualified language or special category code, not a universally
+          accepted language identifier.
+      - name: from
+        type: string
+        description: Native interval label; exact date/period semantics remain pending.
+      - name: to
+        type: string
+        description: Native interval label; null/open-bound interpretation remains pending.
+maintainers:
+  - trakhimenok

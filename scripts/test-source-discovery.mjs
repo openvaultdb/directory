@@ -9,10 +9,47 @@ const root = new URL('../', import.meta.url);
 const record = () => ({ key: 'ecb-daily', file: 'sources/$records/ecb-daily.yaml', data: parse(readFileSync(new URL('sources/$records/ecb-daily.yaml', root), 'utf8')) });
 const maintainers = [{ key: 'trakhimenok' }];
 const digest = value => `sha256:${createHash('sha256').update(JSON.stringify(value)).digest('hex')}`;
+const w1Resources = {
+  'geonames-countries': 'https://download.geonames.org/export/dump/countryInfo.txt',
+  'geonames-places': 'https://download.geonames.org/export/dump/allCountries.zip',
+  'geonames-admin1': 'https://download.geonames.org/export/dump/admin1CodesASCII.txt',
+  'geonames-alternates': 'https://download.geonames.org/export/dump/alternateNamesV2.zip',
+  'ror-organisations': 'https://api.ror.org/v2/organizations',
+};
+test('W1 discoveries preserve original resources, inactive gates and absent unverified registries', () => {
+  const all = readDirectory(root.pathname);
+  assert.deepEqual(sourceProblems(all.sources, all.maintainers), []);
+  for (const [id, resource] of Object.entries(w1Resources)) {
+    const r = all.sources.find(record => record.key === id);
+    assert.ok(r, id);
+    assert.equal(r.data.resource_url, resource);
+    assert.equal(r.data.status, 'inactive');
+    assert.equal(r.data.retention, 'none');
+    assert.equal(r.data.modelspec_url, undefined);
+    assert.equal(r.data.meaninggraph_url, undefined);
+    assert.match(r.data.activation_blockers.join(' '), /activation is frozen/);
+    assert.match(r.data.activation_blockers.join(' '), /proposed OVDB Go proxy route only/);
+    assert.match(r.data.activation_blockers.join(' '), /remain unverified/);
+    assert.match(r.data.activation_blockers.join(' '), /no-store enforcement/);
+    for (const mutate of [
+      d => { d.status = 'published'; }, d => { d.retention = 'snapshot'; },
+      d => { d.resource_url = 'https://localhost/data'; },
+      d => { d.deployment = { url: 'https://fake.example/' }; },
+      d => { d.rows = []; }, d => { d.recordsets[0].fields[0].meanings = []; },
+    ]) {
+      const bad = structuredClone(r); mutate(bad.data);
+      assert.ok(sourceProblems([bad], maintainers).length, id);
+    }
+  }
+  const ror = all.sources.find(record => record.key === 'ror-organisations').data;
+  assert.deepEqual(ror.recordsets[0].fields.map(field => field.name), ['id', 'status']);
+  assert.match(ror.activation_blockers.join(' '), /CC BY 3.0.*CC BY 4.0/);
+  assert.match(ror.notices.join(' '), /all_status/);
+});
 test('canonical source metadata checks without source fetches and has one ID', () => {
   const r = record();
   assert.deepEqual(sourceProblems([r], maintainers), []);
-  assert.equal(readDirectory(root.pathname).sources.length, 2);
+  assert.equal(readDirectory(root.pathname).sources.length, 7);
   assert.equal(sourceEntries([r])[0].id, 'ecb-daily');
   assert.equal(r.data.resource_url, 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml');
   assert.deepEqual(r.data.recordsets[0].fields.map(f => [f.name, f.type]), [['time','string'],['currency','string'],['rate','string']]);
