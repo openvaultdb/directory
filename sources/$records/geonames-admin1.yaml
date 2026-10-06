@@ -18,8 +18,8 @@ activation_blockers:
     route only; direct-browser CORS/authentication, exact resource reads, redirect/DNS
     allowlists and row/byte/time budgets remain unverified.
   - Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact
-    native-field bindings require separate acceptance. No registry links or accepted
-    mappings are asserted here.
+    native-field bindings require separate acceptance. Related registered projection metadata is linked
+    for browsing only; no accepted original-resource mappings are asserted here.
   - Rights for the exact returned material and intended use, attribution/change notices,
     full W1 reference closure and missing-reference behavior remain admission gates.
   - Transient RAM/current-display execution and no-store enforcement across browser, OVDB,
@@ -61,3 +61,6 @@ recordsets:
           remains unverified.
 maintainers:
   - trakhimenok
+
+modelspec_url: https://modelspec.org/registry/models/geonames/
+meaninggraph_url: https://meaninggraph.io/graphs/geonames/

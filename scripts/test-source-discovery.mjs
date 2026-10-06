@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { parse } from 'yaml';
 import { indexText, readDirectory } from './lib/directory.mjs';
-import { sourceEntries, sourceProblems } from './lib/source-discovery.mjs';
+import { sourceEntries, sourceProblems, sourceRegistryProblems } from './lib/source-discovery.mjs';
 const root = new URL('../', import.meta.url);
 const record = () => ({ key: 'ecb-daily', file: 'sources/$records/ecb-daily.yaml', data: parse(readFileSync(new URL('sources/$records/ecb-daily.yaml', root), 'utf8')) });
 const maintainers = [{ key: 'trakhimenok' }];
@@ -16,7 +16,7 @@ const w1Resources = {
   'geonames-alternates': 'https://download.geonames.org/export/dump/alternateNamesV2.zip',
   'ror-organisations': 'https://api.ror.org/v2/organizations',
 };
-test('W1 discoveries preserve original resources, inactive gates and absent unverified registries', () => {
+test('W1 discoveries preserve original resources, inactive gates and explicit related projection links', () => {
   const all = readDirectory(root.pathname);
   assert.deepEqual(sourceProblems(all.sources, all.maintainers), []);
   for (const [id, resource] of Object.entries(w1Resources)) {
@@ -25,12 +25,15 @@ test('W1 discoveries preserve original resources, inactive gates and absent unve
     assert.equal(r.data.resource_url, resource);
     assert.equal(r.data.status, 'inactive');
     assert.equal(r.data.retention, 'none');
-    assert.equal(r.data.modelspec_url, undefined);
-    assert.equal(r.data.meaninggraph_url, undefined);
+    const registryId = id.startsWith('geonames-') ? 'geonames' : 'ror';
+    assert.equal(r.data.modelspec_url, `https://modelspec.org/registry/models/${registryId}/`);
+    assert.equal(r.data.meaninggraph_url, `https://meaninggraph.io/graphs/${registryId}/`);
     assert.match(r.data.activation_blockers.join(' '), /activation is frozen/);
     assert.match(r.data.activation_blockers.join(' '), /proposed OVDB Go proxy route only/);
     assert.match(r.data.activation_blockers.join(' '), /remain unverified/);
     assert.match(r.data.activation_blockers.join(' '), /no-store enforcement/);
+    assert.match(r.data.activation_blockers.join(' '), /no accepted original-resource mappings/);
+    assert.doesNotMatch(r.data.activation_blockers.join(' '), /No registry links/);
     for (const mutate of [
       d => { d.status = 'published'; }, d => { d.retention = 'snapshot'; },
       d => { d.resource_url = 'https://localhost/data'; },
@@ -94,14 +97,14 @@ test('every BigQuery nested requirement is required and closed',()=>{
   }
 });
 
-test('optional HTTP source registry links are exact source-qualified canonical metadata routes',()=>{
+test('optional HTTP source registry links are canonical metadata detail routes with independent IDs',()=>{
   const r=record(); assert.deepEqual(sourceProblems([r],maintainers),[]);
   assert.equal(r.data.modelspec_url,'https://modelspec.org/registry/models/ecb-daily/');
   assert.equal(r.data.meaninggraph_url,'https://meaninggraph.io/graphs/ecb-daily/');
   delete r.data.modelspec_url;delete r.data.meaninggraph_url;assert.deepEqual(sourceProblems([r],maintainers),[]);
   for(const field of ['modelspec_url','meaninggraph_url']) {
     const original=record().data[field];
-    for(const value of [null,[],[original],42,'',original.replace('https:','http:'),original+'?query=x',original+'#field',original+'extra/',original.replace('ecb-daily','other-source'),original.replace('https://','https://user:pass@'),original.replace('ecb-daily','%65cb-daily'),original.replace('modelspec.org','modelspec.org.evil.example').replace('meaninggraph.io','meaninggraph.io.evil.example'),original.slice(0,-1)]) {
+    for(const value of [null,[],[original],42,'',original.replace('https:','http:'),original+'?query=x',original+'#field',original+'extra/',original.replace('ecb-daily','bad--id'),original.replace('ecb-daily','foo%2Fbar'),original.replace('ecb-daily','../other'),original.replace('ecb-daily','foo\\bar'),original.replace('https://','https://user:pass@'),original.replace('ecb-daily','%65cb-daily'),original.replace('modelspec.org','modelspec.org.evil.example').replace('meaninggraph.io','meaninggraph.io.evil.example'),original.slice(0,-1)]) {
       const bad=record();bad.data[field]=value;assert.ok(sourceProblems([bad],maintainers).length,`${field} ${JSON.stringify(value)}`);
     }
   }
@@ -149,4 +152,18 @@ test('W2 discoveries retain documented native subsets without admission or unver
   assert.match(cldr.recordsets[0].description, /\/supplementalData\/codeMappings\/territoryCodes/);
   assert.match(cldr.activation_blockers.join(' '), /not a read/);
   assert.match(cldr.notices.join(' '), /Unicode License V3/);
+});
+
+test('related projection IDs can differ and unknown registry targets are rejected without reading provider data', () => {
+  const records = readDirectory(root.pathname).sources;
+  const ids = ['ecb-daily', 'geonames', 'ror'];
+  const meanings = { byId: new Map(ids.map(id => [id, { id }])) };
+  const models = { byAddress: new Map(ids.map(id => [id, { id }])) };
+  assert.deepEqual(sourceRegistryProblems(records, meanings, models), []);
+  for (const field of ['modelspec_url', 'meaninggraph_url']) {
+    const r = record();
+    r.data[field] = r.data[field].replace('ecb-daily', 'not-registered');
+    assert.deepEqual(sourceProblems([r], maintainers), []);
+    assert.match(sourceRegistryProblems([r], meanings, models).join(' '), /unregistered metadata ID not-registered/);
+  }
 });

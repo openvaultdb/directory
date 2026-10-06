@@ -6780,7 +6780,7 @@
       ]
     }
   ],
-  "sourcesChecksum": "sha256:83329ca5608059377c17b75487abc9eacf7b19b390a392609b223590717b165a",
+  "sourcesChecksum": "sha256:f30715b09ef67482e4b66c5e95bb9a157d9fad52a99f26c35332c68ab6803f46",
   "sources": [
     {
       "id": "bigquery-world-bank-wdi",
@@ -6961,7 +6961,7 @@
       "activation_blockers": [
         "Copied-provider activation is frozen. A working bounded original-resource route or specific user retention authorization is required; existing copies remain inactive and preserved.",
         "No admitted execution gateway exists. The access_mode names a proposed OVDB Go proxy route only; direct-browser CORS/authentication, exact resource reads, redirect/DNS allowlists and row/byte/time budgets remain unverified.",
-        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. No registry links or accepted mappings are asserted here.",
+        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. Related registered projection metadata is linked for browsing only; no accepted original-resource mappings are asserted here.",
         "Rights for the exact returned material and intended use, attribution/change notices, full W1 reference closure and missing-reference behavior remain admission gates.",
         "Transient RAM/current-display execution and no-store enforcement across browser, OVDB, adapter, edge and intermediary sinks remain unproved. Retained paging, histories, exports, fixtures, replay caches and data-bearing logs are not authorized.",
         "The documented extract is not a keyed query API. Economical bounded original-resource access without retained indexes, archives or fallback copies is unresolved. GeoNames webservices are a distinct unadmitted alternative requiring a username and service-credit review."
@@ -6997,7 +6997,9 @@
       ],
       "maintainers": [
         "trakhimenok"
-      ]
+      ],
+      "modelspec_url": "https://modelspec.org/registry/models/geonames/",
+      "meaninggraph_url": "https://meaninggraph.io/graphs/geonames/"
     },
     {
       "id": "geonames-alternates",
@@ -7014,7 +7016,7 @@
       "activation_blockers": [
         "Copied-provider activation is frozen. A working bounded original-resource route or specific user retention authorization is required; existing copies remain inactive and preserved.",
         "No admitted execution gateway exists. The access_mode names a proposed OVDB Go proxy route only; direct-browser CORS/authentication, exact resource reads, redirect/DNS allowlists and row/byte/time budgets remain unverified.",
-        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. No registry links or accepted mappings are asserted here.",
+        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. Related registered projection metadata is linked for browsing only; no accepted original-resource mappings are asserted here.",
         "Rights for the exact returned material and intended use, attribution/change notices, full W1 reference closure and missing-reference behavior remain admission gates.",
         "Transient RAM/current-display execution and no-store enforcement across browser, OVDB, adapter, edge and intermediary sinks remain unproved. Retained paging, histories, exports, fixtures, replay caches and data-bearing logs are not authorized.",
         "The documented extract is not a keyed query API. Economical bounded original-resource access without retained indexes, archives or fallback copies is unresolved. GeoNames webservices are a distinct unadmitted alternative requiring a username and service-credit review."
@@ -7060,7 +7062,9 @@
       ],
       "maintainers": [
         "trakhimenok"
-      ]
+      ],
+      "modelspec_url": "https://modelspec.org/registry/models/geonames/",
+      "meaninggraph_url": "https://meaninggraph.io/graphs/geonames/"
     },
     {
       "id": "geonames-countries",
@@ -7077,7 +7081,7 @@
       "activation_blockers": [
         "Copied-provider activation is frozen. A working bounded original-resource route or specific user retention authorization is required; existing copies remain inactive and preserved.",
         "No admitted execution gateway exists. The access_mode names a proposed OVDB Go proxy route only; direct-browser CORS/authentication, exact resource reads, redirect/DNS allowlists and row/byte/time budgets remain unverified.",
-        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. No registry links or accepted mappings are asserted here.",
+        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. Related registered projection metadata is linked for browsing only; no accepted original-resource mappings are asserted here.",
         "Rights for the exact returned material and intended use, attribution/change notices, full W1 reference closure and missing-reference behavior remain admission gates.",
         "Transient RAM/current-display execution and no-store enforcement across browser, OVDB, adapter, edge and intermediary sinks remain unproved. Retained paging, histories, exports, fixtures, replay caches and data-bearing logs are not authorized.",
         "The documented extract is not a keyed query API. Economical bounded original-resource access without retained indexes, archives or fallback copies is unresolved. GeoNames webservices are a distinct unadmitted alternative requiring a username and service-credit review."
@@ -7113,7 +7117,9 @@
       ],
       "maintainers": [
         "trakhimenok"
-      ]
+      ],
+      "modelspec_url": "https://modelspec.org/registry/models/geonames/",
+      "meaninggraph_url": "https://meaninggraph.io/graphs/geonames/"
     },
     {
       "id": "geonames-places",
@@ -7130,7 +7136,7 @@
       "activation_blockers": [
         "Copied-provider activation is frozen. A working bounded original-resource route or specific user retention authorization is required; existing copies remain inactive and preserved.",
         "No admitted execution gateway exists. The access_mode names a proposed OVDB Go proxy route only; direct-browser CORS/authentication, exact resource reads, redirect/DNS allowlists and row/byte/time budgets remain unverified.",
-        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. No registry links or accepted mappings are asserted here.",
+        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. Related registered projection metadata is linked for browsing only; no accepted original-resource mappings are asserted here.",
         "Rights for the exact returned material and intended use, attribution/change notices, full W1 reference closure and missing-reference behavior remain admission gates.",
         "Transient RAM/current-display execution and no-store enforcement across browser, OVDB, adapter, edge and intermediary sinks remain unproved. Retained paging, histories, exports, fixtures, replay caches and data-bearing logs are not authorized.",
         "The documented extract is not a keyed query API. Economical bounded original-resource access without retained indexes, archives or fallback copies is unresolved. GeoNames webservices are a distinct unadmitted alternative requiring a username and service-credit review."
@@ -7171,7 +7177,9 @@
       ],
       "maintainers": [
         "trakhimenok"
-      ]
+      ],
+      "modelspec_url": "https://modelspec.org/registry/models/geonames/",
+      "meaninggraph_url": "https://meaninggraph.io/graphs/geonames/"
     },
     {
       "id": "gleif-lei-entities",
@@ -7231,7 +7239,7 @@
       "activation_blockers": [
         "Copied-provider activation is frozen. A working bounded original-resource route or specific user retention authorization is required; existing copies remain inactive and preserved.",
         "No admitted execution gateway exists. The access_mode names a proposed OVDB Go proxy route only; direct-browser CORS/authentication, exact resource reads, redirect/DNS allowlists and row/byte/time budgets remain unverified.",
-        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. No registry links or accepted mappings are asserted here.",
+        "Canonical source definition, decoder, ModelSpec and MeaningGraph artifacts and exact native-field bindings require separate acceptance. Related registered projection metadata is linked for browsing only; no accepted original-resource mappings are asserted here.",
         "Rights for the exact returned material and intended use, attribution/change notices, full W1 reference closure and missing-reference behavior remain admission gates.",
         "Transient RAM/current-display execution and no-store enforcement across browser, OVDB, adapter, edge and intermediary sinks remain unproved. Retained paging, histories, exports, fixtures, replay caches and data-bearing logs are not authorized.",
         "Exact API rights for embedded GeoNames locations need clarification: the current data-structure page names CC BY 3.0 while reviewed ROR data release 2.13 on Zenodo names CC BY 4.0. Preserve attribution and source-specific evidence; do not infer a blanket CC0 exemption.",
@@ -7265,7 +7273,9 @@
       ],
       "maintainers": [
         "trakhimenok"
-      ]
+      ],
+      "modelspec_url": "https://modelspec.org/registry/models/ror/",
+      "meaninggraph_url": "https://meaninggraph.io/graphs/ror/"
     }
   ]
 }

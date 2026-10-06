@@ -1,3 +1,12 @@
+// Related metadata only: an explicit registry ID need not equal the source ID.
+// Literal canonical URLs reject credentials, ports, queries, fragments and encoding.
+export function registryMetadataId(field, value) {
+  const prefix = { modelspec_url: 'https://modelspec.org/registry/models/', meaninggraph_url: 'https://meaninggraph.io/graphs/' }[field];
+  if (!prefix || typeof value !== 'string' || !value.startsWith(prefix)) return null;
+  const match = /^([a-z0-9]+(?:-[a-z0-9]+)*)\/$/.exec(value.slice(prefix.length));
+  return match && match[1].length <= 80 ? match[1] : null;
+}
+
 // Inactive discovery metadata only. Admission belongs to the database/manifest path.
 import { publicHttpsProblem } from './urls.mjs';
 export const sourceFormat = 'ovdb-source/draft-1';
@@ -26,11 +35,8 @@ export function sourceProblems(records, maintainers) {
     for (const field of ['activation_blockers', 'notices', 'maintainers']) if (!Array.isArray(data[field]) || !data[field].length || !data[field].every(str)) bad(`${field} must be a non-empty string array`);
     if (Array.isArray(data.maintainers)) for (const handle of data.maintainers) if (!handles.has(handle)) bad(`maintainer ${handle} has no record`);
     if (bigquery) { bigQueryProblems(data).forEach(bad); continue; }
-    for (const [field, expected] of Object.entries({
-      modelspec_url: `https://modelspec.org/registry/models/${key}/`,
-      meaninggraph_url: `https://meaninggraph.io/graphs/${key}/`,
-    })) {
-      if (Object.hasOwn(data, field) && data[field] !== expected) bad(`${field} must be the canonical registry metadata route for this source id`);
+    for (const field of ['modelspec_url', 'meaninggraph_url']) {
+      if (Object.hasOwn(data, field) && !registryMetadataId(field, data[field])) bad(`${field} must be a canonical registry metadata detail URL`);
     }
     const names = new Set();
     if (!Array.isArray(data.recordsets) || !data.recordsets.length) { bad('recordsets must be a non-empty array'); continue; }
@@ -67,4 +73,17 @@ export function bigQueryProblems(data) {
   const r = data.provider_retention;
   check(exact(r, ['result_storage', 'authorization', 'documentation_url']) && r.result_storage === 'materialized-results' && r.authorization === 'pending-review' && !publicHttpsProblem(r.documentation_url), 'provider result materialization requires separate pending retention authorization');
   return errors;
+}
+
+// Check existence in the already-loaded authoritative registries, never infer bindings.
+export function sourceRegistryProblems(records, meaningRegistry, modelRegistry) {
+  const modelIds = new Set([...modelRegistry.byAddress.values()].map(model => model.id));
+  const problems = [];
+  for (const { file, data } of records) {
+    for (const [field, ids] of [['modelspec_url', modelIds], ['meaninggraph_url', new Set(meaningRegistry.byId.keys())]]) {
+      const id = registryMetadataId(field, data[field]);
+      if (id && !ids.has(id)) problems.push(`${file}: ${field} names unregistered metadata ID ${id}`);
+    }
+  }
+  return problems;
 }
