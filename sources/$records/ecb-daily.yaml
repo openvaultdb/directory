@@ -52,3 +52,5 @@ recordsets:
           normalization."
 maintainers:
   - trakhimenok
+modelspec_url: https://modelspec.org/registry/models/ecb-daily/
+meaninggraph_url: https://meaninggraph.io/graphs/ecb-daily/

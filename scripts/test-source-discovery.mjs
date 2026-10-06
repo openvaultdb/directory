@@ -56,3 +56,17 @@ test('every BigQuery nested requirement is required and closed',()=>{
     const r=bigqueryRecord(); r.data[name].credential='fake'; assert.ok(sourceProblems([r],maintainers).length,name);
   }
 });
+
+test('optional HTTP source registry links are exact source-qualified canonical metadata routes',()=>{
+  const r=record(); assert.deepEqual(sourceProblems([r],maintainers),[]);
+  assert.equal(r.data.modelspec_url,'https://modelspec.org/registry/models/ecb-daily/');
+  assert.equal(r.data.meaninggraph_url,'https://meaninggraph.io/graphs/ecb-daily/');
+  delete r.data.modelspec_url;delete r.data.meaninggraph_url;assert.deepEqual(sourceProblems([r],maintainers),[]);
+  for(const field of ['modelspec_url','meaninggraph_url']) {
+    const original=record().data[field];
+    for(const value of [null,[],[original],42,'',original.replace('https:','http:'),original+'?query=x',original+'#field',original+'extra/',original.replace('ecb-daily','other-source'),original.replace('https://','https://user:pass@'),original.replace('ecb-daily','%65cb-daily'),original.replace('modelspec.org','modelspec.org.evil.example').replace('meaninggraph.io','meaninggraph.io.evil.example'),original.slice(0,-1)]) {
+      const bad=record();bad.data[field]=value;assert.ok(sourceProblems([bad],maintainers).length,`${field} ${JSON.stringify(value)}`);
+    }
+  }
+  const bq=bigqueryRecord();bq.data.modelspec_url='https://modelspec.org/registry/models/bigquery-world-bank-wdi/';assert.ok(sourceProblems([bq],maintainers).length);
+});

@@ -54,6 +54,7 @@ test('the Directory data as committed is a valid inGitDB database', () => {
 
 const cases = {
   'sources: BigQuery activation refused': edit('sources', 'bigquery-world-bank-wdi', x => { x.status = 'published'; }),
+  'sources: metadata URL must be scalar': edit('sources', 'ecb-daily', x => { x.modelspec_url = []; }),
   'sources: activation refused': edit('sources', 'ecb-daily', x => { x.status = 'published'; }),
   'sources: copied retention refused': edit('sources', 'ecb-daily', x => { x.retention = 'snapshot'; }),
   'sources: unknown maintainer': edit('sources', 'ecb-daily', x => { x.maintainers = ['nobody']; }),
