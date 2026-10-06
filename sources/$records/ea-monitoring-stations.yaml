@@ -1,0 +1,46 @@
+format: ovdb-source/draft-1
+title: Environment Agency monitoring station metadata
+description: Inactive proposed station-reference subset. No measurements or geographic join accepted.
+status: inactive
+publisher: Environment Agency
+homepage: https://environment.data.gov.uk/flood-monitoring/doc/reference
+resource_url: https://environment.data.gov.uk/flood-monitoring/id/stations
+terms_url: https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+access_mode: live-http-via-ovdb
+retention: none
+activation_blockers:
+  - No admitted execution route exists. The gateway is proposed only; actual GET/CORS, required
+    headers, rate/cost limits, redirect/DNS allowlists and finite row/byte/time budgets remain
+    unverified.
+  - Canonical source definition, bounded decoder, missing/null/multiplicity policy and
+    source-qualified ModelSpec/MeaningGraph bindings need separate acceptance. No semantic join or
+    model binding is claimed.
+  - Exact intended-use rights and notices remain admission gates. A provider licence grant does not
+    grant this workflow authorization to fetch, copy, snapshot or retain source data or results.
+    This task authorizes documentation and registry metadata only. Future transient RAM/current
+    display and no-store enforcement across owned/intermediary sinks remain unproved.
+  - Retained paging/history/export/download/fixtures/replay and data-bearing logs are not
+    authorized. Current shape, native context, response completeness and freshness require
+    separately authorized evidence.
+  - Nested measures/readings, @id URI and numeric coordinates are excluded. No
+    stationReference/RLOI/wiski equivalence is accepted.
+notices:
+  - "Documentation: https://environment.data.gov.uk/flood-monitoring/doc/reference#stations.
+    Proposed inventory is relative to items[]."
+  - "Publisher documents OGL attribution: this uses Environment Agency flood and river level data
+    from the real-time data API (Beta). No registration required; service-level guarantee absent."
+  - Read-only documentation research on 2026-10-06; no source payload requested, no copies/snapshots
+    or query service. No registry binding accepted.
+recordsets:
+  - name: MonitoringStation
+    description: Proposed partial native-string inventory only; current response shape is unverified and
+      the full enclosing response is not modeled.
+    fields:
+      - name: notation
+        type: string
+        description: Source notation; preserve original spelling.
+      - name: stationReference
+        type: string
+        description: Telemetry-feed reference; no global identifier equivalence.
+maintainers:
+  - trakhimenok

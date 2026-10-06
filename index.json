@@ -6780,7 +6780,7 @@
       ]
     }
   ],
-  "sourcesChecksum": "sha256:a9a18628fbfc6e2e949b172ed3864068669ebe60c768337dc792871f3fccb85a",
+  "sourcesChecksum": "sha256:3495119b41585f8fd7b15c1ab6d2bb0723cef6be3d370ba119bd00dc7bda706a",
   "sources": [
     {
       "id": "bigquery-google-trends",
@@ -7125,6 +7125,103 @@
       ]
     },
     {
+      "id": "ea-monitoring-measures",
+      "format": "ovdb-source/draft-1",
+      "title": "Environment Agency measure metadata",
+      "description": "Inactive proposed measure-code subset. No observation values or unit conversion accepted.",
+      "status": "inactive",
+      "publisher": "Environment Agency",
+      "homepage": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
+      "resource_url": "https://environment.data.gov.uk/flood-monitoring/id/measures",
+      "terms_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+      "access_mode": "live-http-via-ovdb",
+      "retention": "none",
+      "activation_blockers": [
+        "No admitted execution route exists. The gateway is proposed only; actual GET/CORS, required headers, rate/cost limits, redirect/DNS allowlists and finite row/byte/time budgets remain unverified.",
+        "Canonical source definition, bounded decoder, missing/null/multiplicity policy and source-qualified ModelSpec/MeaningGraph bindings need separate acceptance. No semantic join or model binding is claimed.",
+        "Exact intended-use rights and notices remain admission gates. A provider licence grant does not grant this workflow authorization to fetch, copy, snapshot or retain source data or results. This task authorizes documentation and registry metadata only. Future transient RAM/current display and no-store enforcement across owned/intermediary sinks remain unproved.",
+        "Retained paging/history/export/download/fixtures/replay and data-bearing logs are not authorized. Current shape, native context, response completeness and freshness require separately authorized evidence.",
+        "Nested latestReading and non-string period, station/unit resources are excluded. No observation/value model or station join accepted."
+      ],
+      "notices": [
+        "Documentation: https://environment.data.gov.uk/flood-monitoring/doc/reference#measures. Proposed inventory is relative to items[].",
+        "Publisher documents OGL attribution: this uses Environment Agency flood and river level data from the real-time data API (Beta). No registration required; service-level guarantee absent.",
+        "Read-only documentation research on 2026-10-06; no source payload requested, no copies/snapshots or query service. No registry binding accepted."
+      ],
+      "recordsets": [
+        {
+          "name": "MonitoringMeasure",
+          "description": "Proposed partial native-string inventory only; current response shape is unverified and the full enclosing response is not modeled.",
+          "fields": [
+            {
+              "name": "notation",
+              "type": "string",
+              "description": "Source notation preserved without normalization."
+            },
+            {
+              "name": "parameter",
+              "type": "string",
+              "description": "Native parameter token; vocabulary unaccepted."
+            },
+            {
+              "name": "qualifier",
+              "type": "string",
+              "description": "Native qualifier; datum context unaccepted."
+            }
+          ]
+        }
+      ],
+      "maintainers": [
+        "trakhimenok"
+      ]
+    },
+    {
+      "id": "ea-monitoring-stations",
+      "format": "ovdb-source/draft-1",
+      "title": "Environment Agency monitoring station metadata",
+      "description": "Inactive proposed station-reference subset. No measurements or geographic join accepted.",
+      "status": "inactive",
+      "publisher": "Environment Agency",
+      "homepage": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
+      "resource_url": "https://environment.data.gov.uk/flood-monitoring/id/stations",
+      "terms_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+      "access_mode": "live-http-via-ovdb",
+      "retention": "none",
+      "activation_blockers": [
+        "No admitted execution route exists. The gateway is proposed only; actual GET/CORS, required headers, rate/cost limits, redirect/DNS allowlists and finite row/byte/time budgets remain unverified.",
+        "Canonical source definition, bounded decoder, missing/null/multiplicity policy and source-qualified ModelSpec/MeaningGraph bindings need separate acceptance. No semantic join or model binding is claimed.",
+        "Exact intended-use rights and notices remain admission gates. A provider licence grant does not grant this workflow authorization to fetch, copy, snapshot or retain source data or results. This task authorizes documentation and registry metadata only. Future transient RAM/current display and no-store enforcement across owned/intermediary sinks remain unproved.",
+        "Retained paging/history/export/download/fixtures/replay and data-bearing logs are not authorized. Current shape, native context, response completeness and freshness require separately authorized evidence.",
+        "Nested measures/readings, @id URI and numeric coordinates are excluded. No stationReference/RLOI/wiski equivalence is accepted."
+      ],
+      "notices": [
+        "Documentation: https://environment.data.gov.uk/flood-monitoring/doc/reference#stations. Proposed inventory is relative to items[].",
+        "Publisher documents OGL attribution: this uses Environment Agency flood and river level data from the real-time data API (Beta). No registration required; service-level guarantee absent.",
+        "Read-only documentation research on 2026-10-06; no source payload requested, no copies/snapshots or query service. No registry binding accepted."
+      ],
+      "recordsets": [
+        {
+          "name": "MonitoringStation",
+          "description": "Proposed partial native-string inventory only; current response shape is unverified and the full enclosing response is not modeled.",
+          "fields": [
+            {
+              "name": "notation",
+              "type": "string",
+              "description": "Source notation; preserve original spelling."
+            },
+            {
+              "name": "stationReference",
+              "type": "string",
+              "description": "Telemetry-feed reference; no global identifier equivalence."
+            }
+          ]
+        }
+      ],
+      "maintainers": [
+        "trakhimenok"
+      ]
+    },
+    {
       "id": "ecb-daily",
       "format": "ovdb-source/draft-1",
       "title": "ECB euro foreign exchange reference rates",
@@ -7176,6 +7273,67 @@
       ],
       "modelspec_url": "https://modelspec.org/registry/models/ecb-daily/",
       "meaninggraph_url": "https://meaninggraph.io/graphs/ecb-daily/"
+    },
+    {
+      "id": "fsa-establishment-metadata",
+      "format": "ovdb-source/draft-1",
+      "title": "FSA establishment metadata for hygiene ratings",
+      "description": "Inactive documented establishment string subset for possible premise lookup. Rating values, images and postcode/entity joins are outside this scope.",
+      "status": "inactive",
+      "publisher": "Food Standards Agency",
+      "homepage": "https://ratings.food.gov.uk/open-data",
+      "resource_url": "https://api.ratings.food.gov.uk/Establishments",
+      "terms_url": "https://ratings.food.gov.uk/terms-and-conditions",
+      "access_mode": "live-http-via-ovdb",
+      "retention": "none",
+      "activation_blockers": [
+        "No admitted execution route exists. The gateway is proposed only; actual GET/CORS, required headers, rate/cost limits, redirect/DNS allowlists and finite row/byte/time budgets remain unverified.",
+        "Canonical source definition, bounded decoder, missing/null/multiplicity policy and source-qualified ModelSpec/MeaningGraph bindings need separate acceptance. No semantic join or model binding is claimed.",
+        "Exact intended-use rights and notices remain admission gates. A provider licence grant does not grant this workflow authorization to fetch, copy, snapshot or retain source data or results. This task authorizes documentation and registry metadata only. Future transient RAM/current display and no-store enforcement across owned/intermediary sinks remain unproved.",
+        "Retained paging/history/export/download/fixtures/replay and data-bearing logs are not authorized. Current shape, native context, response completeness and freshness require separately authorized evidence.",
+        "Header/version, bounded per-query paging and null/missing field behavior must be accepted before execution. Current browser preflight/CORS is unverified.",
+        "Inspection context differs across FHRS/FHIS. No current-risk/safety score, site-to-business equivalence or enduring ID join accepted."
+      ],
+      "notices": [
+        "Official API help documents free access without registration/API keys and requires x-api-version: 2. Documentation is https://api.ratings.food.gov.uk/help. Header cannot be encoded by this browse record; no runnable source definition is claimed.",
+        "Proposed inventory follows the synthetic documentation example (the generated page labels it Request body formats, not an observed response or authoritative current response schema) under establishments[], not an XML-to-JSON schema equivalence: https://api.ratings.food.gov.uk/Help/Api/GET-Establishments_name_address_longitude_latitude_maxDistanceLimit_businessTypeId_schemeTypeKey_ratingKey_ratingOperatorKey_localAuthorityId_countryId_sortOptionKey_pageNumber_pageSize.",
+        "FSA terms put ratings information/services under OGL; branding/images have separate requirements. Use text-only attribution; no FSA logo/rating badge or endorsement.",
+        "FHRSID is numeric in the synthetic JSON documentation example and excluded from this string-only subset. All rating fields and imagery, nested scores/geocode, and full address fields are outside this proposed inventory.",
+        "Official best practices require flow control; undocumented changing throttles can yield403/429. Pages above200 incur extra rate limits; API need not return a complete national listing.",
+        "Read-only documentation research on 2026-10-06; no source payload requested, no copies/snapshots or query service. No registry binding accepted.",
+        "FSA conditions require current or explicitly dated rating information if ratings are ever displayed. This partial metadata listing contains no rating values or imagery and does not accept that future display workflow."
+      ],
+      "recordsets": [
+        {
+          "name": "EstablishmentMetadata",
+          "description": "Proposed partial native-string inventory only; current response shape is unverified and the full enclosing response is not modeled.",
+          "fields": [
+            {
+              "name": "BusinessName",
+              "type": "string",
+              "description": "Native descriptive name; not a unique identity key."
+            },
+            {
+              "name": "PostCode",
+              "type": "string",
+              "description": "Native postcode text; missing/private-address policy unaccepted."
+            },
+            {
+              "name": "LocalAuthorityBusinessID",
+              "type": "string",
+              "description": "Authority-local reference; reused identifiers do not prove persistent business identity."
+            },
+            {
+              "name": "LocalAuthorityCode",
+              "type": "string",
+              "description": "Source authority code; no external government-code equivalence."
+            }
+          ]
+        }
+      ],
+      "maintainers": [
+        "trakhimenok"
+      ]
     },
     {
       "id": "geonames-admin1",
