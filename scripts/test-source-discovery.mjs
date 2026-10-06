@@ -52,7 +52,7 @@ test('W1 discoveries preserve original resources, inactive gates and explicit re
 test('canonical source metadata checks without source fetches and has one ID', () => {
   const r = record();
   assert.deepEqual(sourceProblems([r], maintainers), []);
-  assert.equal(readDirectory(root.pathname).sources.length, 16);
+  assert.equal(readDirectory(root.pathname).sources.length, 19);
   assert.equal(sourceEntries([r])[0].id, 'ecb-daily');
   assert.equal(r.data.resource_url, 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml');
   assert.deepEqual(r.data.recordsets[0].fields.map(f => [f.name, f.type]), [['time','string'],['currency','string'],['rate','string']]);
@@ -287,5 +287,46 @@ test('both BigQuery wave records reject activation, invented scope/binding and u
       const bad=structuredClone(r); bad.data[field][field === 'documentation' ? 'url' : 'documentation_url']='https://localhost/'; assert.ok(sourceProblems([bad], maintainers).length);
     }
     assert.ok(sourceProblems([r, {...structuredClone(r), key: r.key+'-duplicate'}], maintainers).length);
+  }
+});
+
+const w4 = {
+  'ea-monitoring-stations': ['https://environment.data.gov.uk/flood-monitoring/id/stations', ['notation','stationReference']],
+  'ea-monitoring-measures': ['https://environment.data.gov.uk/flood-monitoring/id/measures', ['notation','parameter','qualifier']],
+  'fsa-establishment-metadata': ['https://api.ratings.food.gov.uk/Establishments', ['BusinessName','PostCode','LocalAuthorityBusinessID','LocalAuthorityCode']],
+};
+test('W4 keeps partial native inventories, independent attribution and unresolved execution gates', () => {
+  const all=readDirectory(root.pathname);
+  for (const [id,[url,fields]] of Object.entries(w4)) {
+    const r=all.sources.find(x=>x.key===id); assert.ok(r,id);
+    assert.deepEqual(sourceProblems([r],all.maintainers),[]);
+    assert.equal(r.data.resource_url,url); assert.equal(r.data.format,'ovdb-source/draft-1');
+    assert.equal(r.data.status,'inactive'); assert.equal(r.data.retention,'none');
+    assert.deepEqual(r.data.recordsets[0].fields.map(x=>[x.name,x.type]),fields.map(x=>[x,'string']));
+    assert.match(r.data.recordsets[0].description,/partial.*current response shape is unverified/);
+    for(const key of ['modelspec_url','meaninggraph_url','schema','rows','deployment','licence']) assert.equal(r.data[key],undefined);
+    assert.match(r.data.activation_blockers.join(' '),/provider licence grant does not grant this workflow authorization/);
+    assert.match(r.data.activation_blockers.join(' '),/actual GET\/CORS.*remain unverified/);
+    if(id.startsWith('ea-')) {
+      assert.equal(r.data.terms_url,'https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/');
+      assert.match(r.data.notices.join(' '),/this uses Environment Agency flood and river level data from the real-time data API \(Beta\)/);
+    } else {
+      assert.equal(r.data.terms_url,'https://ratings.food.gov.uk/terms-and-conditions');
+      assert.match(r.data.notices.join(' '),/x-api-version: 2.*Header cannot be encoded/);
+      assert.match(r.data.notices.join(' '),/Request body formats.*not an observed response/);
+      assert.match(r.data.notices.join(' '),/FHRSID is numeric.*All rating fields and imagery/);
+      assert.match(r.data.notices.join(' '),/current or explicitly dated rating information/);
+      assert.doesNotMatch(fields.join(' '),/FHRSID|Rating/);
+    }
+  }
+});
+test('W4 refuses activation, retained payloads, invented types and unsafe resource/rights URLs', () => {
+  for(const r of readDirectory(root.pathname).sources.filter(x=>Object.hasOwn(w4,x.key))) {
+    for(const mutate of [d=>{d.status='active';},d=>{d.retention='snapshot';},d=>{d.rows=[];},d=>{d.headers={'x-api-version':'2'};},d=>{d.licence='CC0-1.0';},d=>{d.schema={};},d=>{d.recordsets[0].fields[0].type='number';},d=>{d.recordsets[0].fields[0].meanings=[];}]) {
+      const bad=structuredClone(r); mutate(bad.data); assert.ok(sourceProblems([bad],maintainers).length,r.key);
+    }
+    for(const field of ['homepage','resource_url','terms_url']) for(const url of ['http://example.org/', 'https://localhost/', 'https://127.0.0.1/', 'https://user:pass@example.org/', 'https://example.org/?query=payload','https://example.org/#rows']) {
+      const bad=structuredClone(r);bad.data[field]=url;assert.ok(sourceProblems([bad],maintainers).length,`${r.key} ${field} ${url}`);
+    }
   }
 });
