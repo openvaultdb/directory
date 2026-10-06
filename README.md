@@ -767,7 +767,7 @@ must not invent deployment URLs, retain source rows or put proposed meanings
 into validated mappings.
 
 Source records declare the original `resource_url`, provider `publisher`,
-`homepage`, custom `terms_url`, proposed access mode and retention constraint,
+`homepage`, custom `terms_url`, proposed access mode and retention constraint.
 `retention: none` constrains the proposed owned OVDB/client route; it does not
 certify upstream provider or intermediary cache/storage behavior. They also hold
 activation blockers, authored notices and proposed native recordset/field
