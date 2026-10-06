@@ -1,0 +1,57 @@
+format: ovdb-source/draft-1
+title: GLEIF LEI entity identifiers
+description: Inactive W2 discovery for d1-lei-entities. This limited JSON API
+  subset describes only the native lowercase lei string within each
+  data[].attributes object; no entity lookup or relationship query is activated.
+status: inactive
+publisher: Global Legal Entity Identifier Foundation (GLEIF)
+homepage: https://www.gleif.org/en/lei-data/gleif-api
+resource_url: https://api.gleif.org/api/v1/lei-records
+terms_url: https://www.gleif.org/en/meta/lei-data-terms-of-use
+access_mode: live-http-via-ovdb
+retention: none
+activation_blockers:
+  - No admitted execution gateway exists. The access_mode names a proposed OVDB Go proxy
+    route only; CORS/authentication, supported API access, redirect/DNS allowlists,
+    exact resource reads and row/byte/time budgets remain unverified.
+  - Canonical source definition, decoder and source-qualified model/meaning bindings
+    require separate acceptance. This entry has no registered semantic artifacts;
+    it does not model the complete JSON entity or either XML CDF representation.
+  - Rights for the exact returned material and intended use, supported Access Service
+    restrictions and source/changes/no-affiliation notices remain admission gates.
+  - Transient RAM/current-display execution and no-store enforcement across browser,
+    OVDB, adapter, edge and intermediary sinks remain unproved. Retained paging,
+    histories, exports, fixtures, replay caches and data-bearing logs are not authorized.
+  - The base list is a documented discovery locator, not an exact-LEI lookup,
+    a reproducible revision, a currentness guarantee or proof of full-registry access.
+    List defaults/pagination and native nested entity values, numeric/null fields and
+    response envelope remain unmodelled.
+  - LEI relationship and reporting-exception CDF candidates remain backlog. Their exact
+    archive identities, extraction paths, grain and accounting-consolidation semantics
+    need separate review; no ROR/LEI or local-demo-ID equivalence is accepted.
+notices:
+  - "Source: GLEIF. Documentation and terms checked on 2026-10-06; no LEI API rows,
+    relationship records, exceptions or archives were fetched or retained."
+  - GLEIF terms describe LEI and LEI reference data from its supported Access Service
+    under CC0 1.0. Technical restrictions and no misleading GLEIF affiliation apply;
+    separate mapping-file and trademark/logo rights are not included.
+  - "API documentation: https://api.gleif.org/docs (linked by GLEIF). The proposed
+    extraction is data[].attributes.lei, relative native field lei. Lowercase JSON
+    lei is distinct from uppercase XML CDF LEI; neither representation is admitted
+    by this listing."
+  - No names or local identifiers from demo databases resolve to legal entities here.
+    LEI registration is not a claim of complete business coverage, beneficial ownership,
+    creditworthiness, affiliation or historical identity.
+recordsets:
+  - name: LeiEntity
+    description: "Partial proposed native string subset only: lei relative to each
+      data[].attributes object. The full entity object, links, envelope, pagination,
+      nested fields and relationships remain unmodelled and unaccepted."
+    fields:
+      - name: lei
+        type: string
+        description: Documented lowercase JSON identifier at data[].attributes.lei;
+          preserve the original string and namespace. No global name resolution,
+          XML-CDF binding or user-field compatibility is asserted.
+maintainers:
+  - trakhimenok
