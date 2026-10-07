@@ -31,16 +31,122 @@ provider_retention:
   authorization: pending-review
   documentation_url: https://docs.cloud.google.com/bigquery/docs/cached-results
 activation_blockers:
-  - Authorized metadata-only dataset/table inspection must establish current existence, location, native schema/types/modes and an exact bounded table allowlist. No observation table is accepted here.
+  - A reviewed metadata-only observation establishes the native field names, types and modes of country_summary in US at 2026-10-07T14:50:22Z. Query activation still requires an accepted exact table allowlist and complete execution metadata; this one table/time does not establish dataset-wide coverage or freshness.
   - Indicator-specific provider rights, edition and attribution must be accepted for the exact intended use. World Bank summary terms do not grant unrestricted dataset-wide commercial entitlement.
   - Economy/aggregate identity, units, year coverage and semantic/model bindings require independent acceptance; no registered model is claimed.
   - Authentication and a separate execution project, cost admission, finite query/output limits and Go/JavaScript runtime acceptance remain pending.
   - Owned no-retention enforcement and explicit provider result-storage authorization are required before any query, including free jobs.
 notices:
-  - Attribution is required to the World Bank and its data providers as specified in their metadata. No World Bank endorsement is implied.
+  - "Attribution for this descriptive WDI metadata is The World Bank: World Development Indicators. Credit relevant data providers as specified in their metadata; no World Bank endorsement is implied."
   - World Bank summary terms generally use CC BY 4.0 with mandatory additions, subject to dataset and indicator/provider exceptions. Some indicators require additional consent or have noncommercial restrictions.
-  - The pinned Google-authored definition documents the dataset name; the public-program source project is a discovery candidate, not an authenticated metadata receipt. The repository is deprecated and its schedule is not a freshness guarantee.
+  - The pinned Google-authored definition documents the dataset name. The country_summary schema is one exact, receipt-backed provider metadata observation, not a dataset-wide existence, location or freshness claim. The repository is deprecated and its schedule is not a freshness guarantee.
   - BigQuery writes query results to destination or temporary tables. Disabling query-cache retrieval does not prevent provider materialization; typical temporary cache duration is about 24 hours, not a guaranteed maximum deletion period.
-  - This entry serves descriptive metadata only. It contains no copied source rows, table schema assertion, query endpoint, execution credential or cost authorization.
+  - This entry serves descriptive metadata only. Its one partial public schema observation is bound to bigquery-public-data.world_bank_wdi.country_summary at 2026-10-07T14:50:22Z; it contains no copied source rows, query endpoint, execution credential or cost authorization and grants no indicator-value rights.
+metadata_observations:
+  - format: ovdb-bigquery-observation/draft-1
+    source_id: bigquery-world-bank-wdi
+    source_project: bigquery-public-data
+    dataset_id: world_bank_wdi
+    table_id: country_summary
+    location: US
+    object_type: TABLE
+    observed_at: 2026-10-07T14:50:22Z
+    projection: partial-public-schema
+    provenance:
+      kind: provider-metadata
+      method: datasets.get+tables.get
+      verifier: public-projection-review-v1
+    schema:
+      - name: country_code
+        type: STRING
+        mode: NULLABLE
+      - name: short_name
+        type: STRING
+        mode: NULLABLE
+      - name: table_name
+        type: STRING
+        mode: NULLABLE
+      - name: long_name
+        type: STRING
+        mode: NULLABLE
+      - name: two_alpha_code
+        type: STRING
+        mode: NULLABLE
+      - name: currency_unit
+        type: STRING
+        mode: NULLABLE
+      - name: special_notes
+        type: STRING
+        mode: NULLABLE
+      - name: region
+        type: STRING
+        mode: NULLABLE
+      - name: income_group
+        type: STRING
+        mode: NULLABLE
+      - name: wb_2_code
+        type: STRING
+        mode: NULLABLE
+      - name: national_accounts_base_year
+        type: STRING
+        mode: NULLABLE
+      - name: national_accounts_reference_year
+        type: STRING
+        mode: NULLABLE
+      - name: sna_price_valuation
+        type: STRING
+        mode: NULLABLE
+      - name: lending_category
+        type: STRING
+        mode: NULLABLE
+      - name: other_groups
+        type: STRING
+        mode: NULLABLE
+      - name: system_of_national_accounts
+        type: STRING
+        mode: NULLABLE
+      - name: alternative_conversion_factor
+        type: STRING
+        mode: NULLABLE
+      - name: ppp_survey_year
+        type: STRING
+        mode: NULLABLE
+      - name: balance_of_payments_manual_in_use
+        type: STRING
+        mode: NULLABLE
+      - name: external_debt_reporting_status
+        type: STRING
+        mode: NULLABLE
+      - name: system_of_trade
+        type: STRING
+        mode: NULLABLE
+      - name: government_accounting_concept
+        type: STRING
+        mode: NULLABLE
+      - name: imf_data_dissemination_standard
+        type: STRING
+        mode: NULLABLE
+      - name: latest_population_census
+        type: STRING
+        mode: NULLABLE
+      - name: latest_household_survey
+        type: STRING
+        mode: NULLABLE
+      - name: source_of_most_recent_income_and_expenditure_data
+        type: STRING
+        mode: NULLABLE
+      - name: vital_registration_complete
+        type: STRING
+        mode: NULLABLE
+      - name: latest_agricultural_census
+        type: STRING
+        mode: NULLABLE
+      - name: latest_industrial_data
+        type: STRING
+        mode: NULLABLE
+      - name: latest_trade_data
+        type: STRING
+        mode: NULLABLE
+    sha256: sha256:359d61bbc4a9937430c32b217199c1e43cccd1d9a35ec2427e0e61ee70f96f72
 maintainers:
   - trakhimenok
