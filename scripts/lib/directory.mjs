@@ -31,16 +31,16 @@ const recordsDir = (root, collection) => join(root, collection, '$records');
 
 // Reads one collection's records as [{ key, file, data }] sorted by key, with a
 // problem for any file in $records that is not <key>.yaml.
-export function readCollection(root, collection) {
+export function readCollection(root, collection, io = {}) {
   const dir = recordsDir(root, collection);
   const records = [];
   const problems = [];
-  if (!existsSync(dir)) return { records, problems };
-  for (const name of readdirSync(dir).sort()) {
+  if (!io.names && !existsSync(dir)) return { records, problems };
+  for (const name of (io.names ? io.names(collection) : readdirSync(dir)).sort()) {
     const file = `${collection}/$records/${name}`;
-    if (!name.endsWith('.yaml')) { problems.push(`${file}: a record is a <key>.yaml file; remove or rename it`); continue; }
+    if (!name.endsWith('.yaml')) { problems.push(`${file}: a record is a <key>.yaml file; remove or rename it`); io.onProblem?.(file, 'record-filename'); continue; }
     let data;
-    try { data = parseYaml(readFileSync(join(dir, name), 'utf8')); } catch (error) { problems.push(`${file}: not YAML: ${error.message}`); continue; }
+    try { data = parseYaml(io.read ? io.read(file) : readFileSync(join(dir, name), 'utf8')); } catch (error) { problems.push(`${file}: not YAML: ${error.message}`); io.onProblem?.(file, 'record-yaml'); continue; }
     records.push({ key: name.slice(0, -'.yaml'.length), file, data: data ?? {} });
   }
   return { records, problems };
