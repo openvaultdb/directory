@@ -23,7 +23,13 @@ test('golden fixture hashes canonical sorted keys and covers every canonical Big
     assert.deepEqual(sourceProblems([synthetic], all.maintainers, { allowSynthetic: true }), []);
     assert.ok(sourceProblems([synthetic], all.maintainers).length);
     assert.throws(() => sourceEntries([synthetic]), /synthetic evidence cannot enter/);
-    assert.equal(r.data.metadata_observations, undefined, 'canonical records contain no manufactured observations');
+    if (r.key === 'bigquery-world-bank-wdi') {
+      assert.equal(r.data.metadata_observations.length, 1);
+      const observed = r.data.metadata_observations[0];
+      assert.equal(observed.provenance.kind, 'provider-metadata');
+      assert.equal(observed.table_id, 'country_summary');
+      assert.equal(observationDigest(observed), observed.sha256);
+    } else assert.equal(r.data.metadata_observations, undefined);
     assert.equal(r.data.locator.existence_status, 'unverified');
     assert.equal(r.data.locator.location_status, 'unverified');
     // Validate generation with test-only provider-kind evidence; never write this index.

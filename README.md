@@ -799,7 +799,9 @@ Optional `metadata_observations` carry a separately versioned, bounded partial
 public table/schema projection; they cannot change any activation gate. The
 [public metadata contract](docs/bigquery-public-metadata.md) defines the closed
 recursive allowlist, provenance, canonical digest, bounds and fixture boundary.
-Current canonical records have no authenticated observations.
+The WDI record carries one independently reviewed, time-bound provider metadata
+observation of the `country_summary` table; the other BigQuery records have no
+such observation.
 
 BigQuery queries remain `blocked`. `access_requirements` keeps authentication
 required, execution project unconfigured, cost admission not granted and runtime
@@ -812,12 +814,14 @@ validates shared columns; the custom checker enforces discriminated required
 fields and nested shapes. Run both checks.
 
 `bigquery-world-bank-wdi` is an inactive dataset discovery. The pinned definition
-supports the name `world_bank_wdi`, not current table existence, region, schema,
-observation coverage or freshness. The candidate public-program project needs
-an authenticated metadata-only receipt. Indicator/provider rights exceptions,
+supports the name `world_bank_wdi`. One reviewed provider metadata observation
+records the partial public schema of `bigquery-public-data.world_bank_wdi.country_summary`
+in `US` at `2026-10-07T14:50:22Z`; it does not establish dataset-wide
+existence, location, coverage or freshness. Other tables need their own
+authorized metadata-only receipts. Indicator/provider rights exceptions,
 attribution and source edition must be accepted before the exact intended use;
-this listing grants no unrestricted commercial entitlement. Land website support
-before publishing the new source format in the canonical index.
+this listing grants no unrestricted commercial entitlement. The Directory
+renders the single observation through its existing inactive source page.
 
 The W1 geography/affiliation discoveries are `geonames-countries`,
 `geonames-places`, `geonames-admin1`, `geonames-alternates` and

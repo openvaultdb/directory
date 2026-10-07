@@ -6,8 +6,11 @@ not change the source format or dataset locator. WDI, Google Trends and the
 scoped Citi Bike candidate all remain inactive, with unverified dataset
 existence/location, blocked queries, unconfigured execution project, cost
 admission not granted, runtime acceptance pending, owned retention unverified
-and provider result-retention authorization pending. No canonical observation
-is authored by this change. No BigQuery API call is performed.
+and provider result-retention authorization pending. The WDI canonical record
+now carries one reviewed provider metadata observation of the exact
+`bigquery-public-data.world_bank_wdi.country_summary` table in `US` at
+`2026-10-07T14:50:22Z`. It does not establish dataset-wide coverage or
+freshness. This publication step performs no BigQuery API call.
 
 The public observation is **separate from transient provider/client metadata**.
 Never persist a `MetadataDiscovery`, complete `TableSchema`, provider response,
@@ -93,8 +96,9 @@ Canonical record validation and `sourceEntries` reject synthetic observations.
 Registry tests can explicitly opt in to synthetic validation, but canonical
 index generation has no fixture override. The existing sorted source index
 and `sourcesChecksum` include valid provider-kind evidence automatically for
-every entry; no per-source list or alternate registry is introduced. Current
-`sources/$records` and `index.json` retain no observations.
+every entry; no per-source list or alternate registry is introduced. The WDI
+record and generated `index.json` retain the single reviewed `country_summary`
+observation; other BigQuery records retain none.
 
 The website separately validates the identical closed projection. Synthetic
 evidence requires both an explicit fixture validation option and a fixture
@@ -105,11 +109,11 @@ retaining every admission blocker. Fixture pages label the whole observation
 synthetic and say no provider call occurred. Provider-kind pages limit claims
 to the named tables and observation times; candidate locators stay unverified.
 
-Land the website support before publishing any real registry observations.
-Real publication needs authorized projection/review; structural capability is
-not that authorization. This work neither calls jobs/tabledata APIs, grants
-cost/retention/rights, creates a copy/snapshot, binds semantic models, nor adds
-DataTug UI. Source object type `SNAPSHOT` describes metadata only; it never
-creates a snapshot.
+Website support renders the reviewed WDI observation on its inactive source
+page. Further publication still needs authorized projection/review; structural
+capability is not that authorization. This work neither calls jobs/tabledata
+APIs, grants cost/retention/rights, creates a copy/snapshot, binds semantic
+models, nor adds DataTug UI. Source object type `SNAPSHOT` describes metadata
+only; it never creates a snapshot.
 
 Field/type reference: [Google Table REST resource](https://docs.cloud.google.com/bigquery/docs/reference/rest/v2/tables).
