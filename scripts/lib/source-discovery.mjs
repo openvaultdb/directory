@@ -13,42 +13,45 @@ import { observationsProblems } from './bigquery-observation.mjs';
 export const sourceFormat = 'ovdb-source/draft-1';
 const httpKeys = ['format', 'title', 'description', 'status', 'publisher', 'homepage', 'resource_url', 'terms_url', 'access_mode', 'retention', 'activation_blockers', 'notices', 'recordsets', 'maintainers', 'modelspec_url', 'meaninggraph_url'];
 const identifier = /^[A-Za-z_][A-Za-z0-9_]*$/;
-export function sourceProblems(records, maintainers, observationOptions) {
+export function sourceProblems(records, maintainers, observationOptions, onFinding) {
   const problems = [];
   const ids = new Set();
   const resources = new Set();
   const handles = new Set(maintainers.map(x => x.key));
   for (const { key, file, data } of records) {
-    const bad = message => problems.push(`${file}: ${message}`);
+    const bad = (message, code, field = '') => {
+      problems.push(`${file}: ${message}`);
+      onFinding?.({ code, file, field, source: key });
+    };
     const str = value => typeof value === 'string' && value.trim().length > 0;
     const only = (object, allowed) => object && typeof object === 'object' && !Array.isArray(object) && Object.keys(object).every(k => allowed.includes(k));
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(key) || key.length > 80 || ids.has(key)) bad('invalid or duplicate source id');
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(key) || key.length > 80 || ids.has(key)) bad('invalid or duplicate source id', 'source-id');
     ids.add(key);
     const bigquery = data?.access_mode === 'bigquery-native';
     const keys = bigquery ? bigQueryKeys : httpKeys;
-    if (!only(data, keys)) { bad('unknown source fields; source records contain metadata only'); continue; }
-    for (const field of ['format', 'title', 'description', 'status', 'publisher', 'homepage', 'terms_url', 'access_mode']) if (!str(data[field])) bad(`${field} must be a non-empty string`);
-    if (!bigquery && (data.format !== sourceFormat || data.status !== 'inactive' || data.access_mode !== 'live-http-via-ovdb' || data.retention !== 'none')) bad('only inactive live-http-via-ovdb discovery with proposed retention none is supported');
-    for (const field of bigquery ? ['homepage', 'terms_url'] : ['homepage', 'resource_url', 'terms_url']) if (publicHttpsProblem(data[field])) bad(`${field} must be a public https URL`);
+    if (!only(data, keys)) { bad('unknown source fields; source records contain metadata only', 'source-fields'); continue; }
+    for (const field of ['format', 'title', 'description', 'status', 'publisher', 'homepage', 'terms_url', 'access_mode']) if (!str(data[field])) bad(`${field} must be a non-empty string`, 'source-required-string', field);
+    if (!bigquery && (data.format !== sourceFormat || data.status !== 'inactive' || data.access_mode !== 'live-http-via-ovdb' || data.retention !== 'none')) bad('only inactive live-http-via-ovdb discovery with proposed retention none is supported', 'source-inactive-http');
+    for (const field of bigquery ? ['homepage', 'terms_url'] : ['homepage', 'resource_url', 'terms_url']) if (publicHttpsProblem(data[field])) bad(`${field} must be a public https URL`, 'source-public-url', field);
     const resource = bigquery ? `${data.locator?.source_project}.${data.locator?.dataset_id}` : data.resource_url;
-    if (resources.has(resource)) bad('duplicate original resource URL');
+    if (resources.has(resource)) bad('duplicate original resource URL', 'source-duplicate-resource');
     resources.add(resource);
-    for (const field of ['activation_blockers', 'notices', 'maintainers']) if (!Array.isArray(data[field]) || !data[field].length || !data[field].every(str)) bad(`${field} must be a non-empty string array`);
-    if (Array.isArray(data.maintainers)) for (const handle of data.maintainers) if (!handles.has(handle)) bad(`maintainer ${handle} has no record`);
-    if (bigquery) { bigQueryProblems(data).forEach(bad); if (Object.hasOwn(data, 'metadata_observations')) observationsProblems(data.metadata_observations, { id: key, locator: data.locator }, observationOptions).forEach(bad); continue; }
+    for (const field of ['activation_blockers', 'notices', 'maintainers']) if (!Array.isArray(data[field]) || !data[field].length || !data[field].every(str)) bad(`${field} must be a non-empty string array`, 'source-required-array', field);
+    if (Array.isArray(data.maintainers)) for (const handle of data.maintainers) if (!handles.has(handle)) bad(`maintainer ${handle} has no record`, 'source-maintainer-reference', 'maintainers');
+    if (bigquery) { bigQueryProblems(data).forEach(message => bad(message, 'source-bigquery-contract')); if (Object.hasOwn(data, 'metadata_observations')) observationsProblems(data.metadata_observations, { id: key, locator: data.locator }, observationOptions).forEach(message => bad(message, 'source-observation-contract', 'metadata_observations')); continue; }
     for (const field of ['modelspec_url', 'meaninggraph_url']) {
-      if (Object.hasOwn(data, field) && !registryMetadataId(field, data[field])) bad(`${field} must be a canonical registry metadata detail URL`);
+      if (Object.hasOwn(data, field) && !registryMetadataId(field, data[field])) bad(`${field} must be a canonical registry metadata detail URL`, 'source-registry-url', field);
     }
     const names = new Set();
-    if (!Array.isArray(data.recordsets) || !data.recordsets.length) { bad('recordsets must be a non-empty array'); continue; }
+    if (!Array.isArray(data.recordsets) || !data.recordsets.length) { bad('recordsets must be a non-empty array', 'source-recordsets', 'recordsets'); continue; }
     for (const rs of data.recordsets) {
-      if (!only(rs, ['name', 'description', 'fields']) || !identifier.test(rs.name ?? '') || names.has(rs.name) || !str(rs.description)) { bad('invalid or duplicate proposed recordset'); continue; }
+      if (!only(rs, ['name', 'description', 'fields']) || !identifier.test(rs.name ?? '') || names.has(rs.name) || !str(rs.description)) { bad('invalid or duplicate proposed recordset', 'source-recordset', 'recordsets'); continue; }
       names.add(rs.name);
       const fields = new Set();
-      if (!Array.isArray(rs.fields) || !rs.fields.length) { bad('fields must be a non-empty array'); continue; }
+      if (!Array.isArray(rs.fields) || !rs.fields.length) { bad('fields must be a non-empty array', 'source-recordset-fields', 'recordsets'); continue; }
       for (const field of rs.fields) {
-        if (!only(field, ['name', 'type', 'description']) || !identifier.test(field.name ?? '') || fields.has(field.name) || field.type !== 'string' || !str(field.description)) bad('invalid or duplicate proposed native string field');
-        fields.add(field.name);
+        if (!only(field, ['name', 'type', 'description']) || !identifier.test(field.name ?? '') || fields.has(field.name) || field.type !== 'string' || !str(field.description)) bad('invalid or duplicate proposed native string field', 'source-native-field', 'recordsets');
+        fields.add(field?.name);
       }
     }
   }
@@ -80,13 +83,16 @@ export function bigQueryProblems(data) {
 }
 
 // Check existence in the already-loaded authoritative registries, never infer bindings.
-export function sourceRegistryProblems(records, meaningRegistry, modelRegistry) {
+export function sourceRegistryProblems(records, meaningRegistry, modelRegistry, onFinding) {
   const modelIds = new Set([...modelRegistry.byAddress.values()].map(model => model.id));
   const problems = [];
   for (const { file, data } of records) {
     for (const [field, ids] of [['modelspec_url', modelIds], ['meaninggraph_url', new Set(meaningRegistry.byId.keys())]]) {
       const id = registryMetadataId(field, data[field]);
-      if (id && !ids.has(id)) problems.push(`${file}: ${field} names unregistered metadata ID ${id}`);
+      if (id && !ids.has(id)) {
+        problems.push(`${file}: ${field} names unregistered metadata ID ${id}`);
+        onFinding?.({ code: 'source-registry-target', file, field });
+      }
     }
   }
   return problems;

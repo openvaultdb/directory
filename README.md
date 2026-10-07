@@ -836,3 +836,59 @@ not deployed behavior. GeoNames attribution is retained; ROR's API schema
 documentation and reviewed release disagree on the embedded GeoNames licence
 version, so exact API rights remain unresolved. Land the provider-neutral
 website renderer before publishing these source records.
+
+## Offline source-contract report
+
+Run the report against a **local checkout root whose HEAD equals the supplied
+40-character commit**. It reads committed Git objects; working-tree edits and
+untracked files are ignored. It never fetches registries, publisher repositories
+or providers, and never queries, copies or snapshots data.
+
+```sh
+npm run report:sources -- /path/to/directory --commit <40-character-HEAD>
+```
+
+The JSON format is `ovdb-source-contract-report/draft-1`. Named checks cover
+source-discovery contracts and maintainer **key existence**. Database count is
+inventory only. Collection constraints, maintainer contents, publisher/database
+validation, site delivery, execution and semantics are explicitly `not-checked`.
+There is no global registry-valid verdict; continue running the existing
+`ingitdb validate` and `npm run check` gates before publication.
+
+For explicitly declared related metadata links, optionally supply local registry
+checkouts with their exact HEAD commits. No default registry URL is read:
+
+```sh
+npm run report:sources -- /path/to/directory --commit <directory-HEAD> \
+  --meaning-index /path/to/meaninggraph-registry --meaning-commit <meaning-HEAD> \
+  --model-index /path/to/modelspec-registry --model-commit <model-HEAD> \
+  --check-index
+```
+
+`--check-index` checks only the committed index's source projection and its
+`sourcesChecksum` against those records. Its input digest proves bytes, not
+full Directory integrity. Related index checks reuse the existing index format
+and checksum readers; target existence grants no semantic equivalence or query
+admission. Missing evidence for a declared link is `unverified`; absent optional
+links require no index. Malformed provided metadata is `invalid`; a missing or
+unreadable explicitly requested input is `unrunnable`. Exit codes are 0 for no
+invalid/unrunnable checks (possibly with unverified evidence), 1 for invalid
+checks, and 2 for usage/unrunnable checks. Declared inactive/blocked states are
+reported separately and never changed.
+
+Diagnostics contain stable codes, bounded record paths and field categories;
+provider payloads, metadata values, identity details and parser/Git errors are
+not printed. The report records input commits and digests without local paths
+or timestamps, so identical inputs produce identical output. It limits inputs
+to 1,024 source/maintainer records, 256 KiB per record and 16 MiB total; related
+indexes have a 4 MiB limit. At most 256 findings are printed, with the omitted
+count retained. Outcomes still reflect all findings. Source/maintainer bytes are hashed as
+an ordered sequence of compact JSON `[path, sha256:<raw-record-digest>]` pairs
+in ascending path order; the SHA-256 of that sequence is `recordsDigest`.
+
+The public BigQuery source-project/dataset/table locator remains permitted
+metadata. Execution/billing/identity project IDs, actor identities, raw responses
+and rows remain excluded by the existing closed observation contract. The report
+refuses synthetic observations in canonical source records and grants no rights,
+retention authorization, publication or activation. Website route acceptance is
+a separate follow-up using the existing generic source-route tests.
