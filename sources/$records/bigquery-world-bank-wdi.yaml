@@ -34,12 +34,15 @@ activation_blockers:
   - A reviewed metadata-only observation establishes the native field names, types and modes of country_summary in US at 2026-10-07T14:50:22Z. Query activation still requires an accepted exact table allowlist and complete execution metadata; this one table/time does not establish dataset-wide coverage or freshness.
   - Indicator-specific provider rights, edition and attribution must be accepted for the exact intended use. World Bank summary terms do not grant unrestricted dataset-wide commercial entitlement.
   - Economy/aggregate identity, units, year coverage and semantic/model bindings require independent acceptance; no registered model is claimed.
+  - An exact distribution/revision crosswalk from country_summary.country_code to World Bank API economy.id remains unaccepted, including treatment of aggregates, territories and historical codes. Identifier uniqueness and join multiplicity have not been accepted.
   - Authentication and a separate execution project, cost admission, finite query/output limits and Go/JavaScript runtime acceptance remain pending.
   - Owned no-retention enforcement and explicit provider result-storage authorization are required before any query, including free jobs.
 notices:
   - "Attribution for this descriptive WDI metadata is The World Bank: World Development Indicators. Credit relevant data providers as specified in their metadata; no World Bank endorsement is implied."
   - World Bank summary terms generally use CC BY 4.0 with mandatory additions, subject to dataset and indicator/provider exceptions. Some indicators require additional consent or have noncommercial restrictions.
   - The pinned Google-authored definition documents the dataset name. The country_summary schema is one exact, receipt-backed provider metadata observation, not a dataset-wide existence, location or freshness claim. The repository is deprecated and its schedule is not a freshness guarantee.
+  - country_summary.country_code is a source-qualified WDI field; unconditional ISO identity and interchangeability with the World Bank API economy key are not accepted. The country_code, two_alpha_code and wb_2_code names and STRING types do not establish their code standards or crosswalks. Country labels are not identity keys.
+  - country_summary.currency_unit is observed as STRING. No ISO currency-code or monetary-unit binding is accepted; the field name and type do not establish one.
   - BigQuery writes query results to destination or temporary tables. Disabling query-cache retrieval does not prevent provider materialization; typical temporary cache duration is about 24 hours, not a guaranteed maximum deletion period.
   - This entry serves descriptive metadata only. Its one partial public schema observation is bound to bigquery-public-data.world_bank_wdi.country_summary at 2026-10-07T14:50:22Z; it contains no copied source rows, query endpoint, execution credential or cost authorization and grants no indicator-value rights.
 metadata_observations:

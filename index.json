@@ -6780,7 +6780,7 @@
       ]
     }
   ],
-  "sourcesChecksum": "sha256:6f151f901e68f521080d22c114b79fba5a1cfa71fe721d869489f1fb9990cc3e",
+  "sourcesChecksum": "sha256:cdd8a47f6cb5bfc02c17b48ceb9e20dde286a15222f4f2854738ad0c33d7a880",
   "sources": [
     {
       "id": "bigquery-google-trends",
@@ -6825,11 +6825,14 @@
         "Two metadata-only observations establish the native field names, types and modes of top_terms and international_top_terms in US at 2026-10-07T15:39:14Z. Query activation still requires an accepted exact table allowlist and complete execution metadata; these table/time observations do not establish dataset-wide coverage or freshness.",
         "Authentication, execution-project IAM, explicit cost admission, finite SQL/output/time/bytes limits, and real Go plus browser acceptance remain pending.",
         "Owned no-retention enforcement and separately scoped authorization of BigQuery result materialization are required before any query, including free jobs.",
-        "Establish which terms apply to the exact BigQuery distribution and intended use, including attribution and any third-party geography requirements, before activation."
+        "Establish which terms apply to the exact BigQuery distribution and intended use, including attribution and any third-party geography requirements, before activation.",
+        "Geography standards, editions, coverage and country/economy crosswalks require independent acceptance before joins. The exact BigQuery score normalization domain also remains unresolved; native schema metadata does not establish these semantics."
       ],
       "notices": [
         "Google's current dataset help https://support.google.com/trends/answer/12764470 documents bigquery-public-data.google_trends.top_terms; Google's international article https://cloud.google.com/blog/products/data-analytics/international-google-trends-datasets-in-bigquery documents international_top_terms. The two exact tables now have provider metadata observations, but no binding or query allowlist is accepted here.",
         "Search-interest data is aggregated and normalized; scores are not raw search volumes. Advertised rolling windows and cadence are not current freshness guarantees. Other international/hourly tables and DMA/country mappings are not accepted.",
+        "international_top_terms.country_code and region_code retain their native source namespaces and country/subregion context; labels alone do not establish identity. top_terms.dma_id is a separate geography namespace, with no accepted country equivalence. No join to WDI or World Bank API economies is accepted here; uniqueness and join multiplicity remain unmeasured.",
+        "score describes normalized search interest, with its exact BigQuery normalization domain unresolved. It is not a raw search count, revenue or population measure, and supplies no accepted causal mapping. General Trends guidance is not an exact BigQuery field-level specification.",
         "Google's use and citation guidance permits information use subject to Google Terms and requires attribution when reused. This entry grants no independent data licence or clearance for the proposed BigQuery route. Attribution should identify Google Trends and avoid conflating it with Google Ads.",
         "Third-party geography requirements remain unresolved; DMA boundaries are not licensed by this listing.",
         "Pinned authored definitions establish documented candidate names only. The two exact metadata observations establish table existence and US location at their observation time, but not permissions, freshness or a deployed query service. Repository code/documentation licences do not licence dataset contents.",
@@ -7064,6 +7067,7 @@
         "A reviewed metadata-only observation establishes the native field names, types and modes of country_summary in US at 2026-10-07T14:50:22Z. Query activation still requires an accepted exact table allowlist and complete execution metadata; this one table/time does not establish dataset-wide coverage or freshness.",
         "Indicator-specific provider rights, edition and attribution must be accepted for the exact intended use. World Bank summary terms do not grant unrestricted dataset-wide commercial entitlement.",
         "Economy/aggregate identity, units, year coverage and semantic/model bindings require independent acceptance; no registered model is claimed.",
+        "An exact distribution/revision crosswalk from country_summary.country_code to World Bank API economy.id remains unaccepted, including treatment of aggregates, territories and historical codes. Identifier uniqueness and join multiplicity have not been accepted.",
         "Authentication and a separate execution project, cost admission, finite query/output limits and Go/JavaScript runtime acceptance remain pending.",
         "Owned no-retention enforcement and explicit provider result-storage authorization are required before any query, including free jobs."
       ],
@@ -7071,6 +7075,8 @@
         "Attribution for this descriptive WDI metadata is The World Bank: World Development Indicators. Credit relevant data providers as specified in their metadata; no World Bank endorsement is implied.",
         "World Bank summary terms generally use CC BY 4.0 with mandatory additions, subject to dataset and indicator/provider exceptions. Some indicators require additional consent or have noncommercial restrictions.",
         "The pinned Google-authored definition documents the dataset name. The country_summary schema is one exact, receipt-backed provider metadata observation, not a dataset-wide existence, location or freshness claim. The repository is deprecated and its schedule is not a freshness guarantee.",
+        "country_summary.country_code is a source-qualified WDI field; unconditional ISO identity and interchangeability with the World Bank API economy key are not accepted. The country_code, two_alpha_code and wb_2_code names and STRING types do not establish their code standards or crosswalks. Country labels are not identity keys.",
+        "country_summary.currency_unit is observed as STRING. No ISO currency-code or monetary-unit binding is accepted; the field name and type do not establish one.",
         "BigQuery writes query results to destination or temporary tables. Disabling query-cache retrieval does not prevent provider materialization; typical temporary cache duration is about 24 hours, not a guaranteed maximum deletion period.",
         "This entry serves descriptive metadata only. Its one partial public schema observation is bound to bigquery-public-data.world_bank_wdi.country_summary at 2026-10-07T14:50:22Z; it contains no copied source rows, query endpoint, execution credential or cost authorization and grants no indicator-value rights."
       ],
