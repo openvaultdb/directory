@@ -29,6 +29,13 @@ test('golden fixture hashes canonical sorted keys and covers every canonical Big
       assert.equal(observed.provenance.kind, 'provider-metadata');
       assert.equal(observed.table_id, 'country_summary');
       assert.equal(observationDigest(observed), observed.sha256);
+    } else if (r.key === 'bigquery-google-trends') {
+      assert.deepEqual(r.data.metadata_observations.map(v => v.table_id), ['top_terms', 'international_top_terms']);
+      for (const observed of r.data.metadata_observations) {
+        assert.equal(observed.provenance.kind, 'provider-metadata');
+        assert.equal(observed.location, 'US');
+        assert.equal(observationDigest(observed), observed.sha256);
+      }
     } else assert.equal(r.data.metadata_observations, undefined);
     assert.equal(r.data.locator.existence_status, 'unverified');
     assert.equal(r.data.locator.location_status, 'unverified');
