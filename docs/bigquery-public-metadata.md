@@ -9,8 +9,11 @@ admission not granted, runtime acceptance pending, owned retention unverified
 and provider result-retention authorization pending. The WDI canonical record
 now carries one reviewed provider metadata observation of the exact
 `bigquery-public-data.world_bank_wdi.country_summary` table in `US` at
-`2026-10-07T14:50:22Z`. It does not establish dataset-wide coverage or
-freshness. This publication step performs no BigQuery API call.
+`2026-10-07T14:50:22Z`. The Google Trends record carries two
+provider metadata observations of `top_terms` and `international_top_terms`
+in `US` at `2026-10-07T15:39:14Z`. These observations do not establish
+dataset-wide coverage or freshness. The Trends publication step used only
+`datasets.get` and `tables.get`; it created no query job and read no rows.
 
 The public observation is **separate from transient provider/client metadata**.
 Never persist a `MetadataDiscovery`, complete `TableSchema`, provider response,
@@ -97,8 +100,9 @@ Registry tests can explicitly opt in to synthetic validation, but canonical
 index generation has no fixture override. The existing sorted source index
 and `sourcesChecksum` include valid provider-kind evidence automatically for
 every entry; no per-source list or alternate registry is introduced. The WDI
-record and generated `index.json` retain the single reviewed `country_summary`
-observation; other BigQuery records retain none.
+record retains the single reviewed `country_summary` observation, while the
+Google Trends record carries the two exact table observations; Citi Bike
+retains none.
 
 The website separately validates the identical closed projection. Synthetic
 evidence requires both an explicit fixture validation option and a fixture
@@ -109,11 +113,11 @@ retaining every admission blocker. Fixture pages label the whole observation
 synthetic and say no provider call occurred. Provider-kind pages limit claims
 to the named tables and observation times; candidate locators stay unverified.
 
-Website support renders the reviewed WDI observation on its inactive source
-page. Further publication still needs authorized projection/review; structural
-capability is not that authorization. This work neither calls jobs/tabledata
-APIs, grants cost/retention/rights, creates a copy/snapshot, binds semantic
-models, nor adds DataTug UI. Source object type `SNAPSHOT` describes metadata
-only; it never creates a snapshot.
+Website support renders the WDI and Google Trends observations on
+their inactive source pages. Further publication still needs authorized
+projection/review; structural capability is not that authorization. This work
+neither calls jobs/tabledata APIs, grants cost/retention/rights, creates a
+copy/snapshot, binds semantic models, nor adds DataTug UI. Source object type
+`SNAPSHOT` describes metadata only; it never creates a snapshot.
 
 Field/type reference: [Google Table REST resource](https://docs.cloud.google.com/bigquery/docs/reference/rest/v2/tables).

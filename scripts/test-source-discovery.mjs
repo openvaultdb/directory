@@ -263,11 +263,11 @@ test('BigQuery wave keeps source-specific scope and unresolved native/rights gat
     assert.equal(r.data.access_requirements.runtime_acceptance, 'pending');
     assert.equal(r.data.provider_retention.authorization, 'pending-review');
     for (const field of ['recordsets','resource_url','retention','modelspec_url','meaninggraph_url']) assert.equal(r.data[field], undefined);
-    assert.match(r.data.activation_blockers.join(' '), /separately authorized metadata-only evidence/);
+    assert.match(r.data.activation_blockers.join(' '), id === 'bigquery-google-trends' ? /Two metadata-only observations.*Query activation still requires/ : /separately authorized metadata-only evidence/);
     assert.match(r.data.notices.join(' '), /not a guaranteed maximum deletion period/);
   }
   const trends = all.sources.find(x => x.key === 'bigquery-google-trends').data;
-  assert.match(trends.notices.join(' '), /top_terms.*candidate only/);
+  assert.match(trends.notices.join(' '), /top_terms.*international_top_terms.*provider metadata observations/);
   assert.match(trends.notices.join(' '), /requires attribution.*no independent data licence/);
   const bike = all.sources.find(x => x.key === 'bigquery-new-york-citibike').data;
   assert.match(bike.title, /Citi Bike candidates within BigQuery new_york/);
