@@ -6780,7 +6780,7 @@
       ]
     }
   ],
-  "sourcesChecksum": "sha256:cdd8a47f6cb5bfc02c17b48ceb9e20dde286a15222f4f2854738ad0c33d7a880",
+  "sourcesChecksum": "sha256:363f6825cebc9ef119523d59ed346798c6fddba466927cda6317c9697d9042dd",
   "sources": [
     {
       "id": "bigquery-google-trends",
@@ -8113,6 +8113,8 @@
         "d2-map-iana-status remains unresolved because Value includes ranges. Exact scalar-code projection and actual log-field binding require reconciliation."
       ],
       "notices": [
+        "Delivered implementation evidence, not live-source acceptance: the fixed lexical CSV mount is documented at https://github.com/openvaultdb/openvaultdb-go/blob/4e7164ac1d4973c95b44822a19e231a662987ce8/docs/http-iana.md. It requires ordered Value,Description,Reference headers, preserves strings and ranges, and bounds the fixed GET to 64 KiB, 512 parsed rows and 10 seconds with no redirects or snapshot fallback. Its native query profile requires limit 1-50 and refuses point reads, writes, paging, aliases, joins, ordering and offsets. These are implemented constraints, not observed current CSV content or accepted scalar status-code semantics.",
+        "Default-off operator composition is documented at https://github.com/openvaultdb/cloud/blob/0414c51e6363b3be81905960c70912763d5a9a87/server/IANA.md. Directory-authored metadata is discovery evidence; it cannot establish publisher verification. Publisher-definition, decoder and rights digests and an independently accepted operator decision remain separate requirements. The per-execution 50-row envelope does not authorize a pilot, public access or paid use. Synthetic component checks do not establish live execution, production configuration, deployed sink behavior or a Directory browser journey; this entry remains inactive with all activation blockers retained.",
         "Metadata/documentation and endpoint HEAD checked 2026-10-06. No source dataset payload was requested or retained; no query service is activated.",
         "IANA/IETF CC0 statement covers applicable protocol-registry rights and excludes linked RFC text/other material. No trademark/patent/third-party guarantee follows.",
         "Proposed CSV header names are recorded in dated candidate d2-rs-iana-http, supported by evidence d2-e-iana, at hub 95a41f656040694d31c3b118cd8f220126931cf5. Current HEAD confirms a CSV resource, not current headers/rows or browser GET access.",
