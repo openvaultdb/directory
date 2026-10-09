@@ -1,6 +1,6 @@
 {
   "format": "ovdb-directory/draft-1",
-  "checksum": "sha256:72227c511d924b72b1c2796cd718bc9f13784ad19570845285d784c0a8c232fc",
+  "checksum": "sha256:e54f09e1381b5d9f6009e9a55936a6bbc8a8df1adf69cbca5a22962a1268755e",
   "databases": [
     {
       "id": "https://demodb.dev/adventureworks/",
@@ -3359,7 +3359,7 @@
       },
       "homepage": "https://chinook.demodb.dev/",
       "repository": "https://github.com/demo-db/chinook",
-      "commit": "26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+      "commit": "3e7bb316d8a438eb7e5930067997a4e4543a275c",
       "manifest": "ovdb.yaml",
       "licence": "MIT",
       "model": {
@@ -3382,7 +3382,7 @@
               "concept": "album",
               "label": "Album",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/album?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+              "address": "meaning://github.com/demo-db/chinook/album?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
               "extends": []
             }
           ],
@@ -3401,7 +3401,7 @@
                   "concept": "album",
                   "label": "Album",
                   "role": "display-name",
-                  "address": "meaning://github.com/demo-db/chinook/album?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/album?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -3416,7 +3416,7 @@
                   "concept": "artist",
                   "label": "Artist",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/artist?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/artist?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -3433,7 +3433,7 @@
               "concept": "artist",
               "label": "Artist",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/artist?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+              "address": "meaning://github.com/demo-db/chinook/artist?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
               "extends": []
             }
           ],
@@ -3447,7 +3447,7 @@
                   "concept": "artist",
                   "label": "Artist",
                   "role": "identifier",
-                  "address": "meaning://github.com/demo-db/chinook/artist?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/artist?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -3461,7 +3461,7 @@
                   "concept": "artist",
                   "label": "Artist",
                   "role": "display-name",
-                  "address": "meaning://github.com/demo-db/chinook/artist?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/artist?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -3478,7 +3478,7 @@
               "concept": "customer",
               "label": "Customer",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/customer?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+              "address": "meaning://github.com/demo-db/chinook/customer?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
               "extends": [
                 {
                   "graph": "core",
@@ -3534,7 +3534,7 @@
                   "concept": "customer-country",
                   "label": "Customer country",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/customer-country?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/customer-country?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": [],
                   "values_of": {
                     "graph": "core",
@@ -3576,13 +3576,13 @@
                   "concept": "support-rep",
                   "label": "Support representative",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/support-rep?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/support-rep?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": [],
                   "values_of": {
                     "graph": "chinook",
                     "concept": "employee",
                     "label": "Employee",
-                    "address": "meaning://github.com/demo-db/chinook/employee?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                    "address": "meaning://github.com/demo-db/chinook/employee?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                     "extends": [
                       {
                         "graph": "core",
@@ -3613,7 +3613,7 @@
               "concept": "employee",
               "label": "Employee",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/employee?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+              "address": "meaning://github.com/demo-db/chinook/employee?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
               "extends": [
                 {
                   "graph": "core",
@@ -3661,7 +3661,7 @@
                   "concept": "manager",
                   "label": "Manager",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/manager?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/manager?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": [
                     {
                       "graph": "core",
@@ -3674,7 +3674,7 @@
                     "graph": "chinook",
                     "concept": "employee",
                     "label": "Employee",
-                    "address": "meaning://github.com/demo-db/chinook/employee?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                    "address": "meaning://github.com/demo-db/chinook/employee?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                     "extends": [
                       {
                         "graph": "core",
@@ -3755,7 +3755,7 @@
               "concept": "genre",
               "label": "Genre",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/genre?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+              "address": "meaning://github.com/demo-db/chinook/genre?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
               "extends": []
             }
           ],
@@ -3774,7 +3774,7 @@
                   "concept": "genre",
                   "label": "Genre",
                   "role": "display-name",
-                  "address": "meaning://github.com/demo-db/chinook/genre?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/genre?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -3791,7 +3791,7 @@
               "concept": "invoice",
               "label": "Invoice",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/invoice?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+              "address": "meaning://github.com/demo-db/chinook/invoice?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
               "extends": [
                 {
                   "graph": "core",
@@ -3818,7 +3818,7 @@
                   "concept": "customer",
                   "label": "Customer",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/customer?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/customer?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": [
                     {
                       "graph": "core",
@@ -3839,7 +3839,7 @@
                   "concept": "invoice-date",
                   "label": "Invoice date",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/invoice-date?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/invoice-date?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": [
                     {
                       "graph": "core",
@@ -3875,7 +3875,7 @@
                   "concept": "billing-country",
                   "label": "Country",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/billing-country?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/billing-country?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": [],
                   "values_of": {
                     "graph": "core",
@@ -3901,7 +3901,7 @@
                   "concept": "invoice-total",
                   "label": "Invoice total",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/invoice-total?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/invoice-total?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": [
                     {
                       "graph": "core",
@@ -3922,7 +3922,7 @@
                   "concept": "music-sales",
                   "label": "Music sales",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/music-sales?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/music-sales?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": [
                     {
                       "graph": "core",
@@ -3946,7 +3946,7 @@
               "concept": "invoice-line",
               "label": "Invoice line",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/invoice-line?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+              "address": "meaning://github.com/demo-db/chinook/invoice-line?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
               "extends": [
                 {
                   "graph": "core",
@@ -3979,7 +3979,7 @@
                   "concept": "invoice",
                   "label": "Invoice",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/invoice?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/invoice?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": [
                     {
                       "graph": "core",
@@ -4001,7 +4001,7 @@
                   "concept": "track",
                   "label": "Track",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/track?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/track?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -4015,7 +4015,7 @@
                   "concept": "unit-price",
                   "label": "Unit price",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/unit-price?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/unit-price?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": [
                     {
                       "graph": "core",
@@ -4048,7 +4048,7 @@
                   "concept": "quantity",
                   "label": "Quantity",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/quantity?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/quantity?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": [
                     {
                       "graph": "core",
@@ -4072,7 +4072,7 @@
               "concept": "media-type",
               "label": "Media type",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/media-type?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+              "address": "meaning://github.com/demo-db/chinook/media-type?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
               "extends": []
             }
           ],
@@ -4091,7 +4091,7 @@
                   "concept": "media-type",
                   "label": "Media type",
                   "role": "display-name",
-                  "address": "meaning://github.com/demo-db/chinook/media-type?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/media-type?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -4108,7 +4108,7 @@
               "concept": "playlist",
               "label": "Playlist",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/playlist?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+              "address": "meaning://github.com/demo-db/chinook/playlist?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
               "extends": []
             }
           ],
@@ -4127,7 +4127,7 @@
                   "concept": "playlist",
                   "label": "Playlist",
                   "role": "display-name",
-                  "address": "meaning://github.com/demo-db/chinook/playlist?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/playlist?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -4150,7 +4150,7 @@
                   "concept": "playlist",
                   "label": "Playlist",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/playlist?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/playlist?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -4173,7 +4173,7 @@
               "concept": "track",
               "label": "Track",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/chinook/track?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+              "address": "meaning://github.com/demo-db/chinook/track?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
               "extends": []
             }
           ],
@@ -4192,7 +4192,7 @@
                   "concept": "track",
                   "label": "Track",
                   "role": "display-name",
-                  "address": "meaning://github.com/demo-db/chinook/track?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/track?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -4207,7 +4207,7 @@
                   "concept": "album",
                   "label": "Album",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/album?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/album?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -4222,7 +4222,7 @@
                   "concept": "media-type",
                   "label": "Media type",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/media-type?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/media-type?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -4237,7 +4237,7 @@
                   "concept": "genre",
                   "label": "Genre",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/chinook/genre?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/genre?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -4256,7 +4256,7 @@
                   "concept": "track-length",
                   "label": "Track length",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/track-length?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/track-length?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": []
                 }
               ]
@@ -4275,7 +4275,7 @@
                   "concept": "list-price",
                   "label": "List price",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/chinook/list-price?ref=26e852cca00101f53a84ef8ee1f1ae389067f5cf",
+                  "address": "meaning://github.com/demo-db/chinook/list-price?ref=3e7bb316d8a438eb7e5930067997a4e4543a275c",
                   "extends": [
                     {
                       "graph": "core",

@@ -9,7 +9,7 @@ carry. The Directory website is a separate repository; it reads
 
 | Record ID | Canonical database identity | Repository at commit | Status |
 |---|---|---|---|
-| `chinook` | `https://demodb.dev/chinook/` | [demo-db/chinook@26e852c](https://github.com/demo-db/chinook/tree/26e852cca00101f53a84ef8ee1f1ae389067f5cf) | draft |
+| `chinook` | `https://demodb.dev/chinook/` | [demo-db/chinook@3e7bb31](https://github.com/demo-db/chinook/tree/3e7bb316d8a438eb7e5930067997a4e4543a275c) | draft |
 | `northwind` | `https://demodb.dev/northwind/` | [demo-db/northwind@e747265](https://github.com/demo-db/northwind/tree/e74726515c3833620b54b7a50d1d273276dd23c1) | draft |
 | `pubs` | `https://demodb.dev/pubs/` | [demo-db/pubs@6c06c5c](https://github.com/demo-db/pubs/tree/6c06c5c7395b03ff1a02c2b1a21485add3e1b65b) | draft |
 | `sakila` | `https://demodb.dev/sakila/` | [demo-db/sakila@cb9a81a](https://github.com/demo-db/sakila/tree/cb9a81a8cbedcd8831737f281f888d5d584fae85) | draft |
