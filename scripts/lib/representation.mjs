@@ -8,6 +8,7 @@ import { parse as parseYaml } from 'yaml';
 import { isDeepStrictEqual } from 'node:util';
 import { parseStrictJson } from './strict-json.mjs';
 import { modelWordProblems, vocabularies, vocabularyOf } from './modelspec.mjs';
+import { hasColumns, recordsetNames } from './manifest-mapping.mjs';
 
 const MiB = 1024 * 1024;
 const schemaPins = {
@@ -124,7 +125,9 @@ export function checkRepresentation(envelope, files, manifest, outerRepository, 
     else if (!manifest.model?.modelspec) bad(`${label}: representation target requires provider-local model`);
     if (manifest.model?.modelspec && c.target.binding.document.path !== manifest.meaning?.file) bad(`${label}: target binding path differs from manifest.meaning.file`);
 
-    if (!manifest.recordsets?.includes(c.target.entity)) bad(`${label}: target entity is absent from manifest recordsets`);
+    // A contract names a recordset by its own name, in either form of the manifest; it reads the columns by the model's names.
+    if (!recordsetNames(manifest).includes(c.target.entity)) bad(`${label}: target entity is absent from manifest recordsets`);
+    else if (hasColumns(manifest, c.target.entity)) bad(`${label}: recordset ${c.target.entity} lists columns, but a representation contract reads its columns by the model's names`);
     if (model) checkModel(model, c.target, c.execution === 'native-identifier', bad, label + '.target');
     const property = fieldsOf(model, recordOf(model, c.target.entity))?.[c.target.property];
     if (model && (!vocabularyOf(model) || model.module?.name !== c.target.module || !property || property.type !== c.target.datatype)) bad(`${label}: target ModelSpec module/entity/property/datatype mismatch`);
@@ -205,7 +208,8 @@ export function checkRepresentation(envelope, files, manifest, outerRepository, 
       }
 
     } else {
-      if (!manifest.recordsets?.includes(c.bridge.table)) bad(`${label}: bridge table is absent from manifest recordsets`);
+      if (!recordsetNames(manifest).includes(c.bridge.table)) bad(`${label}: bridge table is absent from manifest recordsets`);
+      else if (hasColumns(manifest, c.bridge.table)) bad(`${label}: recordset ${c.bridge.table} lists columns, but a representation contract reads its columns by the model's names`);
       if (model) {
         const columns = fieldsOf(model, recordOf(model, c.bridge.table));
         if (!columns || c.bridge.raw_label_column === c.bridge.target_key_column || columns[c.bridge.raw_label_column]?.type !== 'string' || columns[c.bridge.target_key_column]?.type !== 'string' || c.bridge.serving_identity_column && (c.bridge.serving_identity_column === c.bridge.raw_label_column || c.bridge.serving_identity_column === c.bridge.target_key_column || !columns[c.bridge.serving_identity_column])) bad(`${label}: bridge columns missing or overlapping in local model`);
