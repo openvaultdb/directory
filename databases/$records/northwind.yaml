@@ -7,7 +7,7 @@ description: >-
 status: draft
 url: https://demodb.dev/northwind/
 repository: https://github.com/demo-db/northwind
-commit: e74726515c3833620b54b7a50d1d273276dd23c1
+commit: c07b4666734a3445b2b0c2fbaf84305dcdb1bf45
 manifest: ovdb.yaml
 database_manifest: ovdb-database.json
 meaning_graph: northwind

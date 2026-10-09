@@ -1,6 +1,6 @@
 {
   "format": "ovdb-directory/draft-1",
-  "checksum": "sha256:e54f09e1381b5d9f6009e9a55936a6bbc8a8df1adf69cbca5a22962a1268755e",
+  "checksum": "sha256:0aa909d11a85cb0bdd1fc9349b4b3f00f0a1c26af718c946b50797e83ab94123",
   "databases": [
     {
       "id": "https://demodb.dev/adventureworks/",
@@ -20,7 +20,7 @@
       },
       "homepage": "https://adventureworks.demodb.dev/",
       "repository": "https://github.com/demo-db/adventureworks",
-      "commit": "5028a27189b487d6fd8025fafc1307aada707fd2",
+      "commit": "c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
       "manifest": "ovdb.yaml",
       "licence": "MIT",
       "model": {
@@ -69,7 +69,7 @@
               "concept": "employee",
               "label": "Employee",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/employee?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+              "address": "meaning://github.com/demo-db/adventureworks/employee?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
               "extends": [
                 {
                   "graph": "core",
@@ -506,7 +506,7 @@
               "concept": "country-region",
               "label": "Country or region",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/country-region?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+              "address": "meaning://github.com/demo-db/adventureworks/country-region?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
               "extends": [
                 {
                   "graph": "core",
@@ -527,7 +527,7 @@
                   "concept": "country-region",
                   "label": "Country or region",
                   "role": "identifier",
-                  "address": "meaning://github.com/demo-db/adventureworks/country-region?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+                  "address": "meaning://github.com/demo-db/adventureworks/country-region?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
                   "extends": [
                     {
                       "graph": "core",
@@ -626,7 +626,7 @@
               "concept": "natural-person",
               "label": "Person",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/natural-person?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+              "address": "meaning://github.com/demo-db/adventureworks/natural-person?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
               "extends": [
                 {
                   "graph": "core",
@@ -1024,7 +1024,7 @@
               "concept": "product",
               "label": "Product",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/product?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+              "address": "meaning://github.com/demo-db/adventureworks/product?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
               "extends": []
             }
           ],
@@ -1083,7 +1083,7 @@
                   "concept": "product-list-price",
                   "label": "Product list price",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/adventureworks/product-list-price?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+                  "address": "meaning://github.com/demo-db/adventureworks/product-list-price?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
                   "extends": [
                     {
                       "graph": "core",
@@ -1191,7 +1191,7 @@
               "concept": "product-category",
               "label": "Product category",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/product-category?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+              "address": "meaning://github.com/demo-db/adventureworks/product-category?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
               "extends": []
             }
           ],
@@ -1968,7 +1968,7 @@
               "concept": "purchase-order-line",
               "label": "Purchase order line",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/purchase-order-line?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+              "address": "meaning://github.com/demo-db/adventureworks/purchase-order-line?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
               "extends": [
                 {
                   "graph": "core",
@@ -2005,7 +2005,7 @@
                   "concept": "purchase-order-quantity",
                   "label": "Purchase order quantity",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/adventureworks/purchase-order-quantity?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+                  "address": "meaning://github.com/demo-db/adventureworks/purchase-order-quantity?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
                   "extends": [
                     {
                       "graph": "core",
@@ -2032,7 +2032,7 @@
                   "concept": "purchase-order-unit-price",
                   "label": "Purchase order unit price",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/adventureworks/purchase-order-unit-price?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+                  "address": "meaning://github.com/demo-db/adventureworks/purchase-order-unit-price?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
                   "extends": [
                     {
                       "graph": "core",
@@ -2086,7 +2086,7 @@
               "concept": "purchase-order",
               "label": "Purchase order",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/purchase-order?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+              "address": "meaning://github.com/demo-db/adventureworks/purchase-order?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
               "extends": [
                 {
                   "graph": "core",
@@ -2214,7 +2214,7 @@
               "concept": "supplier",
               "label": "Supplier",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/supplier?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+              "address": "meaning://github.com/demo-db/adventureworks/supplier?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
               "extends": [
                 {
                   "graph": "core",
@@ -2405,7 +2405,7 @@
               "concept": "sales-customer",
               "label": "Sales customer",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/sales-customer?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+              "address": "meaning://github.com/demo-db/adventureworks/sales-customer?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
               "extends": [
                 {
                   "graph": "core",
@@ -2490,7 +2490,7 @@
               "concept": "sales-order-line",
               "label": "Sales order line",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/sales-order-line?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+              "address": "meaning://github.com/demo-db/adventureworks/sales-order-line?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
               "extends": [
                 {
                   "graph": "core",
@@ -2533,7 +2533,7 @@
                   "concept": "sales-order-quantity",
                   "label": "Sales order quantity",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/adventureworks/sales-order-quantity?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+                  "address": "meaning://github.com/demo-db/adventureworks/sales-order-quantity?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
                   "extends": [
                     {
                       "graph": "core",
@@ -2566,7 +2566,7 @@
                   "concept": "sales-order-unit-price",
                   "label": "Sales order unit price",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/adventureworks/sales-order-unit-price?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+                  "address": "meaning://github.com/demo-db/adventureworks/sales-order-unit-price?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
                   "extends": [
                     {
                       "graph": "core",
@@ -2615,7 +2615,7 @@
               "concept": "sales-order",
               "label": "Sales order",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/adventureworks/sales-order?ref=5028a27189b487d6fd8025fafc1307aada707fd2",
+              "address": "meaning://github.com/demo-db/adventureworks/sales-order?ref=c91e06e9c12380e7709f66ab1e69cf7f858f67c1",
               "extends": [
                 {
                   "graph": "core",
@@ -4315,7 +4315,7 @@
       },
       "homepage": "https://employees.demodb.dev/",
       "repository": "https://github.com/demo-db/employees",
-      "commit": "2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+      "commit": "add7744ddc5cefc535a7cbb09b3dffee41811ade",
       "manifest": "ovdb.yaml",
       "licence": "CC-BY-SA-3.0",
       "model": {
@@ -4337,7 +4337,7 @@
               "concept": "department",
               "label": "Department",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/employees/department?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+              "address": "meaning://github.com/demo-db/employees/department?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
               "extends": []
             }
           ],
@@ -4351,7 +4351,7 @@
                   "concept": "department",
                   "label": "Department",
                   "role": "identifier",
-                  "address": "meaning://github.com/demo-db/employees/department?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+                  "address": "meaning://github.com/demo-db/employees/department?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
                   "extends": []
                 }
               ]
@@ -4365,7 +4365,7 @@
                   "concept": "department",
                   "label": "Department",
                   "role": "display-name",
-                  "address": "meaning://github.com/demo-db/employees/department?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+                  "address": "meaning://github.com/demo-db/employees/department?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
                   "extends": []
                 }
               ]
@@ -4381,7 +4381,7 @@
               "concept": "department-assignment",
               "label": "Department assignment",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/employees/department-assignment?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+              "address": "meaning://github.com/demo-db/employees/department-assignment?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
               "extends": []
             }
           ],
@@ -4396,7 +4396,7 @@
                   "concept": "employee",
                   "label": "Employee",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/employees/employee?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+                  "address": "meaning://github.com/demo-db/employees/employee?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
                   "extends": [
                     {
                       "graph": "core",
@@ -4424,7 +4424,7 @@
                   "concept": "department",
                   "label": "Department",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/employees/department?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+                  "address": "meaning://github.com/demo-db/employees/department?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
                   "extends": []
                 }
               ]
@@ -4450,7 +4450,7 @@
               "concept": "department-manager-assignment",
               "label": "Department manager assignment",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/employees/department-manager-assignment?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+              "address": "meaning://github.com/demo-db/employees/department-manager-assignment?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
               "extends": []
             }
           ],
@@ -4465,7 +4465,7 @@
                   "concept": "employee",
                   "label": "Employee",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/employees/employee?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+                  "address": "meaning://github.com/demo-db/employees/employee?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
                   "extends": [
                     {
                       "graph": "core",
@@ -4493,7 +4493,7 @@
                   "concept": "department",
                   "label": "Department",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/employees/department?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+                  "address": "meaning://github.com/demo-db/employees/department?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
                   "extends": []
                 }
               ]
@@ -4519,7 +4519,7 @@
               "concept": "employee",
               "label": "Employee",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/employees/employee?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+              "address": "meaning://github.com/demo-db/employees/employee?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
               "extends": [
                 {
                   "graph": "core",
@@ -4546,7 +4546,7 @@
                   "concept": "employee",
                   "label": "Employee",
                   "role": "identifier",
-                  "address": "meaning://github.com/demo-db/employees/employee?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+                  "address": "meaning://github.com/demo-db/employees/employee?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
                   "extends": [
                     {
                       "graph": "core",
@@ -4600,7 +4600,7 @@
               "concept": "employee-salary-history",
               "label": "Employee salary history",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/employees/employee-salary-history?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+              "address": "meaning://github.com/demo-db/employees/employee-salary-history?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
               "extends": []
             }
           ],
@@ -4615,7 +4615,7 @@
                   "concept": "employee",
                   "label": "Employee",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/employees/employee?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+                  "address": "meaning://github.com/demo-db/employees/employee?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
                   "extends": [
                     {
                       "graph": "core",
@@ -4642,7 +4642,7 @@
                   "concept": "salary-amount",
                   "label": "Salary amount",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/employees/salary-amount?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+                  "address": "meaning://github.com/demo-db/employees/salary-amount?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
                   "extends": []
                 }
               ]
@@ -4668,7 +4668,7 @@
               "concept": "employee-title-history",
               "label": "Employee title history",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/employees/employee-title-history?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+              "address": "meaning://github.com/demo-db/employees/employee-title-history?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
               "extends": []
             }
           ],
@@ -4683,7 +4683,7 @@
                   "concept": "employee",
                   "label": "Employee",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/employees/employee?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+                  "address": "meaning://github.com/demo-db/employees/employee?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
                   "extends": [
                     {
                       "graph": "core",
@@ -4710,7 +4710,7 @@
                   "concept": "job-title",
                   "label": "Job title",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/employees/job-title?ref=2069e26e8fdb60bdb16507f75569a579cf3da7cf",
+                  "address": "meaning://github.com/demo-db/employees/job-title?ref=add7744ddc5cefc535a7cbb09b3dffee41811ade",
                   "extends": []
                 }
               ]
@@ -4747,7 +4747,7 @@
       },
       "homepage": "https://northwind.demodb.dev/",
       "repository": "https://github.com/demo-db/northwind",
-      "commit": "e74726515c3833620b54b7a50d1d273276dd23c1",
+      "commit": "c07b4666734a3445b2b0c2fbaf84305dcdb1bf45",
       "manifest": "ovdb.yaml",
       "licence": "MIT",
       "model": {
@@ -4836,7 +4836,7 @@
               "concept": "customer",
               "label": "customer",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/northwind/customer?ref=e74726515c3833620b54b7a50d1d273276dd23c1",
+              "address": "meaning://github.com/demo-db/northwind/customer?ref=c07b4666734a3445b2b0c2fbaf84305dcdb1bf45",
               "extends": [
                 {
                   "graph": "core",
@@ -4935,7 +4935,7 @@
               "concept": "employee",
               "label": "employee",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/northwind/employee?ref=e74726515c3833620b54b7a50d1d273276dd23c1",
+              "address": "meaning://github.com/demo-db/northwind/employee?ref=c07b4666734a3445b2b0c2fbaf84305dcdb1bf45",
               "extends": [
                 {
                   "graph": "core",
@@ -5056,7 +5056,7 @@
               "concept": "order-line",
               "label": "sales order line",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/northwind/order-line?ref=e74726515c3833620b54b7a50d1d273276dd23c1",
+              "address": "meaning://github.com/demo-db/northwind/order-line?ref=c07b4666734a3445b2b0c2fbaf84305dcdb1bf45",
               "extends": [
                 {
                   "graph": "core",
@@ -5113,7 +5113,7 @@
               "concept": "order",
               "label": "sales order",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/northwind/order?ref=e74726515c3833620b54b7a50d1d273276dd23c1",
+              "address": "meaning://github.com/demo-db/northwind/order?ref=c07b4666734a3445b2b0c2fbaf84305dcdb1bf45",
               "extends": [
                 {
                   "graph": "core",
@@ -5202,7 +5202,7 @@
                   "concept": "shipping-country",
                   "label": "shipping country",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/northwind/shipping-country?ref=e74726515c3833620b54b7a50d1d273276dd23c1",
+                  "address": "meaning://github.com/demo-db/northwind/shipping-country?ref=c07b4666734a3445b2b0c2fbaf84305dcdb1bf45",
                   "extends": [],
                   "values_of": {
                     "graph": "core",
@@ -5429,7 +5429,7 @@
       },
       "homepage": "https://pubs.demodb.dev/",
       "repository": "https://github.com/demo-db/pubs",
-      "commit": "6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+      "commit": "e99ca33330a043e23b2c5a665356fb8ad8d0b508",
       "manifest": "ovdb.yaml",
       "licence": "MIT",
       "model": {
@@ -5451,7 +5451,7 @@
               "concept": "author",
               "label": "Author",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/pubs/author?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+              "address": "meaning://github.com/demo-db/pubs/author?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
               "extends": [
                 {
                   "graph": "core",
@@ -5530,7 +5530,7 @@
                   "concept": "store",
                   "label": "Store",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/store?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+                  "address": "meaning://github.com/demo-db/pubs/store?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
                   "extends": []
                 }
               ]
@@ -5561,7 +5561,7 @@
               "concept": "employee",
               "label": "Employee",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/pubs/employee?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+              "address": "meaning://github.com/demo-db/pubs/employee?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
               "extends": [
                 {
                   "graph": "core",
@@ -5620,7 +5620,7 @@
                   "concept": "publisher",
                   "label": "Publisher",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
                   "extends": [
                     {
                       "graph": "core",
@@ -5681,7 +5681,7 @@
                   "concept": "publisher",
                   "label": "Publisher",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
                   "extends": [
                     {
                       "graph": "core",
@@ -5714,7 +5714,7 @@
               "concept": "publisher",
               "label": "Publisher",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/pubs/publisher?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+              "address": "meaning://github.com/demo-db/pubs/publisher?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
               "extends": [
                 {
                   "graph": "core",
@@ -5768,7 +5768,7 @@
                   "concept": "book",
                   "label": "Book",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/book?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+                  "address": "meaning://github.com/demo-db/pubs/book?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
                   "extends": []
                 }
               ]
@@ -5799,7 +5799,7 @@
               "concept": "sale",
               "label": "Sale",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/pubs/sale?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+              "address": "meaning://github.com/demo-db/pubs/sale?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
               "extends": []
             }
           ],
@@ -5814,7 +5814,7 @@
                   "concept": "store",
                   "label": "Store",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/store?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+                  "address": "meaning://github.com/demo-db/pubs/store?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
                   "extends": []
                 }
               ]
@@ -5838,7 +5838,7 @@
                   "concept": "sale-quantity",
                   "label": "Sale quantity",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/pubs/sale-quantity?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+                  "address": "meaning://github.com/demo-db/pubs/sale-quantity?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
                   "extends": []
                 }
               ]
@@ -5858,7 +5858,7 @@
                   "concept": "book",
                   "label": "Book",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/book?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+                  "address": "meaning://github.com/demo-db/pubs/book?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
                   "extends": []
                 }
               ]
@@ -5874,7 +5874,7 @@
               "concept": "store",
               "label": "Store",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/pubs/store?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+              "address": "meaning://github.com/demo-db/pubs/store?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
               "extends": []
             }
           ],
@@ -5926,7 +5926,7 @@
                   "concept": "author",
                   "label": "Author",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/author?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+                  "address": "meaning://github.com/demo-db/pubs/author?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
                   "extends": [
                     {
                       "graph": "core",
@@ -5948,7 +5948,7 @@
                   "concept": "book",
                   "label": "Book",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/book?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+                  "address": "meaning://github.com/demo-db/pubs/book?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
                   "extends": []
                 }
               ]
@@ -5974,7 +5974,7 @@
               "concept": "book",
               "label": "Book",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/pubs/book?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+              "address": "meaning://github.com/demo-db/pubs/book?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
               "extends": []
             }
           ],
@@ -6004,7 +6004,7 @@
                   "concept": "publisher",
                   "label": "Publisher",
                   "role": "foreign-key",
-                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+                  "address": "meaning://github.com/demo-db/pubs/publisher?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
                   "extends": [
                     {
                       "graph": "core",
@@ -6025,7 +6025,7 @@
                   "concept": "book-price",
                   "label": "Book price",
                   "role": "value",
-                  "address": "meaning://github.com/demo-db/pubs/book-price?ref=6c06c5c7395b03ff1a02c2b1a21485add3e1b65b",
+                  "address": "meaning://github.com/demo-db/pubs/book-price?ref=e99ca33330a043e23b2c5a665356fb8ad8d0b508",
                   "extends": [
                     {
                       "graph": "core",
@@ -6090,7 +6090,7 @@
       },
       "homepage": "https://sakila.demodb.dev/",
       "repository": "https://github.com/demo-db/sakila",
-      "commit": "cb9a81a8cbedcd8831737f281f888d5d584fae85",
+      "commit": "113e54ad83c3e003a4fd195c893f2b19a921435c",
       "manifest": "ovdb.yaml",
       "licence": "BSD-3-Clause",
       "model": {
@@ -6112,7 +6112,7 @@
               "concept": "actor",
               "label": "Actor",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/sakila/actor?ref=cb9a81a8cbedcd8831737f281f888d5d584fae85",
+              "address": "meaning://github.com/demo-db/sakila/actor?ref=113e54ad83c3e003a4fd195c893f2b19a921435c",
               "extends": [
                 {
                   "graph": "core",
@@ -6280,7 +6280,7 @@
               "concept": "customer",
               "label": "Customer",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/sakila/customer?ref=cb9a81a8cbedcd8831737f281f888d5d584fae85",
+              "address": "meaning://github.com/demo-db/sakila/customer?ref=113e54ad83c3e003a4fd195c893f2b19a921435c",
               "extends": [
                 {
                   "graph": "core",
@@ -6350,7 +6350,7 @@
               "concept": "film",
               "label": "Film",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/sakila/film?ref=cb9a81a8cbedcd8831737f281f888d5d584fae85",
+              "address": "meaning://github.com/demo-db/sakila/film?ref=113e54ad83c3e003a4fd195c893f2b19a921435c",
               "extends": []
             }
           ],
@@ -6554,7 +6554,7 @@
               "concept": "payment",
               "label": "Payment",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/sakila/payment?ref=cb9a81a8cbedcd8831737f281f888d5d584fae85",
+              "address": "meaning://github.com/demo-db/sakila/payment?ref=113e54ad83c3e003a4fd195c893f2b19a921435c",
               "extends": []
             }
           ],
@@ -6608,7 +6608,7 @@
               "concept": "rental",
               "label": "Rental",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/sakila/rental?ref=cb9a81a8cbedcd8831737f281f888d5d584fae85",
+              "address": "meaning://github.com/demo-db/sakila/rental?ref=113e54ad83c3e003a4fd195c893f2b19a921435c",
               "extends": []
             }
           ],
@@ -6662,7 +6662,7 @@
               "concept": "employee",
               "label": "Staff member",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/sakila/employee?ref=cb9a81a8cbedcd8831737f281f888d5d584fae85",
+              "address": "meaning://github.com/demo-db/sakila/employee?ref=113e54ad83c3e003a4fd195c893f2b19a921435c",
               "extends": [
                 {
                   "graph": "core",
@@ -6748,7 +6748,7 @@
               "concept": "store",
               "label": "Store",
               "role": "entity",
-              "address": "meaning://github.com/demo-db/sakila/store?ref=cb9a81a8cbedcd8831737f281f888d5d584fae85",
+              "address": "meaning://github.com/demo-db/sakila/store?ref=113e54ad83c3e003a4fd195c893f2b19a921435c",
               "extends": []
             }
           ],

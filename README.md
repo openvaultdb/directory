@@ -10,11 +10,11 @@ carry. The Directory website is a separate repository; it reads
 | Record ID | Canonical database identity | Repository at commit | Status |
 |---|---|---|---|
 | `chinook` | `https://demodb.dev/chinook/` | [demo-db/chinook@3e7bb31](https://github.com/demo-db/chinook/tree/3e7bb316d8a438eb7e5930067997a4e4543a275c) | draft |
-| `northwind` | `https://demodb.dev/northwind/` | [demo-db/northwind@e747265](https://github.com/demo-db/northwind/tree/e74726515c3833620b54b7a50d1d273276dd23c1) | draft |
-| `pubs` | `https://demodb.dev/pubs/` | [demo-db/pubs@6c06c5c](https://github.com/demo-db/pubs/tree/6c06c5c7395b03ff1a02c2b1a21485add3e1b65b) | draft |
-| `sakila` | `https://demodb.dev/sakila/` | [demo-db/sakila@cb9a81a](https://github.com/demo-db/sakila/tree/cb9a81a8cbedcd8831737f281f888d5d584fae85) | draft |
-| `adventureworks` | `https://demodb.dev/adventureworks/` | [demo-db/adventureworks@31bdb4e](https://github.com/demo-db/adventureworks/tree/31bdb4eceff01367ce812b2844530ed17a7d35ae) | draft |
-| `employees` | `https://demodb.dev/employees/` | [demo-db/employees@2069e26](https://github.com/demo-db/employees/tree/2069e26e8fdb60bdb16507f75569a579cf3da7cf) | draft |
+| `northwind` | `https://demodb.dev/northwind/` | [demo-db/northwind@c07b466](https://github.com/demo-db/northwind/tree/c07b4666734a3445b2b0c2fbaf84305dcdb1bf45) | draft |
+| `pubs` | `https://demodb.dev/pubs/` | [demo-db/pubs@e99ca33](https://github.com/demo-db/pubs/tree/e99ca33330a043e23b2c5a665356fb8ad8d0b508) | draft |
+| `sakila` | `https://demodb.dev/sakila/` | [demo-db/sakila@113e54a](https://github.com/demo-db/sakila/tree/113e54ad83c3e003a4fd195c893f2b19a921435c) | draft |
+| `adventureworks` | `https://demodb.dev/adventureworks/` | [demo-db/adventureworks@c91e06e](https://github.com/demo-db/adventureworks/tree/c91e06e9c12380e7709f66ab1e69cf7f858f67c1) | draft |
+| `employees` | `https://demodb.dev/employees/` | [demo-db/employees@add7744](https://github.com/demo-db/employees/tree/add7744ddc5cefc535a7cbb09b3dffee41811ade) | draft |
 
 ## This repository is the source of truth
 
