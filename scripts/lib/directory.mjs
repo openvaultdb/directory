@@ -13,7 +13,7 @@ import { isAbsolute, join, posix, relative } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { addressOf, commitPattern, defaultBranch, defaultCacheDir, ensurePlainDirectory, isRepositoryPath, onBranch, openCommit, repositoryKey, repositoryHosts } from './git.mjs';
 import { createMeaningResolver, entryOf, graphIdProblem, graphsAtAddress, loadMeaningRegistry, meaningFilesOf, registryIdPattern, parseConceptRef, parseGraphAddress, labelOf, validateConcept } from './meaning.mjs';
-import { addressMatchesRecord, identifierPattern, loadModelRegistry, modelsAtAddress, normalisedModelAddress, parseModelSpec, parseModelRef, parseModelAddress } from './modelspec.mjs';
+import { addressMatchesRecord, earlierSpellingNotice, identifierPattern, loadModelRegistry, modelsAtAddress, normalisedModelAddress, parseModelSpec, parseModelRef, parseModelAddress } from './modelspec.mjs';
 import { directoryPagePath, encodePathSegment, globalDatabaseIdProblem, hasOvdbMarker, homepageProblem, publicHttpsProblem } from './urls.mjs';
 import { checkRepresentationEnvelope, checkRepresentation, verifySourceData } from './representation.mjs';
 
@@ -353,6 +353,15 @@ export async function analyseDatabase(record, context) {
   const stop = () => ({ problems, warnings, entry: null, claims });
   const bad = (message) => problems.push(`${file}: ${message}`);
   const warn = (message) => warnings.push(`${file}: ${message}`);
+  // A model file in the earlier ModelSpec spelling is read as it always was and reported once per run (several
+  // databases may share one), never as an error.
+  const noticed = context.noticed ?? new Set();
+  const noticeEarlierSpelling = (label, commit) => {
+    const once = `${lowerKey(label)}@${commit}`; // GitHub ignores the case of a repository's name
+    if (noticed.has(once)) return;
+    noticed.add(once);
+    warn(earlierSpellingNotice(label));
+  };
   if (!wellFormed(record)) return stop(); // reported by recordProblems; never handed to git
   const { urlFor = (url) => url, cacheDir, historyDir, fetched, branches } = context;
   const url = urlFor(data.repository);
@@ -518,6 +527,7 @@ export async function analyseDatabase(record, context) {
     model = parseModelSpec(modelText);
     for (const problem of model.problems) bad(`${manifest.model.modelspec}: ${problem}`);
     if (model.problems.length) return stop();
+    if (model.earlierSpelling) noticeEarlierSpelling(`${manifest.model.modelspec} of ${repositoryKey(data.repository)}`, data.commit);
     publishedNames = checkRecordsets();
 
     // The meaning file.
@@ -672,6 +682,7 @@ export async function analyseDatabase(record, context) {
     model = parseModelSpec(modelText);
     for (const problem of model.problems) bad(`${modelLabel}: ${problem}`);
     if (model.problems.length) return stop();
+    if (model.earlierSpelling) noticeEarlierSpelling(modelLabel, modelPin.ref);
     if (model.module !== registered.module) { bad(`${modelLabel} is module ${model.module}, but the ModelSpec registry registers ${registered.address} as module ${registered.module}`); return stop(); }
     if (manifest.model.name !== undefined && manifest.model.name !== model.module) bad(`${data.manifest}: model.name is ${manifest.model.name}, but the ModelSpec at ${modelLabel} is module ${model.module}`);
     if (modelFiles.status(registered.files.source) !== 'file') bad(`the model source ${registered.files.source} of ${repositoryKey(registered.repository)} ${modelFiles.status(registered.files.source) === 'link' ? 'is not a regular file' : 'does not exist'} at commit ${modelPin.ref}${modelMoved}`);
@@ -795,7 +806,7 @@ export async function analyseDatabase(record, context) {
           && registered[0].repository === ref.repository && addressOf(registered[0].repository) === registered[0].address
           && meaningFilesOf(registered[0])?.some((pattern) => typeof pattern === 'string' && new RegExp('^' + pattern.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('[^/]*') + '$').test(ref.path));
       };
-      const result = checkRepresentation(manifest.representation_contract, files, manifest, data.repository, context.representationDependencies, canonicalMeaning);
+      const result = checkRepresentation(manifest.representation_contract, files, manifest, data.repository, context.representationDependencies, canonicalMeaning, (label, commit) => noticeEarlierSpelling(label, commit));
       for (const problem of result.problems) bad(`${data.manifest}: ${problem}`);
       if (result.document) verifySourceData(result.document, context.representationDependencies);
     } catch (error) { if (error.code === 'DEPENDENCY_UNRUNNABLE') throw error; bad(`${data.manifest}: representation_contract: ${error.message}`); }
@@ -852,7 +863,7 @@ function sharedContext({ urlFor, cacheDir, meaningRegistry, modelRegistry, repre
   // The two directories are plain directories, never links to somewhere else.
   ensurePlainDirectory(repositories);
   ensurePlainDirectory(history);
-  return { urlFor, cacheDir: repositories, historyDir: history, meaningRegistry, modelRegistry, representationDependencies, fetched, branches };
+  return { urlFor, cacheDir: repositories, historyDir: history, meaningRegistry, modelRegistry, representationDependencies, fetched, branches, noticed: new Set() };
 }
 
 // Reads the MeaningGraph registry (a fetched index, or `meaningRegistry` as given) and
