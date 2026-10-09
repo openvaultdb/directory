@@ -55,7 +55,7 @@ export function mapItemUnderOldFormat(manifest) {
 
 // The notice for a manifest in the old form that writes `recordset_entities` (empty or not), or null.
 export const earlierKeyNotice = (manifest) => (formatOf(manifest) === 'old' && manifest.recordset_entities !== undefined
-  ? `recordset_entities is the earlier form of the mapping and is still read; under format: ${newFormat} the same is one record_type: line under each recordset (- name: Order Details, record_type: OrderDetails), and recordset_entities is removed`
+  ? `recordset_entities is the earlier form of the mapping and is still read; under format: ${newFormat} the same is one record_type: line under each recordset that recordset_entities lists (for example - name: Order Details, record_type: OrderDetails), and recordset_entities is removed; an empty recordset_entities can simply be removed`
   : null);
 
 // The problems of a manifest in the new form (formatOf(manifest) === 'new') that need no model: the shape of
