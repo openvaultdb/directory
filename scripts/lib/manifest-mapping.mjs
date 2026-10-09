@@ -8,8 +8,11 @@
 //
 // The identifier decides the form, and a manifest that mixes the two is refused. Whatever the form, a reader
 // that has passed the manifest stage holds one normalised mapping, normalisedMapping(): for each recordset,
-// in the order written, its name, its record type, and for each listed column the field it holds. Nothing
-// after that step looks at `recordsets` or `recordset_entities` again.
+// in the order written, its name, its record type, and for each listed column the field it holds. The record-type
+// table, the checks of the recordsets against the model and the index entry read that mapping. The representation
+// checks read the manifest's recordsets themselves, in either form, through recordsetsOfType, recordsetNames and
+// hasColumns below: a representation contract's target is found by its record type, and its bridge table by its
+// own name.
 //
 // This file has no imports and is the same, byte for byte, in openvaultdb/directory (the Directory checker)
 // and in demo-db/chinook (the offline pre-check the Go publisher check is proved against). A test of each
@@ -140,11 +143,29 @@ export function normalisedMapping(manifest) {
 }
 
 // The recordsets' own names, in the order written, for a reader that needs the names alone (a representation
-// contract names a recordset by its own name; so does the data-rights profile). Reads either form and is
-// safe on a manifest that has not been checked.
+// contract names its bridge table by the table's own name). Reads either form and is safe on a manifest that has
+// not been checked.
 export const recordsetNames = (manifest) => (Array.isArray(manifest?.recordsets)
   ? manifest.recordsets.map((item) => (typeof item === 'string' ? item : isMap(item) ? item.name : undefined)).filter((name) => typeof name === 'string')
   : []);
+
+// The own names of the recordsets whose rows have this record type, in the order written: the record type that
+// the normalised mapping gives each recordset (a `record_type:` under the new identifier, the pair in
+// `recordset_entities` under the old one, else the name itself). A representation contract's target names a
+// record type, so this is how the target is found. Safe on a manifest that has not been checked.
+export function recordsetsOfType(manifest, recordType) {
+  const items = Array.isArray(manifest?.recordsets) ? manifest.recordsets : [];
+  const isNew = formatOf(manifest) === 'new';
+  const entities = !isNew && isMap(manifest?.recordset_entities) ? manifest.recordset_entities : {};
+  const names = [];
+  for (const item of items) {
+    const name = typeof item === 'string' ? item : isMap(item) ? item.name : undefined;
+    if (typeof name !== 'string') continue;
+    const own = isNew && isMap(item) && Object.hasOwn(item, 'record_type') ? item.record_type : Object.hasOwn(entities, name) ? entities[name] : name;
+    if (own === recordType) names.push(name);
+  }
+  return names;
+}
 
 // Whether the manifest lists at least one column under the recordset of this own name.
 export const hasColumns = (manifest, name) => (Array.isArray(manifest?.recordsets)
