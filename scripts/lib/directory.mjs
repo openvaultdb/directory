@@ -450,7 +450,8 @@ export async function analyseDatabase(record, context) {
   }
 
   const shared = manifestForm(manifest) === 'shared';
-  // The mapping, whichever form the manifest is in: nothing below reads `recordsets` or `recordset_entities` again.
+  // The mapping, whichever form the manifest is in. The record-type table and the checks of the recordsets against the
+  // model read it; the representation check, further down, reads the manifest's recordsets itself (manifest-mapping.mjs).
   const mapping = normalisedMapping(manifest);
   const newForm = formatOf(manifest) === 'new';
   const recordTypes = new Map(mapping.map(({ name, recordType }) => [name, recordType]));
