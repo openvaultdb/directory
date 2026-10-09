@@ -328,3 +328,26 @@ test('every implicit snapshot count preserves signed integer tokens without roun
   for (const token of ['1.5', '1.0', '1e0', '-1e0', '"1"', 'null', 'true', '[]', '{}', '9223372036854775807', '-9223372036854775808', '9223372036854775808', '-9223372036854775809', '9007199254740992', '9007199254740993', '-9007199254740992', '-9007199254740993']) refused(countFixture(token), /implicit snapshot count/, token);
   for (const token of ['2.0', '2e0', '9007199254740993', '-2']) refused(countFixture(token, true), /count/);
 });
+
+test('a contract names a recordset by its own name in either form of the manifest, and a recordset that lists columns is refused', () => {
+  for (const version of [1, 3]) {
+    // the new form: an item of recordsets is a name or a map; the target and the bridge table are found by their own names
+    const f = full(version);
+    f.manifest.format = 'ovdb-manifest/draft-2';
+    f.manifest.recordsets = [{ name: 'Entities', record_type: 'Entities' }, 'Bridge'];
+    assert.deepEqual(check(f).problems, [], `format ${version}`);
+    // a name that is not listed is absent in both forms
+    f.manifest.recordsets = [{ name: 'Other', record_type: 'Entities' }, 'Bridge'];
+    refused(f, /target entity is absent from manifest recordsets/, `format ${version}`);
+    // a contract reads its columns by the model's names, so the recordset it names lists none
+    f.manifest.recordsets = [{ name: 'Entities', columns: { identifier: { field: 'id' } } }, 'Bridge'];
+    refused(f, /recordset Entities lists columns, but a representation contract reads its columns by the model's names/, `format ${version}`);
+    f.manifest.recordsets = [{ name: 'Entities', columns: {} }, 'Bridge'];
+    assert.deepEqual(check(f).problems, [], 'an empty columns says nothing');
+  }
+  const f = full(1);
+  f.manifest.recordsets = ['Entities', { name: 'Bridge', columns: { label: { field: 'raw_label' } } }];
+  refused(f, /recordset Bridge lists columns/);
+  delete f.manifest.recordsets;
+  refused(f, /target entity is absent from manifest recordsets/);
+});
