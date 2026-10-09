@@ -470,7 +470,7 @@ test('a column that is listed holds a field of its record type, and the index do
   expectProblem(await problemsOf(world({ publisher: columns({ first_name: { field: 'GivenName' } }) })), /recordsets "customers": column "first_name" holds "GivenName", but Customer has no field "GivenName"/);
   expectProblem(await problemsOf(world({ publisher: columns({ LastName: { field: 'FirstName' } }) })), /column "LastName" is also the name of the field LastName of Customer/);
   assert.deepEqual(await problemsOf(world({ publisher: columns({ LastName: { field: 'FirstName' }, FirstName: { field: 'LastName' } }) })), [], 'two fields may swap their column names');
-  expectProblem(await problemsOf(world({ publisher: columns({ first_name: { field: 'FirstName.Initial' } }) })), /FirstName is a field that holds no component, so "Initial" cannot be read in it/);
+  expectProblem(await problemsOf(world({ publisher: columns({ first_name: { field: 'FirstName.Initial' } }) })), /no reader of the model reads a component yet, so "Initial" cannot be read in FirstName/);
   expectProblem(await problemsOf(world({ publisher: columns({ first_name: 'FirstName' }) })), /column "first_name" must be a map with field/);
 });
 

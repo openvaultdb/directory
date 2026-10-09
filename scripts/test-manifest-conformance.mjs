@@ -5,6 +5,8 @@
 import assert from 'node:assert/strict';
 import { after, describe, test } from 'node:test';
 import { cleanup, conformance, directoryVerdict, manifestFor } from './conformance-world.mjs';
+import { manifestProblems } from './lib/directory.mjs';
+import { columnModelProblems } from './lib/manifest-mapping.mjs';
 
 after(cleanup);
 
@@ -54,7 +56,7 @@ for (const vocabulary of ['current', 'earlier']) {
   });
 }
 
-test('the cases cover every identifier of section 6.3, 6.4 and 6.5 of the contract once', () => {
+test('the cases cover each identifier A1 to A8, B1 to B28 and C1 to C6 once, and the pair C7', () => {
   const ids = new Set(conformance.cases.map((c) => c.id.replace(/[a-d]$/, '')));
   for (let n = 1; n <= 8; n += 1) assert.ok(ids.has(`A${n}`), `A${n}`);
   for (let n = 1; n <= 28; n += 1) assert.ok(ids.has(`B${n}`), `B${n}`);
@@ -67,4 +69,25 @@ test('a case that leaves a key out leaves it out of the manifest', () => {
   assert.ok(!Object.hasOwn(manifestFor({ recordsets: ['Customer'] }), 'format'));
   assert.ok(!Object.hasOwn(manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: ['Customer'] }), 'recordset_entities'));
   assert.equal(manifestFor({ format: 'ovdb-manifest/draft-1', recordsets: ['Customer'], recordset_entities: null }).recordset_entities, null);
+});
+
+test('a column that holds a path into a component says that no reader reads components yet, and nothing about what the field holds', () => {
+  const problems = columnModelProblems({ name: 'payments', recordType: 'Payment', columns: new Map([['amount_minor', 'Amount.Minor']]) }, new Set(['Amount']));
+  assert.deepEqual(problems, ['recordsets "payments": column "amount_minor" holds "Amount.Minor": no reader of the model reads a component yet, so "Minor" cannot be read in Amount']);
+});
+
+test('a value that refers to itself is reported as a problem and does not throw', () => {
+  const list = ['Customer', 'OrderLine'];
+  list.push(list);
+  const item = { name: 'Customer' };
+  item.record_type = item;
+  const columns = { name: 'Customer', columns: {} };
+  columns.columns.self = columns.columns;
+  for (const format of ['ovdb-manifest/draft-1', 'ovdb-manifest/draft-2']) {
+    for (const recordsets of [list, ['OrderLine', item], ['OrderLine', columns]]) {
+      let problems;
+      assert.doesNotThrow(() => { problems = manifestProblems(manifestFor({ format, recordsets })); }, `${format}`);
+      assert.ok(problems.length > 0, `${format}: the manifest is refused`);
+    }
+  }
 });

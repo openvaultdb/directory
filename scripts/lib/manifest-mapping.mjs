@@ -26,7 +26,11 @@ const isText = (value) => typeof value === 'string' && value.trim() !== '';
 const identifier = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const fieldPath = /^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/;
 const itemKeys = ['name', 'record_type', 'columns'];
-const quoted = (value) => JSON.stringify(value);
+// A value as it is shown in a message. A value that refers to itself (a YAML anchor used inside its own list) cannot
+// be written as JSON; it is shown as text instead of throwing.
+const quoted = (value) => {
+  try { return JSON.stringify(value); } catch { return String(value); }
+};
 
 // A problem with `value` as a recordset's or a column's own name, or null: the name the database uses, at
 // most 256 UTF-16 code units, not a dot path segment, no slash, backslash or control character.
@@ -173,7 +177,7 @@ export const hasColumns = (manifest, name) => (Array.isArray(manifest?.recordset
 
 // The problems of one recordset's columns against its record type's field names (a Set), once the model is read.
 // A column holds a field of the record type, or a path into a component; no reader of the model reads a
-// component yet, so a path of more than one name is refused as a field that holds no component. A column
+// component yet, so a path of more than one name is refused whatever the field holds. A column
 // that is named like a field no other column holds would make two fields claim the one column name.
 export function columnModelProblems({ name, recordType, columns }, fieldNames) {
   const problems = [];
@@ -182,7 +186,7 @@ export function columnModelProblems({ name, recordType, columns }, fieldNames) {
     const where = `recordsets ${quoted(name)}: column ${quoted(column)}`;
     const [first, second] = path.split('.');
     if (!fieldNames.has(first)) problems.push(`${where} holds ${quoted(path)}, but ${recordType} has no field ${quoted(first)}`);
-    else if (second !== undefined) problems.push(`${where} holds ${quoted(path)}: ${first} is a field that holds no component, so ${quoted(second)} cannot be read in it`);
+    else if (second !== undefined) problems.push(`${where} holds ${quoted(path)}: no reader of the model reads a component yet, so ${quoted(second)} cannot be read in ${first}`);
     if (column !== path && fieldNames.has(column) && !held.has(column)) problems.push(`${where} is also the name of the field ${column} of ${recordType}, which has no column of its own listed, so two fields would claim the column ${column}`);
   }
   return problems;
