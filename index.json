@@ -1,6 +1,6 @@
 {
   "format": "ovdb-directory/draft-1",
-  "checksum": "sha256:092035ad05ed4e278c458783817af3dafbfec28bd8ca398018b3a4a1a58c2fd8",
+  "checksum": "sha256:72227c511d924b72b1c2796cd718bc9f13784ad19570845285d784c0a8c232fc",
   "databases": [
     {
       "id": "https://demodb.dev/adventureworks/",
@@ -35,7 +35,7 @@
       "recordsets": [
         {
           "name": "HumanResources.Department",
-          "modelEntity": "HumanResources_Department",
+          "modelRecordType": "HumanResources_Department",
           "meanings": [],
           "fields": [
             {
@@ -62,7 +62,7 @@
         },
         {
           "name": "HumanResources.Employee",
-          "modelEntity": "HumanResources_Employee",
+          "modelRecordType": "HumanResources_Employee",
           "meanings": [
             {
               "graph": "adventureworks",
@@ -172,7 +172,7 @@
         },
         {
           "name": "HumanResources.EmployeeDepartmentHistory",
-          "modelEntity": "HumanResources_EmployeeDepartmentHistory",
+          "modelRecordType": "HumanResources_EmployeeDepartmentHistory",
           "meanings": [],
           "fields": [
             {
@@ -212,7 +212,7 @@
         },
         {
           "name": "HumanResources.EmployeePayHistory",
-          "modelEntity": "HumanResources_EmployeePayHistory",
+          "modelRecordType": "HumanResources_EmployeePayHistory",
           "meanings": [],
           "fields": [
             {
@@ -245,7 +245,7 @@
         },
         {
           "name": "HumanResources.JobCandidate",
-          "modelEntity": "HumanResources_JobCandidate",
+          "modelRecordType": "HumanResources_JobCandidate",
           "meanings": [],
           "fields": [
             {
@@ -273,7 +273,7 @@
         },
         {
           "name": "HumanResources.Shift",
-          "modelEntity": "HumanResources_Shift",
+          "modelRecordType": "HumanResources_Shift",
           "meanings": [],
           "fields": [
             {
@@ -305,7 +305,7 @@
         },
         {
           "name": "Person.Address",
-          "modelEntity": "Person_Address",
+          "modelRecordType": "Person_Address",
           "meanings": [],
           "fields": [
             {
@@ -358,7 +358,7 @@
         },
         {
           "name": "Person.AddressType",
-          "modelEntity": "Person_AddressType",
+          "modelRecordType": "Person_AddressType",
           "meanings": [],
           "fields": [
             {
@@ -385,7 +385,7 @@
         },
         {
           "name": "Person.BusinessEntity",
-          "modelEntity": "Person_BusinessEntity",
+          "modelRecordType": "Person_BusinessEntity",
           "meanings": [],
           "fields": [
             {
@@ -407,7 +407,7 @@
         },
         {
           "name": "Person.BusinessEntityAddress",
-          "modelEntity": "Person_BusinessEntityAddress",
+          "modelRecordType": "Person_BusinessEntityAddress",
           "meanings": [],
           "fields": [
             {
@@ -442,7 +442,7 @@
         },
         {
           "name": "Person.BusinessEntityContact",
-          "modelEntity": "Person_BusinessEntityContact",
+          "modelRecordType": "Person_BusinessEntityContact",
           "meanings": [],
           "fields": [
             {
@@ -477,7 +477,7 @@
         },
         {
           "name": "Person.ContactType",
-          "modelEntity": "Person_ContactType",
+          "modelRecordType": "Person_ContactType",
           "meanings": [],
           "fields": [
             {
@@ -499,7 +499,7 @@
         },
         {
           "name": "Person.CountryRegion",
-          "modelEntity": "Person_CountryRegion",
+          "modelRecordType": "Person_CountryRegion",
           "meanings": [
             {
               "graph": "adventureworks",
@@ -553,7 +553,7 @@
         },
         {
           "name": "Person.EmailAddress",
-          "modelEntity": "Person_EmailAddress",
+          "modelRecordType": "Person_EmailAddress",
           "meanings": [],
           "fields": [
             {
@@ -586,7 +586,7 @@
         },
         {
           "name": "Person.Password",
-          "modelEntity": "Person_Password",
+          "modelRecordType": "Person_Password",
           "meanings": [],
           "fields": [
             {
@@ -619,7 +619,7 @@
         },
         {
           "name": "Person.Person",
-          "modelEntity": "Person_Person",
+          "modelRecordType": "Person_Person",
           "meanings": [
             {
               "graph": "adventureworks",
@@ -708,7 +708,7 @@
         },
         {
           "name": "Person.PersonPhone",
-          "modelEntity": "Person_PersonPhone",
+          "modelRecordType": "Person_PersonPhone",
           "meanings": [],
           "fields": [
             {
@@ -737,7 +737,7 @@
         },
         {
           "name": "Person.PhoneNumberType",
-          "modelEntity": "Person_PhoneNumberType",
+          "modelRecordType": "Person_PhoneNumberType",
           "meanings": [],
           "fields": [
             {
@@ -759,7 +759,7 @@
         },
         {
           "name": "Person.StateProvince",
-          "modelEntity": "Person_StateProvince",
+          "modelRecordType": "Person_StateProvince",
           "meanings": [],
           "fields": [
             {
@@ -808,7 +808,7 @@
         },
         {
           "name": "Production.BillOfMaterials",
-          "modelEntity": "Production_BillOfMaterials",
+          "modelRecordType": "Production_BillOfMaterials",
           "meanings": [],
           "fields": [
             {
@@ -863,7 +863,7 @@
         },
         {
           "name": "Production.Culture",
-          "modelEntity": "Production_Culture",
+          "modelRecordType": "Production_Culture",
           "meanings": [],
           "fields": [
             {
@@ -885,7 +885,7 @@
         },
         {
           "name": "Production.Document",
-          "modelEntity": "Production_Document",
+          "modelRecordType": "Production_Document",
           "meanings": [],
           "fields": [
             {
@@ -963,7 +963,7 @@
         },
         {
           "name": "Production.Illustration",
-          "modelEntity": "Production_Illustration",
+          "modelRecordType": "Production_Illustration",
           "meanings": [],
           "fields": [
             {
@@ -985,7 +985,7 @@
         },
         {
           "name": "Production.Location",
-          "modelEntity": "Production_Location",
+          "modelRecordType": "Production_Location",
           "meanings": [],
           "fields": [
             {
@@ -1017,7 +1017,7 @@
         },
         {
           "name": "Production.Product",
-          "modelEntity": "Production_Product",
+          "modelRecordType": "Production_Product",
           "meanings": [
             {
               "graph": "adventureworks",
@@ -1184,7 +1184,7 @@
         },
         {
           "name": "Production.ProductCategory",
-          "modelEntity": "Production_ProductCategory",
+          "modelRecordType": "Production_ProductCategory",
           "meanings": [
             {
               "graph": "adventureworks",
@@ -1220,7 +1220,7 @@
         },
         {
           "name": "Production.ProductCostHistory",
-          "modelEntity": "Production_ProductCostHistory",
+          "modelRecordType": "Production_ProductCostHistory",
           "meanings": [],
           "fields": [
             {
@@ -1253,7 +1253,7 @@
         },
         {
           "name": "Production.ProductDescription",
-          "modelEntity": "Production_ProductDescription",
+          "modelRecordType": "Production_ProductDescription",
           "meanings": [],
           "fields": [
             {
@@ -1280,7 +1280,7 @@
         },
         {
           "name": "Production.ProductDocument",
-          "modelEntity": "Production_ProductDocument",
+          "modelRecordType": "Production_ProductDocument",
           "meanings": [],
           "fields": [
             {
@@ -1304,7 +1304,7 @@
         },
         {
           "name": "Production.ProductInventory",
-          "modelEntity": "Production_ProductInventory",
+          "modelRecordType": "Production_ProductInventory",
           "meanings": [],
           "fields": [
             {
@@ -1348,7 +1348,7 @@
         },
         {
           "name": "Production.ProductListPriceHistory",
-          "modelEntity": "Production_ProductListPriceHistory",
+          "modelRecordType": "Production_ProductListPriceHistory",
           "meanings": [],
           "fields": [
             {
@@ -1381,7 +1381,7 @@
         },
         {
           "name": "Production.ProductModel",
-          "modelEntity": "Production_ProductModel",
+          "modelRecordType": "Production_ProductModel",
           "meanings": [],
           "fields": [
             {
@@ -1418,7 +1418,7 @@
         },
         {
           "name": "Production.ProductModelIllustration",
-          "modelEntity": "Production_ProductModelIllustration",
+          "modelRecordType": "Production_ProductModelIllustration",
           "meanings": [],
           "fields": [
             {
@@ -1442,7 +1442,7 @@
         },
         {
           "name": "Production.ProductModelProductDescriptionCulture",
-          "modelEntity": "Production_ProductModelProductDescriptionCulture",
+          "modelRecordType": "Production_ProductModelProductDescriptionCulture",
           "meanings": [],
           "fields": [
             {
@@ -1472,7 +1472,7 @@
         },
         {
           "name": "Production.ProductPhoto",
-          "modelEntity": "Production_ProductPhoto",
+          "modelRecordType": "Production_ProductPhoto",
           "meanings": [],
           "fields": [
             {
@@ -1509,7 +1509,7 @@
         },
         {
           "name": "Production.ProductProductPhoto",
-          "modelEntity": "Production_ProductProductPhoto",
+          "modelRecordType": "Production_ProductProductPhoto",
           "meanings": [],
           "fields": [
             {
@@ -1538,7 +1538,7 @@
         },
         {
           "name": "Production.ProductReview",
-          "modelEntity": "Production_ProductReview",
+          "modelRecordType": "Production_ProductReview",
           "meanings": [],
           "fields": [
             {
@@ -1586,7 +1586,7 @@
         },
         {
           "name": "Production.ProductSubcategory",
-          "modelEntity": "Production_ProductSubcategory",
+          "modelRecordType": "Production_ProductSubcategory",
           "meanings": [],
           "fields": [
             {
@@ -1619,7 +1619,7 @@
         },
         {
           "name": "Production.ScrapReason",
-          "modelEntity": "Production_ScrapReason",
+          "modelRecordType": "Production_ScrapReason",
           "meanings": [],
           "fields": [
             {
@@ -1641,7 +1641,7 @@
         },
         {
           "name": "Production.TransactionHistory",
-          "modelEntity": "Production_TransactionHistory",
+          "modelRecordType": "Production_TransactionHistory",
           "meanings": [],
           "fields": [
             {
@@ -1694,7 +1694,7 @@
         },
         {
           "name": "Production.TransactionHistoryArchive",
-          "modelEntity": "Production_TransactionHistoryArchive",
+          "modelRecordType": "Production_TransactionHistoryArchive",
           "meanings": [],
           "fields": [
             {
@@ -1746,7 +1746,7 @@
         },
         {
           "name": "Production.UnitMeasure",
-          "modelEntity": "Production_UnitMeasure",
+          "modelRecordType": "Production_UnitMeasure",
           "meanings": [],
           "fields": [
             {
@@ -1768,7 +1768,7 @@
         },
         {
           "name": "Production.WorkOrder",
-          "modelEntity": "Production_WorkOrder",
+          "modelRecordType": "Production_WorkOrder",
           "meanings": [],
           "fields": [
             {
@@ -1827,7 +1827,7 @@
         },
         {
           "name": "Production.WorkOrderRouting",
-          "modelEntity": "Production_WorkOrderRouting",
+          "modelRecordType": "Production_WorkOrderRouting",
           "meanings": [],
           "fields": [
             {
@@ -1896,7 +1896,7 @@
         },
         {
           "name": "Purchasing.ProductVendor",
-          "modelEntity": "Purchasing_ProductVendor",
+          "modelRecordType": "Purchasing_ProductVendor",
           "meanings": [],
           "fields": [
             {
@@ -1961,7 +1961,7 @@
         },
         {
           "name": "Purchasing.PurchaseOrderDetail",
-          "modelEntity": "Purchasing_PurchaseOrderDetail",
+          "modelRecordType": "Purchasing_PurchaseOrderDetail",
           "meanings": [
             {
               "graph": "adventureworks",
@@ -2079,7 +2079,7 @@
         },
         {
           "name": "Purchasing.PurchaseOrderHeader",
-          "modelEntity": "Purchasing_PurchaseOrderHeader",
+          "modelRecordType": "Purchasing_PurchaseOrderHeader",
           "meanings": [
             {
               "graph": "adventureworks",
@@ -2170,7 +2170,7 @@
         },
         {
           "name": "Purchasing.ShipMethod",
-          "modelEntity": "Purchasing_ShipMethod",
+          "modelRecordType": "Purchasing_ShipMethod",
           "meanings": [],
           "fields": [
             {
@@ -2207,7 +2207,7 @@
         },
         {
           "name": "Purchasing.Vendor",
-          "modelEntity": "Purchasing_Vendor",
+          "modelRecordType": "Purchasing_Vendor",
           "meanings": [
             {
               "graph": "adventureworks",
@@ -2271,7 +2271,7 @@
         },
         {
           "name": "Sales.CountryRegionCurrency",
-          "modelEntity": "Sales_CountryRegionCurrency",
+          "modelRecordType": "Sales_CountryRegionCurrency",
           "meanings": [],
           "fields": [
             {
@@ -2295,7 +2295,7 @@
         },
         {
           "name": "Sales.CreditCard",
-          "modelEntity": "Sales_CreditCard",
+          "modelRecordType": "Sales_CreditCard",
           "meanings": [],
           "fields": [
             {
@@ -2332,7 +2332,7 @@
         },
         {
           "name": "Sales.Currency",
-          "modelEntity": "Sales_Currency",
+          "modelRecordType": "Sales_Currency",
           "meanings": [],
           "fields": [
             {
@@ -2354,7 +2354,7 @@
         },
         {
           "name": "Sales.CurrencyRate",
-          "modelEntity": "Sales_CurrencyRate",
+          "modelRecordType": "Sales_CurrencyRate",
           "meanings": [],
           "fields": [
             {
@@ -2398,7 +2398,7 @@
         },
         {
           "name": "Sales.Customer",
-          "modelEntity": "Sales_Customer",
+          "modelRecordType": "Sales_Customer",
           "meanings": [
             {
               "graph": "adventureworks",
@@ -2459,7 +2459,7 @@
         },
         {
           "name": "Sales.PersonCreditCard",
-          "modelEntity": "Sales_PersonCreditCard",
+          "modelRecordType": "Sales_PersonCreditCard",
           "meanings": [],
           "fields": [
             {
@@ -2483,7 +2483,7 @@
         },
         {
           "name": "Sales.SalesOrderDetail",
-          "modelEntity": "Sales_SalesOrderDetail",
+          "modelRecordType": "Sales_SalesOrderDetail",
           "meanings": [
             {
               "graph": "adventureworks",
@@ -2608,7 +2608,7 @@
         },
         {
           "name": "Sales.SalesOrderHeader",
-          "modelEntity": "Sales_SalesOrderHeader",
+          "modelRecordType": "Sales_SalesOrderHeader",
           "meanings": [
             {
               "graph": "adventureworks",
@@ -2769,7 +2769,7 @@
         },
         {
           "name": "Sales.SalesOrderHeaderSalesReason",
-          "modelEntity": "Sales_SalesOrderHeaderSalesReason",
+          "modelRecordType": "Sales_SalesOrderHeaderSalesReason",
           "meanings": [],
           "fields": [
             {
@@ -2793,7 +2793,7 @@
         },
         {
           "name": "Sales.SalesPerson",
-          "modelEntity": "Sales_SalesPerson",
+          "modelRecordType": "Sales_SalesPerson",
           "meanings": [],
           "fields": [
             {
@@ -2847,7 +2847,7 @@
         },
         {
           "name": "Sales.SalesPersonQuotaHistory",
-          "modelEntity": "Sales_SalesPersonQuotaHistory",
+          "modelRecordType": "Sales_SalesPersonQuotaHistory",
           "meanings": [],
           "fields": [
             {
@@ -2880,7 +2880,7 @@
         },
         {
           "name": "Sales.SalesReason",
-          "modelEntity": "Sales_SalesReason",
+          "modelRecordType": "Sales_SalesReason",
           "meanings": [],
           "fields": [
             {
@@ -2907,7 +2907,7 @@
         },
         {
           "name": "Sales.SalesTaxRate",
-          "modelEntity": "Sales_SalesTaxRate",
+          "modelRecordType": "Sales_SalesTaxRate",
           "meanings": [],
           "fields": [
             {
@@ -2950,7 +2950,7 @@
         },
         {
           "name": "Sales.SalesTerritory",
-          "modelEntity": "Sales_SalesTerritory",
+          "modelRecordType": "Sales_SalesTerritory",
           "meanings": [],
           "fields": [
             {
@@ -3008,7 +3008,7 @@
         },
         {
           "name": "Sales.SalesTerritoryHistory",
-          "modelEntity": "Sales_SalesTerritoryHistory",
+          "modelRecordType": "Sales_SalesTerritoryHistory",
           "meanings": [],
           "fields": [
             {
@@ -3047,7 +3047,7 @@
         },
         {
           "name": "Sales.ShoppingCartItem",
-          "modelEntity": "Sales_ShoppingCartItem",
+          "modelRecordType": "Sales_ShoppingCartItem",
           "meanings": [],
           "fields": [
             {
@@ -3085,7 +3085,7 @@
         },
         {
           "name": "Sales.SpecialOffer",
-          "modelEntity": "Sales_SpecialOffer",
+          "modelRecordType": "Sales_SpecialOffer",
           "meanings": [],
           "fields": [
             {
@@ -3147,7 +3147,7 @@
         },
         {
           "name": "Sales.SpecialOfferProduct",
-          "modelEntity": "Sales_SpecialOfferProduct",
+          "modelRecordType": "Sales_SpecialOfferProduct",
           "meanings": [],
           "fields": [
             {
@@ -3176,7 +3176,7 @@
         },
         {
           "name": "Sales.Store",
-          "modelEntity": "Sales_Store",
+          "modelRecordType": "Sales_Store",
           "meanings": [],
           "fields": [
             {
@@ -3215,7 +3215,7 @@
         },
         {
           "name": "dbo.AWBuildVersion",
-          "modelEntity": "dbo_AWBuildVersion",
+          "modelRecordType": "dbo_AWBuildVersion",
           "meanings": [],
           "fields": [
             {
@@ -3242,7 +3242,7 @@
         },
         {
           "name": "dbo.DatabaseLog",
-          "modelEntity": "dbo_DatabaseLog",
+          "modelRecordType": "dbo_DatabaseLog",
           "meanings": [],
           "fields": [
             {
@@ -3289,7 +3289,7 @@
         },
         {
           "name": "dbo.ErrorLog",
-          "modelEntity": "dbo_ErrorLog",
+          "modelRecordType": "dbo_ErrorLog",
           "meanings": [],
           "fields": [
             {
@@ -3374,7 +3374,7 @@
       "recordsets": [
         {
           "name": "Album",
-          "modelEntity": "Album",
+          "modelRecordType": "Album",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Album",
           "meanings": [
             {
@@ -3425,7 +3425,7 @@
         },
         {
           "name": "Artist",
-          "modelEntity": "Artist",
+          "modelRecordType": "Artist",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Artist",
           "meanings": [
             {
@@ -3470,7 +3470,7 @@
         },
         {
           "name": "Customer",
-          "modelEntity": "Customer",
+          "modelRecordType": "Customer",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Customer",
           "meanings": [
             {
@@ -3605,7 +3605,7 @@
         },
         {
           "name": "Employee",
-          "modelEntity": "Employee",
+          "modelRecordType": "Employee",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Employee",
           "meanings": [
             {
@@ -3747,7 +3747,7 @@
         },
         {
           "name": "Genre",
-          "modelEntity": "Genre",
+          "modelRecordType": "Genre",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Genre",
           "meanings": [
             {
@@ -3783,7 +3783,7 @@
         },
         {
           "name": "Invoice",
-          "modelEntity": "Invoice",
+          "modelRecordType": "Invoice",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Invoice",
           "meanings": [
             {
@@ -3938,7 +3938,7 @@
         },
         {
           "name": "InvoiceLine",
-          "modelEntity": "InvoiceLine",
+          "modelRecordType": "InvoiceLine",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/InvoiceLine",
           "meanings": [
             {
@@ -4064,7 +4064,7 @@
         },
         {
           "name": "MediaType",
-          "modelEntity": "MediaType",
+          "modelRecordType": "MediaType",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/MediaType",
           "meanings": [
             {
@@ -4100,7 +4100,7 @@
         },
         {
           "name": "Playlist",
-          "modelEntity": "Playlist",
+          "modelRecordType": "Playlist",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Playlist",
           "meanings": [
             {
@@ -4136,7 +4136,7 @@
         },
         {
           "name": "PlaylistTrack",
-          "modelEntity": "PlaylistTrack",
+          "modelRecordType": "PlaylistTrack",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/PlaylistTrack",
           "meanings": [],
           "fields": [
@@ -4165,7 +4165,7 @@
         },
         {
           "name": "Track",
-          "modelEntity": "Track",
+          "modelRecordType": "Track",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Track",
           "meanings": [
             {
@@ -4330,7 +4330,7 @@
       "recordsets": [
         {
           "name": "departments",
-          "modelEntity": "departments",
+          "modelRecordType": "departments",
           "meanings": [
             {
               "graph": "employees",
@@ -4374,7 +4374,7 @@
         },
         {
           "name": "dept_emp",
-          "modelEntity": "dept_emp",
+          "modelRecordType": "dept_emp",
           "meanings": [
             {
               "graph": "employees",
@@ -4443,7 +4443,7 @@
         },
         {
           "name": "dept_manager",
-          "modelEntity": "dept_manager",
+          "modelRecordType": "dept_manager",
           "meanings": [
             {
               "graph": "employees",
@@ -4512,7 +4512,7 @@
         },
         {
           "name": "employees",
-          "modelEntity": "employees",
+          "modelRecordType": "employees",
           "meanings": [
             {
               "graph": "employees",
@@ -4593,7 +4593,7 @@
         },
         {
           "name": "salaries",
-          "modelEntity": "salaries",
+          "modelRecordType": "salaries",
           "meanings": [
             {
               "graph": "employees",
@@ -4661,7 +4661,7 @@
         },
         {
           "name": "titles",
-          "modelEntity": "titles",
+          "modelRecordType": "titles",
           "meanings": [
             {
               "graph": "employees",
@@ -4762,7 +4762,7 @@
       "recordsets": [
         {
           "name": "Categories",
-          "modelEntity": "Categories",
+          "modelRecordType": "Categories",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Categories",
           "meanings": [],
           "fields": [
@@ -4790,7 +4790,7 @@
         },
         {
           "name": "CustomerCustomerDemo",
-          "modelEntity": "CustomerCustomerDemo",
+          "modelRecordType": "CustomerCustomerDemo",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/CustomerCustomerDemo",
           "meanings": [],
           "fields": [
@@ -4810,7 +4810,7 @@
         },
         {
           "name": "CustomerDemographics",
-          "modelEntity": "CustomerDemographics",
+          "modelRecordType": "CustomerDemographics",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/CustomerDemographics",
           "meanings": [],
           "fields": [
@@ -4828,7 +4828,7 @@
         },
         {
           "name": "Customers",
-          "modelEntity": "Customers",
+          "modelRecordType": "Customers",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Customers",
           "meanings": [
             {
@@ -4907,7 +4907,7 @@
         },
         {
           "name": "EmployeeTerritories",
-          "modelEntity": "EmployeeTerritories",
+          "modelRecordType": "EmployeeTerritories",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/EmployeeTerritories",
           "meanings": [],
           "fields": [
@@ -4927,7 +4927,7 @@
         },
         {
           "name": "Employees",
-          "modelEntity": "Employees",
+          "modelRecordType": "Employees",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Employees",
           "meanings": [
             {
@@ -5048,7 +5048,7 @@
         },
         {
           "name": "Order Details",
-          "modelEntity": "OrderDetails",
+          "modelRecordType": "OrderDetails",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Order%20Details",
           "meanings": [
             {
@@ -5105,7 +5105,7 @@
         },
         {
           "name": "Orders",
-          "modelEntity": "Orders",
+          "modelRecordType": "Orders",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Orders",
           "meanings": [
             {
@@ -5218,7 +5218,7 @@
         },
         {
           "name": "Products",
-          "modelEntity": "Products",
+          "modelRecordType": "Products",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Products",
           "meanings": [],
           "fields": [
@@ -5278,7 +5278,7 @@
         },
         {
           "name": "Regions",
-          "modelEntity": "Regions",
+          "modelRecordType": "Regions",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Regions",
           "meanings": [],
           "fields": [
@@ -5296,7 +5296,7 @@
         },
         {
           "name": "Shippers",
-          "modelEntity": "Shippers",
+          "modelRecordType": "Shippers",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Shippers",
           "meanings": [],
           "fields": [
@@ -5319,7 +5319,7 @@
         },
         {
           "name": "Suppliers",
-          "modelEntity": "Suppliers",
+          "modelRecordType": "Suppliers",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Suppliers",
           "meanings": [],
           "fields": [
@@ -5387,7 +5387,7 @@
         },
         {
           "name": "Territories",
-          "modelEntity": "Territories",
+          "modelRecordType": "Territories",
           "url": "https://cloud.openvaultdb.com/ovdb/dbs/northwind/collections/Territories",
           "meanings": [],
           "fields": [
@@ -5444,7 +5444,7 @@
       "recordsets": [
         {
           "name": "authors",
-          "modelEntity": "authors",
+          "modelRecordType": "authors",
           "meanings": [
             {
               "graph": "pubs",
@@ -5512,7 +5512,7 @@
         },
         {
           "name": "discounts",
-          "modelEntity": "discounts",
+          "modelRecordType": "discounts",
           "meanings": [],
           "fields": [
             {
@@ -5554,7 +5554,7 @@
         },
         {
           "name": "employee",
-          "modelEntity": "employee",
+          "modelRecordType": "employee",
           "meanings": [
             {
               "graph": "pubs",
@@ -5641,7 +5641,7 @@
         },
         {
           "name": "jobs",
-          "modelEntity": "jobs",
+          "modelRecordType": "jobs",
           "meanings": [],
           "fields": [
             {
@@ -5668,7 +5668,7 @@
         },
         {
           "name": "pub_info",
-          "modelEntity": "pub_info",
+          "modelRecordType": "pub_info",
           "meanings": [],
           "fields": [
             {
@@ -5707,7 +5707,7 @@
         },
         {
           "name": "publishers",
-          "modelEntity": "publishers",
+          "modelRecordType": "publishers",
           "meanings": [
             {
               "graph": "pubs",
@@ -5755,7 +5755,7 @@
         },
         {
           "name": "roysched",
-          "modelEntity": "roysched",
+          "modelRecordType": "roysched",
           "meanings": [],
           "fields": [
             {
@@ -5792,7 +5792,7 @@
         },
         {
           "name": "sales",
-          "modelEntity": "sales",
+          "modelRecordType": "sales",
           "meanings": [
             {
               "graph": "pubs",
@@ -5867,7 +5867,7 @@
         },
         {
           "name": "stores",
-          "modelEntity": "stores",
+          "modelRecordType": "stores",
           "meanings": [
             {
               "graph": "pubs",
@@ -5913,7 +5913,7 @@
         },
         {
           "name": "titleauthor",
-          "modelEntity": "titleauthor",
+          "modelRecordType": "titleauthor",
           "meanings": [],
           "fields": [
             {
@@ -5967,7 +5967,7 @@
         },
         {
           "name": "titles",
-          "modelEntity": "titles",
+          "modelRecordType": "titles",
           "meanings": [
             {
               "graph": "pubs",
@@ -6105,7 +6105,7 @@
       "recordsets": [
         {
           "name": "actor",
-          "modelEntity": "actor",
+          "modelRecordType": "actor",
           "meanings": [
             {
               "graph": "sakila",
@@ -6148,7 +6148,7 @@
         },
         {
           "name": "address",
-          "modelEntity": "address",
+          "modelRecordType": "address",
           "meanings": [],
           "fields": [
             {
@@ -6201,7 +6201,7 @@
         },
         {
           "name": "category",
-          "modelEntity": "category",
+          "modelRecordType": "category",
           "meanings": [],
           "fields": [
             {
@@ -6223,7 +6223,7 @@
         },
         {
           "name": "city",
-          "modelEntity": "city",
+          "modelRecordType": "city",
           "meanings": [],
           "fields": [
             {
@@ -6251,7 +6251,7 @@
         },
         {
           "name": "country",
-          "modelEntity": "country",
+          "modelRecordType": "country",
           "meanings": [],
           "fields": [
             {
@@ -6273,7 +6273,7 @@
         },
         {
           "name": "customer",
-          "modelEntity": "customer",
+          "modelRecordType": "customer",
           "meanings": [
             {
               "graph": "sakila",
@@ -6343,7 +6343,7 @@
         },
         {
           "name": "film",
-          "modelEntity": "film",
+          "modelRecordType": "film",
           "meanings": [
             {
               "graph": "sakila",
@@ -6426,7 +6426,7 @@
         },
         {
           "name": "film_actor",
-          "modelEntity": "film_actor",
+          "modelRecordType": "film_actor",
           "meanings": [],
           "fields": [
             {
@@ -6450,7 +6450,7 @@
         },
         {
           "name": "film_category",
-          "modelEntity": "film_category",
+          "modelRecordType": "film_category",
           "meanings": [],
           "fields": [
             {
@@ -6474,7 +6474,7 @@
         },
         {
           "name": "film_text",
-          "modelEntity": "film_text",
+          "modelRecordType": "film_text",
           "meanings": [],
           "fields": [
             {
@@ -6496,7 +6496,7 @@
         },
         {
           "name": "inventory",
-          "modelEntity": "inventory",
+          "modelRecordType": "inventory",
           "meanings": [],
           "fields": [
             {
@@ -6525,7 +6525,7 @@
         },
         {
           "name": "language",
-          "modelEntity": "language",
+          "modelRecordType": "language",
           "meanings": [],
           "fields": [
             {
@@ -6547,7 +6547,7 @@
         },
         {
           "name": "payment",
-          "modelEntity": "payment",
+          "modelRecordType": "payment",
           "meanings": [
             {
               "graph": "sakila",
@@ -6601,7 +6601,7 @@
         },
         {
           "name": "rental",
-          "modelEntity": "rental",
+          "modelRecordType": "rental",
           "meanings": [
             {
               "graph": "sakila",
@@ -6655,7 +6655,7 @@
         },
         {
           "name": "staff",
-          "modelEntity": "staff",
+          "modelRecordType": "staff",
           "meanings": [
             {
               "graph": "sakila",
@@ -6741,7 +6741,7 @@
         },
         {
           "name": "store",
-          "modelEntity": "store",
+          "modelRecordType": "store",
           "meanings": [
             {
               "graph": "sakila",
