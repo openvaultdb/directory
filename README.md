@@ -134,6 +134,16 @@ module name, without `?ref=`. The host, organisation and repository are written
 in lower case; the module name is case-sensitive. A foreign address next to local
 model files is refused, as are `meaning.address` and `recordsets_partial`.
 
+**ModelSpec spellings.** The check reads a model's JSON in either spelling of ModelSpec's
+vocabulary: format `1.0-draft` (`entities`, `properties`, `entity`) and format
+`1.0-draft-2` (`records`, `fields`, `record`). The identifier decides the vocabulary;
+a document that mixes the two is refused, as are the removed `collections` and
+`recordsets` fields and the reserved `projections` and `migrations` fields. The index
+this repository writes is the same for either spelling, with its present keys
+(`recordsets`, `modelEntity`, `fields`). A model file in the earlier spelling is read
+as before and reported once per run as a `warning:` line on standard error that names
+`modelspec rewrite --write <folder>`; the warning does not change the exit status.
+
 A manifest that gives `model.address` makes the check read the ModelSpec registry.
 If the registry has that address, the manifest's `model.modelspec` must be the same
 model as the registry's `files.json`: the same parsed JSON, with the same order of
