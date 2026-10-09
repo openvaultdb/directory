@@ -18,15 +18,23 @@ const ref = (path, bytes) => ({ path, sha256: sha(bytes) });
 const external = (path) => ({ path, sha256: 'b'.repeat(64), repository: sourceRepo, revision });
 const bytes = (value) => Buffer.isBuffer(value) ? value : Buffer.from(typeof value === 'string' ? value : JSON.stringify(value));
 
-function fixture(format = 3, prefix = '') {
+// A ModelSpec JSON model in the current spelling (format 1.0-draft-2: records, fields, record), word for word what
+// `modelspec rewrite` makes of one in the earlier spelling (1.0-draft: entities, properties, entity).
+const inCurrentSpelling = (model) => ({
+  ...Object.fromEntries(Object.entries(model).map(([key, value]) => (key === 'entities' ? ['records', Object.fromEntries(Object.entries(value).map(([name, record]) => [name, Object.fromEntries(Object.entries(record).map(([part, members]) => (part === 'properties' ? ['fields', Object.fromEntries(Object.entries(members).map(([field, member]) => [field, Object.fromEntries(Object.entries(member).map(([setting, v]) => [setting === 'entity' ? 'record' : setting, v]))]))] : [part, members])))]))] : [key, value]))),
+  modelspec: '1.0-draft-2',
+});
+
+function fixture(format = 3, prefix = '', targetInCurrentSpelling = false) {
   const files = new Map();
   const put = (path, value) => { const data = bytes(value); const full = `${prefix}${path}`; files.set(full, data); return ref(full, data); };
-  const targetModel = put('model/target.modelspec.json', {
+  const earlierTargetModel = {
     modelspec: '1.0-draft', module: { name: 'target' }, entities: {
       Entities: { key: ['id'], properties: { id: { type: 'string', required: true }, serving_id: { type: 'string' } } },
       Bridge: { properties: { raw_label: { type: 'string' }, target_key: { type: 'string' } } },
     },
-  });
+  };
+  const targetModel = put('model/target.modelspec.json', targetInCurrentSpelling ? inCurrentSpelling(earlierTargetModel) : earlierTargetModel);
   const binding = put('model/target.meaning.yaml', `format: meaning/draft-1\nconcepts:\n  - id: target-entity\n    extends: meaning://github.com/example/meaning/concept?ref=${revision}\n    bindings:\n      - model: modelspec:///target.Entities\n        property: id\n        role: identifier\n`);
   const dataset = { path: `${prefix}native.sqlite`, sha256: 'c'.repeat(64) };
   const provenance = put('source/provenance.json', {
@@ -65,13 +73,14 @@ function fixture(format = 3, prefix = '') {
 }
 
 
-function full(version = 3) {
-  const f = fixture(version);
+function full(version = 3, { target = false, source = false } = {}) {
+  const f = fixture(version, '', target);
   const externalFiles = new Map();
   const add = (reference, value) => {
     const data = bytes(value); reference.sha256 = sha(data); externalFiles.set(reference.path, data);
   };
-  add(f.contract.source.schema, { modelspec: '1.0-draft', module: { name: 'source' }, entities: { Rows: { properties: { id: { type: 'string' } } } } });
+  const sourceSchema = { modelspec: '1.0-draft', module: { name: 'source' }, entities: { Rows: { properties: { id: { type: 'string' } } } } };
+  add(f.contract.source.schema, source ? inCurrentSpelling(sourceSchema) : sourceSchema);
   add(f.contract.decision.document, 'unchanged opaque provenance');
   add(f.contract.target.binding.meaning.document, { format: 'meaning/draft-1', concepts: [{ id: 'concept' }] });
   if (version === 3) add(f.contract.source.data, '[{"id":"id:1"},{"id":"id:2"}]');
@@ -83,8 +92,8 @@ function full(version = 3) {
   f.repack = () => { f.attachment = f.put('source/contract.json', f.doc); };
   f.repack(); return f;
 }
-function check(f, registered = () => true) { return checkRepresentation(f.attachment, f.reader, f.manifest, providerRepo, f.dependencies, registered); }
-const refused = (f, pattern = /./) => assert.match(check(f).problems.join('\n'), pattern);
+function check(f, registered = () => true, onEarlierSpelling) { return checkRepresentation(f.attachment, f.reader, f.manifest, providerRepo, f.dependencies, registered, onEarlierSpelling); }
+const refused = (f, pattern = /./, message) => assert.match(check(f).problems.join('\n'), pattern, message);
 
 test('all frozen formats prove structural closure; metadata never reads source/native data', () => {
   for (const version of [1, 2, 3]) {
@@ -104,6 +113,62 @@ test('a second generic source works without fixture hash, namespace or research 
   const data = bytes({ modelspec: '1.0-draft', module: { name: 'another' }, entities: { Affiliations: { properties: { exact_id: { type: 'string' } } } } });
   f.externalFiles.set(reference.path, data); reference.sha256 = sha(data); f.repack();
   assert.deepEqual(check(f).problems, []);
+});
+
+test('a model in the current spelling is read as the earlier one is, in all three formats', () => {
+  for (const version of [1, 2, 3]) {
+    const earlier = full(version);
+    const current = full(version, { target: true, source: true });
+    assert.deepEqual(check(earlier).problems, []);
+    assert.deepEqual(check(current).problems, []);
+    assert.equal(JSON.parse(current.files.get('model/target.modelspec.json')).modelspec, '1.0-draft-2');
+    // either one alone
+    assert.deepEqual(check(full(version, { target: true })).problems, []);
+    assert.deepEqual(check(full(version, { source: true })).problems, []);
+    // what the model says still decides: a module or property it does not have is refused in both spellings
+    for (const spelling of [{}, { target: true, source: true }]) for (const [scope, field] of [['target', 'module'], ['target', 'property'], ['source', 'entity'], ['source', 'property']]) {
+      const f = full(version, spelling); f.contract[scope][field] = 'Changed'; f.repack(); refused(f, /ModelSpec module\/entity\/property\/datatype mismatch/, `${scope}.${field}`);
+    }
+  }
+});
+
+test('a source schema in the earlier spelling is reported once, with its repository and revision; the current spelling is not', () => {
+  const notices = [];
+  assert.deepEqual(check(full(), () => true, (label, commit) => notices.push([label, commit])).problems, []);
+  assert.deepEqual(notices, [['source/schema.json of github.com/example/source', revision]]);
+  notices.length = 0;
+  assert.deepEqual(check(full(3, { target: true, source: true }), () => true, (label, commit) => notices.push([label, commit])).problems, []);
+  assert.deepEqual(notices, []);
+  // a model that is refused is not reported as read
+  const refusedSchema = full(); refusedSchema.contract.source.property = 'changed'; refusedSchema.repack();
+  assert.notDeepEqual(check(refusedSchema, () => true, (label) => notices.push(label)).problems, []);
+  assert.deepEqual(notices, []);
+});
+
+test('a model that mixes the two spellings, or holds a removed or reserved construct, is refused in either', () => {
+  const edit = (which, change, spelling) => {
+    const f = full(3, spelling);
+    const reference = which === 'target' ? f.contract.target.model : f.contract.source.schema;
+    const model = JSON.parse((which === 'target' ? f.files : f.externalFiles).get(reference.path));
+    change(model);
+    if (which === 'target') Object.assign(reference, f.put(reference.path, model));
+    else { const data = bytes(model); reference.sha256 = sha(data); f.externalFiles.set(reference.path, data); }
+    f.repack();
+    return f;
+  };
+  const cases = [
+    ['an earlier identifier with the current key', { target: false, source: false }, (m) => { m.records = m.entities; delete m.entities; }, /"records" is a key of format 1\.0-draft-2;/],
+    ['a current identifier with the earlier key', { target: true, source: true }, (m) => { m.entities = m.records; delete m.records; }, /"entities" is a key of format 1\.0-draft;/],
+    ['a current identifier with the earlier members key', { target: true, source: true }, (m) => { for (const record of Object.values(m.records)) { record.properties = record.fields; delete record.fields; } }, /"properties" is a key of format 1\.0-draft;/],
+    ['a current identifier with the earlier reference key', { target: true, source: true }, (m) => { const first = Object.values(Object.values(m.records)[0].fields)[0]; first.entity = 'Rows'; }, /"entity" is a key of format 1\.0-draft;/],
+    ['a removed construct, collections', { target: false, source: false }, (m) => { m.collections = {}; }, /collections field was removed/],
+    ['a removed construct, recordsets, in the current spelling', { target: true, source: true }, (m) => { m.recordsets = {}; }, /recordsets field was removed/],
+    ['a reserved word, projections', { target: true, source: true }, (m) => { m.projections = {}; }, /projections field is reserved/],
+    ['a reserved word, migrations', { target: false, source: false }, (m) => { m.migrations = []; }, /migrations field is reserved/],
+  ];
+  for (const [name, spelling, change, pattern] of cases) {
+    for (const which of ['target', 'source']) refused(edit(which, change, spelling), pattern, `${name} (${which})`);
+  }
 });
 
 test('every immutable coordinate, canonical registration, exact source and namespace fail closed', () => {
