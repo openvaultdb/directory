@@ -139,10 +139,13 @@ vocabulary: format `1.0-draft` (`entities`, `properties`, `entity`) and format
 `1.0-draft-2` (`records`, `fields`, `record`). The identifier decides the vocabulary;
 a document that mixes the two is refused, as are the removed `collections` and
 `recordsets` fields and the reserved `projections` and `migrations` fields. The index
-this repository writes is the same for either spelling, with its present keys
-(`recordsets`, `modelEntity`, `fields`). A model file in the earlier spelling is read
-as before and reported once per run as a `warning:` line on standard error that names
-`modelspec rewrite --write <folder>`; the warning does not change the exit status.
+this repository writes is the same for either spelling. Each recordset has
+`modelRecordType`, the name of the ModelSpec record type it holds; the earlier key
+`modelEntity` is no longer written, and readers still accept an index with
+`modelEntity` until the earlier spelling is retired. A model file in the earlier
+spelling is read as before and reported once per run as a `warning:` line on standard
+error that names `modelspec rewrite --write <folder>`; the warning does not change
+the exit status.
 
 A manifest that gives `model.address` makes the check read the ModelSpec registry.
 If the registry has that address, the manifest's `model.modelspec` must be the same
@@ -412,8 +415,9 @@ address at the commit that address pins, resolved through the MeaningGraph regis
   database's own repository, so a link to the model's file for a shared-model
   database is `{model.repository}/blob/{model.commit}/{model.path}`.
 - `recordsets` are the native collection names the deployment serves. Each
-  recordset has `modelEntity`, the corresponding ModelSpec entity name (the
-  same value by default, or from `recordset_entities` when they differ). A
+  recordset has `modelRecordType`, the name of the corresponding ModelSpec record
+  type (the same value by default, or from `recordset_entities` when they
+  differ); the earlier key `modelEntity` is no longer written. A
   recordset's `url` is the manifest's
   `deployment.recordset_page` template with `{name}` filled in, and is absent
   when the manifest has no template: it is never built by appending to

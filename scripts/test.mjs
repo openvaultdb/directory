@@ -365,14 +365,15 @@ test('native spaced recordset names map to publishable ModelSpec entities and en
   const result = await index(w);
   const orderDetails = result.databases[0].recordsets.find((recordset) => recordset.name === 'Order Details');
   assert.ok(orderDetails);
-  assert.equal(orderDetails.modelEntity, 'OrderDetails');
+  assert.equal(orderDetails.modelRecordType, 'OrderDetails');
+  assert.ok(!Object.hasOwn(orderDetails, 'modelEntity'), 'the index no longer writes the earlier key');
   assert.equal(orderDetails.url, 'https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Order%20Details');
   assert.deepEqual(orderDetails.meanings.map((entry) => [entry.concept, entry.role]), [['order-detail', 'entity']]);
   assert.deepEqual(orderDetails.fields.map((entry) => entry.name), ['OrderID', 'ProductID', 'UnitPrice']);
   assert.deepEqual(orderDetails.fields[2].meanings.map((entry) => [entry.concept, entry.role]), [['order-detail-price', 'value']]);
   const employee = result.databases[0].recordsets.find((recordset) => recordset.name === 'HumanResources.Employee');
   assert.ok(employee);
-  assert.equal(employee.modelEntity, 'SchemaQualifiedEmployee');
+  assert.equal(employee.modelRecordType, 'SchemaQualifiedEmployee');
   assert.equal(employee.url, 'https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/HumanResources.Employee');
   assert.deepEqual(employee.fields.map((entry) => entry.name), ['BusinessEntityID']);
 });
@@ -743,9 +744,9 @@ test('a database whose model is in the current spelling is checked and indexed e
   assert.deepEqual(await problemsOf(current), []);
   const [fromEarlier] = (await index(earlier)).databases;
   const [fromCurrent] = (await index(current)).databases;
-  assert.equal(withoutCommits(fromCurrent), withoutCommits(fromEarlier), 'the entry is the same, byte for byte, with the same keys (recordsets with modelEntity, fields)');
-  assert.ok(fromCurrent.recordsets.length > 0 && fromCurrent.recordsets.every((recordset) => typeof recordset.modelEntity === 'string'));
-  assert.ok(!JSON.stringify(fromCurrent).includes('modelRecordType'), 'the index keeps its keys; moving them is a later change');
+  assert.equal(withoutCommits(fromCurrent), withoutCommits(fromEarlier), 'the entry is the same, byte for byte, with the same keys (recordsets with modelRecordType, fields)');
+  assert.ok(fromCurrent.recordsets.length > 0 && fromCurrent.recordsets.every((recordset) => typeof recordset.modelRecordType === 'string' && !Object.hasOwn(recordset, 'modelEntity')));
+  assert.ok(!JSON.stringify(fromCurrent).includes('modelEntity'), 'the index writes modelRecordType and no longer the earlier modelEntity');
   // the whole index text, not just the entry
   const textOf = async (w) => (await buildIndex(options(w))).replace(/"checksum": "sha256:[0-9a-f]{64}"/, '"checksum": "<sha256>"').replace(/[0-9a-f]{40}/g, '<commit>');
   assert.equal(await textOf(current), await textOf(earlier));
