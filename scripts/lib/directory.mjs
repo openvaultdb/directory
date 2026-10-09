@@ -833,7 +833,7 @@ export async function analyseDatabase(record, context) {
     meaning_graph: { id: graph.id, address: graph.address },
     recordsets: [...recordsets.values()].sort(byName).map((recordset) => ({
       name: recordset.name,
-      modelEntity: recordset.modelEntity,
+      modelRecordType: recordset.modelEntity,
       ...(manifest.deployment.recordset_page ? { url: recordsetUrl(recordset.name) } : {}),
       meanings: sorted(recordset.meanings),
       fields: [...recordset.fields.values()].map(({ name, type, references, meanings }) => ({ name, type, ...(references ? { references: recordsetByModelEntity.get(references) ?? references } : {}), meanings: sorted(meanings) })),
