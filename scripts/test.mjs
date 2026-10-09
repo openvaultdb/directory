@@ -1045,7 +1045,7 @@ test('the committed index.json has the documented shape and its own checksum', (
   assert.ok(pubsRecord, 'the Pubs provider has a committed Directory record');
   assert.deepEqual(
     [pubsRecord.data.url, pubsRecord.data.repository, pubsRecord.data.commit, pubsRecord.data.manifest, pubsRecord.data.database_manifest, pubsRecord.data.meaning_graph],
-    ['https://demodb.dev/pubs/', 'https://github.com/demo-db/pubs', '6c06c5c7395b03ff1a02c2b1a21485add3e1b65b', 'ovdb.yaml', 'ovdb-database.json', 'pubs'],
+    ['https://demodb.dev/pubs/', 'https://github.com/demo-db/pubs', 'e99ca33330a043e23b2c5a665356fb8ad8d0b508', 'ovdb.yaml', 'ovdb-database.json', 'pubs'],
   );
   const pubs = committed.databases.find((database) => database.recordId === 'pubs');
   assert.ok(pubs, 'the Pubs database appears in the generated index');
@@ -1067,7 +1067,7 @@ test('the committed index.json has the documented shape and its own checksum', (
   assert.ok(sakilaRecord, 'the Sakila provider has a committed Directory record');
   assert.deepEqual(
     [sakilaRecord.data.url, sakilaRecord.data.repository, sakilaRecord.data.commit, sakilaRecord.data.manifest, sakilaRecord.data.database_manifest, sakilaRecord.data.meaning_graph],
-    ['https://demodb.dev/sakila/', 'https://github.com/demo-db/sakila', 'cb9a81a8cbedcd8831737f281f888d5d584fae85', 'ovdb.yaml', 'ovdb-database.json', 'sakila'],
+    ['https://demodb.dev/sakila/', 'https://github.com/demo-db/sakila', '113e54ad83c3e003a4fd195c893f2b19a921435c', 'ovdb.yaml', 'ovdb-database.json', 'sakila'],
   );
   const sakila = committed.databases.find((database) => database.recordId === 'sakila');
   assert.ok(sakila, 'the Sakila database appears in the generated index');
@@ -1088,7 +1088,7 @@ test('AdventureWorks and Employees Directory records pin their exact public prov
       recordId: 'adventureworks',
       url: 'https://demodb.dev/adventureworks/',
       repository: 'https://github.com/demo-db/adventureworks',
-      commit: '5028a27189b487d6fd8025fafc1307aada707fd2',
+      commit: 'c91e06e9c12380e7709f66ab1e69cf7f858f67c1',
       meaningGraph: 'adventureworks',
       title: 'AdventureWorks OLTP',
     },
@@ -1096,7 +1096,7 @@ test('AdventureWorks and Employees Directory records pin their exact public prov
       recordId: 'employees',
       url: 'https://demodb.dev/employees/',
       repository: 'https://github.com/demo-db/employees',
-      commit: '2069e26e8fdb60bdb16507f75569a579cf3da7cf',
+      commit: 'add7744ddc5cefc535a7cbb09b3dffee41811ade',
       meaningGraph: 'employees',
       title: 'Employees (browser edition)',
     },
