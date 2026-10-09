@@ -165,6 +165,8 @@ const problemsOf = async (w, extra) => {
   const { problems } = await checkDirectory(options(w, extra));
   return problems.filter((problem) => !problem.startsWith('index.json'));
 };
+// A model file in the earlier ModelSpec spelling is reported with a warning; the tests that count warnings count the others.
+const withoutSpellingNotices = (lines) => lines.filter((line) => !line.includes('is in the earlier ModelSpec spelling'));
 const expectProblem = (problems, pattern) => assert.ok(problems.some((problem) => pattern.test(problem)), `expected a problem matching ${pattern}, got:\n${problems.join('\n') || '(none)'}`);
 const edited = (path, change) => (files) => files.set(path, change(files.get(path)));
 const manifestEdit = (change) => edited('ovdb.yaml', (text) => { const manifest = parseYaml(text); change(manifest); return stringifyYaml(manifest); });
@@ -656,6 +658,156 @@ test('a ModelSpec that is not JSON, or has no entities, fails', async () => {
   expectProblem(await problemsOf(world({ publisher: (files) => files.set('model/chinook.modelspec.json', '{"modelspec":"1","module":{"name":"chinook"},"entities":{}}') })), /model\/chinook\.modelspec\.json: has no entities/);
   const broken = parseModelSpec(JSON.stringify({ modelspec: '1', module: { name: 'm' }, entities: { A: { key: ['x'], properties: { x: { entity: 'Missing' } } } } }));
   assert.match(broken.problems.join('\n'), /A\.x references entity Missing/);
+});
+
+// ---- both spellings of ModelSpec ----
+
+// A model in the current spelling (format 1.0-draft-2: records, fields, record), word for word and in the same order
+// what `modelspec rewrite --write` makes of the JSON of one in the earlier spelling (format 1.0-draft: entities,
+// properties, entity).
+const renamedKeys = (object, names) => Object.fromEntries(Object.entries(object).map(([key, value]) => [names[key] ?? key, value]));
+const mapValues = (object, change) => Object.fromEntries(Object.entries(object).map(([key, value]) => [key, change(value)]));
+const currentSpellingOf = (doc) => ({
+  ...renamedKeys(doc, { entities: 'records' }),
+  modelspec: '1.0-draft-2',
+  records: mapValues(doc.entities, (record) => ({ ...renamedKeys(record, { properties: 'fields' }), fields: mapValues(record.properties, (member) => renamedKeys(member, { entity: 'record' })) })),
+});
+const inCurrentSpelling = edited('model/chinook.modelspec.json', (text) => JSON.stringify(currentSpellingOf(JSON.parse(text))));
+const spellingNotices = (lines) => lines.filter((line) => line.includes('is in the earlier ModelSpec spelling'));
+// An index entry without the commits of the local repositories the world made, which differ from one world to the next.
+const withoutCommits = (result) => JSON.stringify(result).replace(/[0-9a-f]{40}/g, '<commit>');
+
+test('parseModelSpec reads the current spelling as the earlier one, and says which it read', () => {
+  const earlier = { modelspec: '1.0-draft', module: { name: 'shop' }, entities: {
+    Customer: { key: ['id'], properties: { id: { type: 'int' }, country: { type: 'string' }, referrer: { entity: 'Customer' } } },
+    Invoice: { properties: { total: { type: 'decimal' }, customer: { entity: 'Customer' } } },
+  } };
+  const readEarlier = parseModelSpec(JSON.stringify(earlier));
+  const readCurrent = parseModelSpec(JSON.stringify(currentSpellingOf(earlier)));
+  assert.deepEqual(readEarlier.problems, []);
+  assert.deepEqual(readCurrent.problems, []);
+  assert.equal(JSON.parse(JSON.stringify(currentSpellingOf(earlier))).modelspec, '1.0-draft-2');
+  assert.equal(readEarlier.earlierSpelling, true);
+  assert.equal(readCurrent.earlierSpelling, false);
+  assert.deepEqual({ ...readCurrent, earlierSpelling: true }, readEarlier, 'the same module, record types, members and references, in the same order');
+  assert.deepEqual([...readCurrent.entities.keys()], ['Customer', 'Invoice']);
+  assert.deepEqual(readCurrent.entities.get('Customer').properties, [{ name: 'id', type: 'int' }, { name: 'country', type: 'string' }, { name: 'referrer', type: 'reference', references: 'Customer' }]);
+  // a version this reader does not know is read as it always was, in the earlier words, and is not reported
+  const other = parseModelSpec(JSON.stringify({ ...earlier, modelspec: '1' }));
+  assert.deepEqual({ ...other, earlierSpelling: true }, readEarlier);
+  assert.equal(other.earlierSpelling, false);
+});
+
+test('parseModelSpec refuses what the format refuses, in either spelling, and names it', () => {
+  const earlier = (extra = {}) => ({ modelspec: '1.0-draft', module: { name: 'shop' }, entities: { A: { properties: { id: { type: 'int' }, self: { entity: 'A' } } } }, ...extra });
+  const current = (extra = {}) => ({ ...currentSpellingOf(earlier()), ...extra });
+  const problems = (doc) => parseModelSpec(JSON.stringify(doc)).problems.join('\n');
+  assert.equal(problems(earlier()), '');
+  assert.equal(problems(current()), '');
+  // the identifier decides the vocabulary: a key of the other one is an error, wherever it is
+  assert.match(problems(current({ entities: {} })), /"entities" is a key of format 1\.0-draft; this document says "1\.0-draft-2", where it is "records"/);
+  assert.match(problems(earlier({ records: {} })), /"records" is a key of format 1\.0-draft-2; this document says "1\.0-draft", where it is "entities"/);
+  assert.match(problems({ ...current(), records: { A: { properties: { id: { type: 'int' } } } } }), /record A: "properties" is a key of format 1\.0-draft/);
+  assert.match(problems({ ...earlier(), entities: { A: { fields: { id: { type: 'int' } } } } }), /entity A: "fields" is a key of format 1\.0-draft-2/);
+  assert.match(problems({ ...current(), records: { A: { fields: { self: { entity: 'A' } } } } }), /A\.self: "entity" is a key of format 1\.0-draft;/);
+  assert.match(problems({ ...earlier(), entities: { A: { properties: { self: { record: 'A' } } } } }), /A\.self: "record" is a key of format 1\.0-draft-2;/);
+  assert.match(problems({ ...current(), records: { A: { fields: { self: { record: 'A', entity: 'A' } } } } }), /A\.self: "entity" is a key of format 1\.0-draft;/, 'a member with both reference words');
+  // a document with only the other vocabulary's key has no record types in its own
+  assert.match(problems({ modelspec: '1.0-draft-2', module: { name: 'shop' }, entities: earlier().entities }), /has no records/);
+  assert.match(problems({ modelspec: '1.0-draft', module: { name: 'shop' }, records: current().records }), /has no entities/);
+  // removed and reserved constructs, by the word that names them
+  for (const [word, pattern] of [['collections', /collections field was removed/], ['recordsets', /recordsets field was removed/], ['projections', /projections field is reserved/], ['migrations', /migrations field is reserved/]]) {
+    assert.match(problems(earlier({ [word]: {} })), pattern, word);
+    assert.match(problems(current({ [word]: {} })), pattern, word);
+  }
+  // `records` joined the words that no concept may be called
+  for (const name of ['records', 'entities', 'components', 'enums', 'collections', 'recordsets']) {
+    assert.match(problems(earlier({ entities: { [name]: { properties: { id: { type: 'int' } } } } })), new RegExp(`entity name "${name}" is a reserved word`), name);
+    assert.match(problems(current({ records: { [name]: { fields: { id: { type: 'int' } } } } })), new RegExp(`record name "${name}" is a reserved word`), name);
+  }
+  // the other checks speak in the words of the document
+  assert.match(problems(current({ records: { A: { fields: { self: { record: 'Missing' } } } } })), /A\.self references record Missing, which the ModelSpec does not have/);
+  assert.match(problems(current({ records: { A: { fields: { self: {} } } } })), /A\.self has neither a type nor a record/);
+  assert.match(problems(current({ records: { A: {} } })), /record A has no fields/);
+  assert.match(problems(current({ records: { 'a b': { fields: { id: { type: 'int' } } } } })), /record name "a b" must be an identifier/);
+  assert.match(problems(current({ records: { A: { fields: { 'x y': { type: 'int' } } } } })), /field name "A\.x y" must be an identifier/);
+  assert.match(problems(earlier({ entities: { A: { properties: { self: {} } } } })), /A\.self has neither a type nor an entity/);
+  // a document that is not an object is still a problem, never an exception
+  for (const text of ['null', '[]', '"x"', '5']) assert.notDeepEqual(parseModelSpec(text).problems, [], text);
+});
+
+test('a database whose model is in the current spelling is checked and indexed exactly like the same model in the earlier one', async () => {
+  const earlier = world();
+  const current = world({ publisher: inCurrentSpelling });
+  assert.equal(JSON.parse(readFileSync(join(current.publisher.dir, 'model/chinook.modelspec.json'), 'utf8')).modelspec, '1.0-draft-2');
+  assert.deepEqual(await problemsOf(current), []);
+  const [fromEarlier] = (await index(earlier)).databases;
+  const [fromCurrent] = (await index(current)).databases;
+  assert.equal(withoutCommits(fromCurrent), withoutCommits(fromEarlier), 'the entry is the same, byte for byte, with the same keys (recordsets with modelEntity, fields)');
+  assert.ok(fromCurrent.recordsets.length > 0 && fromCurrent.recordsets.every((recordset) => typeof recordset.modelEntity === 'string'));
+  assert.ok(!JSON.stringify(fromCurrent).includes('modelRecordType'), 'the index keeps its keys; moving them is a later change');
+  // the whole index text, not just the entry
+  const textOf = async (w) => (await buildIndex(options(w))).replace(/"checksum": "sha256:[0-9a-f]{64}"/, '"checksum": "<sha256>"').replace(/[0-9a-f]{40}/g, '<commit>');
+  assert.equal(await textOf(current), await textOf(earlier));
+});
+
+test('an earlier spelling is reported with a warning that names the command, once per model file; the current spelling is not; the exit status is the same', async () => {
+  const capture = () => { const lines = { out: [], err: [] }; return { lines, io: { out: (line) => lines.out.push(line), err: (line) => lines.err.push(line) } }; };
+  const earlier = world();
+  const run = capture();
+  writeFileSync(join(earlier.dir, 'index.json'), await buildIndex(options(earlier)));
+  assert.equal(await runCheck(options(earlier), run.io), 0);
+  assert.deepEqual(run.lines.out, ['ok: 1 database checked']);
+  assert.equal(run.lines.err.length, 1);
+  assert.match(run.lines.err[0], /^warning: databases\/\$records\/chinook\.yaml: model\/chinook\.modelspec\.json of github\.com\/demo-db\/chinook is in the earlier ModelSpec spelling \(format 1\.0-draft: entities, properties\); it is still read\. Run modelspec rewrite --write <folder> on the folder that holds it to move it to 1\.0-draft-2$/);
+  // the index command prints the same notice and writes the same file
+  const writing = capture();
+  assert.equal(await runIndex(options(earlier), writing.io), 0);
+  assert.deepEqual(writing.lines.err, run.lines.err);
+  assert.deepEqual(writing.lines.out, ['wrote index.json']);
+
+  const current = world({ publisher: inCurrentSpelling });
+  const quiet = capture();
+  writeFileSync(join(current.dir, 'index.json'), await buildIndex(options(current)));
+  assert.equal(await runCheck(options(current), quiet.io), 0);
+  assert.deepEqual(quiet.lines.err, []);
+  assert.deepEqual(quiet.lines.out, ['ok: 1 database checked']);
+
+  // a notice never turns a failing run into a passing one, or the other way round
+  const broken = world({ publisher: (files) => files.set('model/chinook.modelspec.json', files.get('model/chinook.modelspec.json').replace('"entities"', '"records"')) });
+  const failing = capture();
+  assert.equal(await runCheck(options(broken), failing.io), 1);
+  assert.deepEqual(spellingNotices(failing.lines.err), [], 'a model that is refused is not reported as read');
+  assert.ok(failing.lines.err.some((line) => /^error: databases\/\$records\/chinook\.yaml: model\/chinook\.modelspec\.json: .*"records" is a key of format 1\.0-draft-2/.test(line)), failing.lines.err.join('\n'));
+});
+
+test('a model shared by two databases is reported once, and a shared model in the current spelling is read like one in the earlier', async () => {
+  const w = sharedWorld({ chinook: chinookNamesModel });
+  const { problems, warnings } = await checkDirectory(sharedOptions(w));
+  assert.deepEqual(problems.filter((problem) => !problem.startsWith('index.json')), []);
+  const notices = spellingNotices(warnings);
+  assert.equal(notices.length, 1, notices.join('\n'));
+  // chinook-acme sorts before chinook: the first record to read the file reports it
+  assert.match(notices[0], /^databases\/\$records\/chinook-acme\.yaml: model\/chinook\.modelspec\.json of github\.com\/demo-db\/chinook is in the earlier ModelSpec spelling/);
+  // the same two databases with the model in the current spelling: nothing to report, and the same entries
+  const current = sharedWorld({ chinook: { ...chinookNamesModel, publisher: (files) => { chinookNamesModel.publisher(files); inCurrentSpelling(files); } } });
+  const result = await checkDirectory(sharedOptions(current));
+  assert.deepEqual(result.problems.filter((problem) => !problem.startsWith('index.json')), []);
+  assert.deepEqual(spellingNotices(result.warnings), []);
+  const [chinook, acme] = (await sharedIndex(current)).databases;
+  const [earlierChinook, earlierAcme] = (await sharedIndex(sharedWorld({ chinook: chinookNamesModel }))).databases;
+  assert.equal(withoutCommits(chinook), withoutCommits(earlierChinook));
+  assert.equal(withoutCommits(acme), withoutCommits(earlierAcme));
+});
+
+test('the Directory reports a source schema of a representation contract that is in the earlier spelling', async () => {
+  const w = representationWorld();
+  const { problems, warnings } = await checkDirectory(options(w, { representationDependencies: w.dependencies }));
+  assert.deepEqual(problems.filter((problem) => !problem.startsWith('index.json')), []);
+  const notices = spellingNotices(warnings);
+  assert.equal(notices.length, 2, notices.join('\n'));
+  assert.ok(notices.some((notice) => /: input\.modelspec\.json of github\.com\/example\/input is in the earlier ModelSpec spelling/.test(notice)), notices.join('\n'));
+  assert.ok(notices.some((notice) => /: model\/chinook\.modelspec\.json of github\.com\/demo-db\/chinook is in the earlier ModelSpec spelling/.test(notice)), notices.join('\n'));
 });
 
 // ---- the MeaningGraph registry ----
@@ -1451,7 +1603,7 @@ test('a second hoster of Chinook points at the published model and meaning graph
   writeFileSync(join(w.dir, 'index.json'), await buildIndex(sharedOptions(w)));
   const checkedResult = await checkDirectory(sharedOptions(w));
   assert.deepEqual(checkedResult.problems, []);
-  assert.deepEqual(checkedResult.warnings, []);
+  assert.deepEqual(withoutSpellingNotices(checkedResult.warnings), []);
   assert.equal(checkedResult.databases, 2);
   const result = await sharedIndex(w);
   assert.deepEqual(result.databases.map((database) => database.recordId), ['chinook', 'chinook-acme']);
@@ -1506,13 +1658,14 @@ test('a pin that differs from the one a registry registers is a warning, not a p
     },
   });
   const warned = [];
-  const { problems, warnings } = await checkDirectory(sharedOptions(w));
+  const { problems, warnings: allWarnings } = await checkDirectory(sharedOptions(w));
+  const warnings = withoutSpellingNotices(allWarnings);
   assert.deepEqual(problems.filter((problem) => !problem.startsWith('index.json')), []);
   assert.equal(warnings.length, 2);
   expectProblem(warnings, new RegExp(`^${hosterFile.replace('$', '\\$')}: model\\.address pins [0-9a-f]{40}, but the ModelSpec registry registers ${modelAddr.replaceAll('/', '\\/')} at ${w.publisher.commit}; the pinned commit is read`));
   expectProblem(warnings, new RegExp(`meaning\\.address pins [0-9a-f]{40}, but the MeaningGraph registry registers chinook at ${w.publisher.commit}`));
   const result = JSON.parse(await buildIndex(sharedOptions(w, { onWarning: (warning) => warned.push(warning) })));
-  assert.equal(warned.length, 2);
+  assert.equal(withoutSpellingNotices(warned).length, 2);
   const acme = result.databases.find((database) => database.recordId === 'chinook-acme');
   assert.notEqual(acme.model.commit, w.publisher.commit);
   assert.ok(field(acme, 'Customer', 'Country').meanings[0].address.endsWith(`?ref=${acme.model.commit}`), 'meaning addresses carry the pinned commit of the graph repository');
@@ -1997,7 +2150,7 @@ test('an own model that names a registered address is the registered model: its 
   const named = () => world(chinookNamesModel);
   // The registry registers the model at this record's commit, with the same files.json: nothing to report.
   const same = named();
-  assert.deepEqual((await checkDirectory(options(same, { modelRegistry: modelIndex({ commit: same.publisher.commit }) }))).warnings, []);
+  assert.deepEqual(withoutSpellingNotices((await checkDirectory(options(same, { modelRegistry: modelIndex({ commit: same.publisher.commit }) }))).warnings), []);
   assert.deepEqual(await problemsOf(same, { modelRegistry: modelIndex({ commit: same.publisher.commit }) }), []);
   // files.json is another file with another model: the two are not the same model.
   const other = world({ publisher: (files) => { const json = JSON.parse(files.get('model/chinook.modelspec.json')); delete json.entities.Genre; files.set('model/registered.modelspec.json', JSON.stringify(json)); manifestEdit((manifest) => { manifest.model.address = modelAddr; })(files); } });
@@ -2025,8 +2178,8 @@ test('an own model that names a registered address is the registered model: its 
   const registryCommit = 'a'.repeat(40);
   const result = await checkDirectory(options(behind, { modelRegistry: modelIndex({ commit: registryCommit, edit: (models) => { models[0].files.json = 'model/nowhere.json'; } }) }));
   assert.deepEqual(result.problems.filter((problem) => !problem.startsWith('index.json')), []);
-  assert.equal(result.warnings.length, 1);
-  assert.match(result.warnings[0], new RegExp(`^databases/\\$records/chinook\\.yaml: model\\.address ${modelAddr.replaceAll('/', '\\/')} is registered in the ModelSpec registry at ${registryCommit}, but this record pins ${behind.publisher.commit}; model/chinook\\.modelspec\\.json was not compared with the registry's model/nowhere\\.json$`));
+  assert.equal(withoutSpellingNotices(result.warnings).length, 1);
+  assert.match(withoutSpellingNotices(result.warnings)[0], new RegExp(`^databases/\\$records/chinook\\.yaml: model\\.address ${modelAddr.replaceAll('/', '\\/')} is registered in the ModelSpec registry at ${registryCommit}, but this record pins ${behind.publisher.commit}; model/chinook\\.modelspec\\.json was not compared with the registry's model/nowhere\\.json$`));
   // An address the registry does not know is not compared (the own form is not registered anywhere); an unreadable registry is a problem, never a fallback.
   assert.deepEqual(await problemsOf(named()), []);
   expectProblem(await problemsOf(named(), { loadModelRegistry: async () => { throw new Error('cannot read https://raw.githubusercontent.com/example/models/main/index.json: HTTP 503'); } }), /^databases\/\$records\/chinook\.yaml: ModelSpec registry: cannot read https:\/\/raw\.githubusercontent\.com\/example\/models\/main\/index\.json: HTTP 503/);
@@ -2040,7 +2193,7 @@ test('warnings: a refused pin is not "read", a registry commit that is not a str
   const side = sharedWorld({ chinook, manifest: (manifest, w) => { manifest.model.address = `${modelAddr}?ref=${w.publisher.sideCommit}`; manifest.meaning.address = `${chinookAddress}?ref=${w.publisher.sideCommit}`; } });
   const refused = await checkDirectory(sharedOptions(side));
   expectProblem(refused.problems, /model\.address pins commit [0-9a-f]{40}, which is not in the history of main/);
-  assert.deepEqual(refused.warnings, [], 'nothing was read, so nothing says the pinned commit is read');
+  assert.deepEqual(withoutSpellingNotices(refused.warnings), [], 'nothing was read, so nothing says the pinned commit is read');
   // A malformed registry commit is shown as it is written, never as [object Object].
   for (const [commit, shown] of [[{ a: 1 }, '{"a":1}'], [42, '42'], [null, 'null'], [['x'], '["x"]'], ['not a commit\u001b[2J', '"not a commit\\u001b[2J"']]) {
     const w = sharedWorld({ models: (models) => { models[0].commit = commit; } });
@@ -2056,9 +2209,10 @@ test('warnings: a refused pin is not "read", a registry commit that is not a str
   const written = capture();
   assert.equal(await runIndex(sharedOptions(w), written.io), 0);
   assert.deepEqual(written.lines.out, ['wrote index.json']);
-  assert.equal(written.lines.err.length, 2);
-  assert.match(written.lines.err[0], /^warning: databases\/\$records\/chinook-acme\.yaml: model\.address pins [0-9a-f]{40}, but the ModelSpec registry registers modelspec:\/\/github\.com\/demo-db\/chinook\/chinook at [0-9a-f]{40}; the pinned commit is read$/);
-  assert.match(written.lines.err[1], /^warning: databases\/\$records\/chinook-acme\.yaml: meaning\.address pins [0-9a-f]{40}, but the MeaningGraph registry registers chinook at [0-9a-f]{40}; the pinned commit is read$/);
+  const writtenWarnings = withoutSpellingNotices(written.lines.err);
+  assert.equal(writtenWarnings.length, 2);
+  assert.match(writtenWarnings[0], /^warning: databases\/\$records\/chinook-acme\.yaml: model\.address pins [0-9a-f]{40}, but the ModelSpec registry registers modelspec:\/\/github\.com\/demo-db\/chinook\/chinook at [0-9a-f]{40}; the pinned commit is read$/);
+  assert.match(writtenWarnings[1], /^warning: databases\/\$records\/chinook-acme\.yaml: meaning\.address pins [0-9a-f]{40}, but the MeaningGraph registry registers chinook at [0-9a-f]{40}; the pinned commit is read$/);
   assert.equal(readFileSync(join(w.dir, 'index.json'), 'utf8').includes('"chinook-acme"'), true);
   const checkedRun = capture();
   assert.equal(await runCheck(sharedOptions(w), checkedRun.io), 0);

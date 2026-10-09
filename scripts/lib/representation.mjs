@@ -7,6 +7,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import { parse as parseYaml } from 'yaml';
 import { isDeepStrictEqual } from 'node:util';
 import { parseStrictJson } from './strict-json.mjs';
+import { modelWordProblems, vocabularies, vocabularyOf } from './modelspec.mjs';
 
 const MiB = 1024 * 1024;
 const schemaPins = {
@@ -34,7 +35,9 @@ export function checkRepresentationEnvelope(envelope) {
 
 // Explicit readers are supplied by the owner. No reference can provision a reader or fetch.
 // Metadata validation never reads source.data or native.dataset.
-export function checkRepresentation(envelope, files, manifest, outerRepository, dependencies = new Map(), canonicalMeaning = () => false) {
+// `onEarlierSpelling(label, commit)` is called for a model file of another repository (a source schema) that is in
+// the earlier ModelSpec spelling; the provider's own model is the manifest's, which the caller reports.
+export function checkRepresentation(envelope, files, manifest, outerRepository, dependencies = new Map(), canonicalMeaning = () => false, onEarlierSpelling = () => {}) {
   const problems = [];
   const bad = (message) => problems.push(`representation_contract: ${message}`);
   try { checkRepresentationEnvelope(envelope); }
@@ -107,7 +110,9 @@ export function checkRepresentation(envelope, files, manifest, outerRepository, 
       if (!ownRef(ref)) bad(`${label}.${field} must be provider-local`);
     }
     const source = localObject(c.source.schema, `${label}.source.schema`);
-    if (source) checkModel(source, c.source, false, bad, label + '.source');
+    if (source && checkModel(source, c.source, false, bad, label + '.source') === vocabularies.earlier) {
+      onEarlierSpelling(`${c.source.schema.path} of ${String(c.source.schema.repository).replace(/^https:\/\//, '')}`, c.source.schema.revision);
+    }
     resolve(c.decision.document, `${label}.decision.document`, 'bytes');
     const meaning = localObject(c.target.binding.meaning.document, `${label}.target.binding.meaning.document`, 'yaml');
     if (!canonicalMeaning(c.target.binding.meaning.document)) bad(`${label}: meaning document is not in the registered canonical graph at its exact pin`);
@@ -121,8 +126,8 @@ export function checkRepresentation(envelope, files, manifest, outerRepository, 
 
     if (!manifest.recordsets?.includes(c.target.entity)) bad(`${label}: target entity is absent from manifest recordsets`);
     if (model) checkModel(model, c.target, c.execution === 'native-identifier', bad, label + '.target');
-    const property = model?.entities?.[c.target.entity]?.properties?.[c.target.property];
-    if (model && (model.modelspec !== '1.0-draft' || model.module?.name !== c.target.module || !property || property.type !== c.target.datatype)) bad(`${label}: target ModelSpec module/entity/property/datatype mismatch`);
+    const property = fieldsOf(model, recordOf(model, c.target.entity))?.[c.target.property];
+    if (model && (!vocabularyOf(model) || model.module?.name !== c.target.module || !property || property.type !== c.target.datatype)) bad(`${label}: target ModelSpec module/entity/property/datatype mismatch`);
     if (binding) {
       const address = `meaning://${c.target.binding.meaning.document.repository.slice(8)}/${c.target.binding.meaning.concept}?ref=${c.target.binding.meaning.document.revision}`;
       const concepts = binding.concepts;
@@ -150,9 +155,9 @@ export function checkRepresentation(envelope, files, manifest, outerRepository, 
       }
       associated(c.target.model, 'target.model'); associated(c.target.binding.document, 'target.binding.document');
       if (model) {
-        const entity = model.entities?.[c.target.entity];
+        const entity = recordOf(model, c.target.entity);
         if (!Array.isArray(entity?.key) || entity.key.length !== 1 || entity.key[0] !== c.target.property || property?.required !== true) bad(`${label}: native target key must be one required selected property`);
-        if (c.native.serving_identity_column && (c.native.serving_identity_column === c.target.property || !entity?.properties?.[c.native.serving_identity_column])) bad(`${label}: invalid serving identity column`);
+        if (c.native.serving_identity_column && (c.native.serving_identity_column === c.target.property || !fieldsOf(model, entity)?.[c.native.serving_identity_column])) bad(`${label}: invalid serving identity column`);
       }
       const provenance = localObject(c.native.provenance, `${label}.native.provenance`, 'json', 2 * MiB);
       if (provenance) {
@@ -202,7 +207,7 @@ export function checkRepresentation(envelope, files, manifest, outerRepository, 
     } else {
       if (!manifest.recordsets?.includes(c.bridge.table)) bad(`${label}: bridge table is absent from manifest recordsets`);
       if (model) {
-        const columns = model.entities?.[c.bridge.table]?.properties;
+        const columns = fieldsOf(model, recordOf(model, c.bridge.table));
         if (!columns || c.bridge.raw_label_column === c.bridge.target_key_column || columns[c.bridge.raw_label_column]?.type !== 'string' || columns[c.bridge.target_key_column]?.type !== 'string' || c.bridge.serving_identity_column && (c.bridge.serving_identity_column === c.bridge.raw_label_column || c.bridge.serving_identity_column === c.bridge.target_key_column || !columns[c.bridge.serving_identity_column])) bad(`${label}: bridge columns missing or overlapping in local model`);
       }
       // A matching path/hash in an external repository cannot satisfy local snapshot authority.
@@ -261,22 +266,34 @@ function exactFields(value, fields) {
   if (!object(value)) throw new Error('expected metadata object');
   for (const key of Object.keys(value)) if (!fields.includes(key) && fields.some((f) => f.toLowerCase() === key.toLowerCase().replace(/ſ/g, 's'))) throw new Error(`non-exact JSON field ${key}`);
 }
+// A record type of a ModelSpec JSON model and its members, in the vocabulary the model's identifier names.
+const recordOf = (model, name) => model?.[vocabularyOf(model)?.records]?.[name];
+const fieldsOf = (model, record) => record?.[vocabularyOf(model)?.fields];
+// Checks a ModelSpec JSON model, in either spelling, against the scope a contract names. Returns the vocabulary
+// it is in when it is right (a problem is reported with `bad`, and returns undefined).
 function checkModel(model, scope, native, bad, label) {
   try {
-    exactFields(model, ['modelspec', 'module', 'entities']);
+    const vocabulary = vocabularyOf(model);
+    if (vocabulary) {
+      const wordProblems = modelWordProblems(model, vocabulary);
+      if (wordProblems.length) throw new Error(wordProblems.join('; '));
+    }
+    const words = vocabulary ?? vocabularies.earlier;
+    exactFields(model, ['modelspec', 'module', words.records]);
     exactFields(model.module, ['name']);
-    if (!object(model.entities)) throw new Error('entities must be an object');
-    for (const entity of Object.values(model.entities)) {
-      exactFields(entity, native ? ['properties', 'key'] : ['properties']);
-      if (!object(entity.properties)) throw new Error('properties must be an object');
-      for (const p of Object.values(entity.properties)) {
+    if (!object(model[words.records])) throw new Error(`${words.records} must be an object`);
+    for (const entity of Object.values(model[words.records])) {
+      exactFields(entity, native ? [words.fields, 'key'] : [words.fields]);
+      if (!object(entity[words.fields])) throw new Error(`${words.fields} must be an object`);
+      for (const p of Object.values(entity[words.fields])) {
         exactFields(p, native ? ['type', 'required'] : ['type']);
-        if (p.type !== undefined && typeof p.type !== 'string') throw new Error('property type must be string');
+        if (p.type !== undefined && typeof p.type !== 'string') throw new Error(`${words.field} type must be string`);
         if (native && p.required !== undefined && typeof p.required !== 'boolean') throw new Error('required must be boolean');
       }
     }
-    if (model.modelspec !== '1.0-draft' || model.module.name !== scope.module || model.entities[scope.entity]?.properties?.[scope.property]?.type !== scope.datatype) throw new Error('ModelSpec module/entity/property/datatype mismatch');
-  } catch (error) { bad(`${label}: ${error.message}`); }
+    if (!vocabulary || model.module.name !== scope.module || fieldsOf(model, recordOf(model, scope.entity))?.[scope.property]?.type !== scope.datatype) throw new Error('ModelSpec module/entity/property/datatype mismatch');
+    return vocabulary;
+  } catch (error) { bad(`${label}: ${error.message}`); return undefined; }
 }
 
 const integerToken = (value) => object(value) && /^(0|[1-9][0-9]*)$/.test(value.$jsonNumberToken ?? '') && BigInt(value.$jsonNumberToken) <= 9223372036854775807n;
