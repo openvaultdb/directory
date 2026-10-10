@@ -91,3 +91,35 @@ test('a value that refers to itself is reported as a problem and does not throw'
     }
   }
 });
+
+test('a map that refers to itself under its own key toString is reported as a problem and does not throw', () => {
+  // `record_type: &a {toString: *a}` and `format: &f {toString: *f}` in YAML: turning the value into text calls the map's toString, which is the map.
+  const loop = {};
+  loop.toString = loop;
+  const asRecordType = manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: ['OrderLine', { name: 'Customer', record_type: loop }] });
+  let problems;
+  assert.doesNotThrow(() => { problems = manifestProblems(asRecordType); }, 'record_type');
+  assert.ok(problems.some((problem) => problem.includes('recordsets "Customer": record_type must be a ModelSpec record type name')), problems.join('\n'));
+  assert.ok(problems.some((problem) => problem.includes('got a value that refers to itself')), problems.join('\n'));
+  for (const recordsets of [['Customer', 'OrderLine'], [{ name: 'Customer' }, 'OrderLine']]) {
+    assert.doesNotThrow(() => { problems = manifestProblems(manifestFor({ format: loop, recordsets })); }, 'format');
+    assert.ok(problems.some((problem) => problem.includes('format must be ovdb-manifest/draft-1 or ovdb-manifest/draft-2, got a value that refers to itself')), problems.join('\n'));
+  }
+});
+
+test('an item with a record type but no name is told once that it needs a name, and its record type is reported against its position', () => {
+  const problems = manifestProblems(manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: [{ record_type: '9x' }, 'OrderLine'] }));
+  assert.deepEqual(problems.filter((problem) => problem.includes('recordsets')).map((problem) => problem.replace(/^.*?ovdb\.yaml: /, '')), [
+    'recordsets item 1 needs name: the recordset\'s own name',
+    'recordsets item 1: record_type must be a ModelSpec record type name (letters, digits and _, not starting with a digit), got "9x"',
+  ]);
+  assert.ok(!problems.some((problem) => problem.includes('recordsets undefined')), problems.join('\n'));
+});
+
+test('a name listed twice is reported as that, and not also as two recordsets of one record type', () => {
+  const problems = manifestProblems(manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: ['Customer', { name: 'Customer' }, 'OrderLine'] }));
+  assert.deepEqual(problems.map((problem) => problem.replace(/^.*?ovdb\.yaml: /, '')), ['recordsets lists a name twice: "Customer"']);
+  // Two different names with one record type are still reported.
+  const clash = manifestProblems(manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: ['Customer', { name: 'clients', record_type: 'Customer' }, 'OrderLine'] }));
+  assert.deepEqual(clash.map((problem) => problem.replace(/^.*?ovdb\.yaml: /, '')), ['recordsets "Customer" and "clients" both have the record type Customer; mappings must be one-to-one']);
+});

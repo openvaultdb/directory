@@ -27,9 +27,12 @@ const identifier = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const fieldPath = /^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/;
 const itemKeys = ['name', 'record_type', 'columns'];
 // A value as it is shown in a message. A value that refers to itself (a YAML anchor used inside its own list) cannot
-// be written as JSON; it is shown as text instead of throwing.
+// be written as JSON; it is shown as words instead of throwing. Turning it into text can throw too (a map that
+// refers to itself under its own key `toString`), so that is guarded as well.
 const quoted = (value) => {
-  try { return JSON.stringify(value); } catch { return String(value); }
+  try { return JSON.stringify(value); } catch {
+    try { return String(value); } catch { return 'a value that refers to itself'; }
+  }
 };
 
 // A problem with `value` as a recordset's or a column's own name, or null: the name the database uses, at
@@ -90,7 +93,7 @@ export function newFormProblems(manifest) {
       else name = item.name;
       if (Object.hasOwn(item, 'record_type')) {
         if (typeof item.record_type === 'string' && identifier.test(item.record_type)) recordType = item.record_type;
-        else problems.push(`recordsets ${quoted(item.name)}: record_type must be a ModelSpec record type name (letters, digits and _, not starting with a digit), got ${quoted(item.record_type)}`);
+        else problems.push(`recordsets ${name === undefined ? `item ${position}` : quoted(name)}: record_type must be a ModelSpec record type name (letters, digits and _, not starting with a digit), got ${quoted(item.record_type)}`);
       } else recordType = name;
       if (Object.hasOwn(item, 'columns')) columns = item.columns;
     } else {
@@ -100,9 +103,11 @@ export function newFormProblems(manifest) {
     if (name !== undefined) {
       const problem = nameProblem(name);
       if (problem) problems.push(`recordsets name ${quoted(name)} ${problem}`);
-      if (names.has(name)) problems.push(`recordsets lists a name twice: ${quoted(name)}`);
+      // A name listed twice is reported once, as that; its record type is not set against the first one's.
+      const repeated = names.has(name);
+      if (repeated) problems.push(`recordsets lists a name twice: ${quoted(name)}`);
       names.add(name);
-      if (recordType !== undefined) {
+      if (recordType !== undefined && !repeated) {
         if (typeOwner.has(recordType)) problems.push(`recordsets ${quoted(typeOwner.get(recordType))} and ${quoted(name)} both have the record type ${recordType}; mappings must be one-to-one`);
         else typeOwner.set(recordType, name);
       }
