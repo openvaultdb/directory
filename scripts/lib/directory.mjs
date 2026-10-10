@@ -488,7 +488,7 @@ export async function analyseDatabase(record, context) {
           if (property.references && !mappedEntities.includes(property.references)) bad(`${data.manifest}: recordsets lists ${name}, which references ModelSpec entity ${property.references}, but a partial list must also include its mapped recordset`);
         }
       }
-    } else if (lacking.length) bad(`${data.manifest}: recordsets lacks ${newForm ? 'the record types of the model' : 'ModelSpec entities'}: ${lacking.join(', ')}${shared ? ' (to list a subset of a shared model, list it explicitly and set recordsets_partial: true)' : ''}`);
+    } else if (lacking.length) bad(`${data.manifest}: ${newForm ? 'recordsets lacks the record types of the model' : 'recordsets lacks ModelSpec entities'}: ${lacking.join(', ')}${shared ? ' (to list a subset of a shared model, list it explicitly and set recordsets_partial: true)' : ''}`);
     if (extra.length) bad(newForm
       ? `${data.manifest}: recordsets names record types that are not in the model file: ${extra.map((name) => `${name} (record type ${modelEntityFor(name)})`).join(', ')}`
       : `${data.manifest}: recordsets names things that do not map to ModelSpec entities: ${extra.join(', ')}`);

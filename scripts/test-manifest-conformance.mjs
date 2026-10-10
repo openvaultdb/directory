@@ -3,6 +3,9 @@
 // pre-check runs, and the two checkers must agree on every case. Each case is run twice, against the model in
 // ModelSpec's current vocabulary and against the same model in the earlier one.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { after, describe, test } from 'node:test';
 import { cleanup, conformance, directoryVerdict, manifestFor } from './conformance-world.mjs';
 import { manifestProblems } from './lib/directory.mjs';
@@ -134,5 +137,18 @@ test('B4: the index entry names the recordsets as the manifest does, and a refer
     assert.equal(byName.get('OrderLine').modelRecordType, 'OrderLine', vocabulary);
     // CustomerId references the record type Customer, which this manifest calls "customers".
     assert.deepEqual(byName.get('OrderLine').fields.find((field) => field.name === 'CustomerId'), { name: 'CustomerId', type: 'reference', references: 'customers', meanings: [] }, vocabulary);
+  }
+});
+
+// openvaultdb/ovdb copies the refusals it walks out of this file by their text (its directory-stage generator, at the commit
+// it pins), and stops when a text is not found in the source. The refusal for an old-form manifest therefore stays one
+// contiguous piece of text in the source, whatever the message is built from.
+test('the refusal of recordsets that lack ModelSpec entities is written out in the source, and is what an old-form manifest gets', async () => {
+  const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'lib', 'directory.mjs'), 'utf8');
+  assert.ok(source.includes('recordsets lacks ModelSpec entities'), 'the text is in scripts/lib/directory.mjs');
+  const a4 = conformance.cases.find((c) => c.id === 'A4');
+  for (const vocabulary of ['current', 'earlier']) {
+    const { problems } = await directoryVerdict(a4.manifest, vocabulary);
+    assert.ok(problems.some((problem) => problem.endsWith('ovdb.yaml: recordsets lacks ModelSpec entities: OrderLine')), problems.join('\n'));
   }
 });
