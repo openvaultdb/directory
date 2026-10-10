@@ -49,8 +49,25 @@ export function parseGraphAddress(address) {
 // already refused labels that are not short plain strings.)
 export const labelOf = (concept) => concept.labels?.en ?? Object.values(concept.labels ?? {})[0] ?? concept.id;
 
-// The roles a binding can have in meaning/draft-1.
-export const bindingRoles = ['entity', 'identifier', 'display-name', 'foreign-key', 'value'];
+// The roles a binding can have. meaning/draft-1 has entity, identifier, display-name, foreign-key and value;
+// meaning/draft-2 names two of them instances (earlier entity) and reference (earlier foreign-key) and accepts
+// the earlier names. The builder reads a file's roles and keys the same way whatever its `format:` line says
+// (it never reads that line), so both names are accepted in a file of either format.
+const earlierRole = { instances: 'entity', reference: 'foreign-key' };
+export const bindingRoles = ['entity', 'instances', 'identifier', 'display-name', 'foreign-key', 'reference', 'value'];
+
+// The role as index.json has always spelled it: the earlier name of a role that draft-2 renamed. index.json
+// keeps writing the earlier names until the builder's writer step (a later change) writes the current ones.
+export const indexRole = (role) => earlierRole[role] ?? role;
+
+// The key of a binding that names a field of the ModelSpec record type: `field` in meaning/draft-2, `property`
+// in meaning/draft-1. Returns { key, name } for the key a binding writes (name is undefined when it writes
+// neither), or null when it writes both: one binding line names its field once.
+export const bindingField = (binding) => {
+  if (binding.field !== undefined && binding.property !== undefined) return null;
+  const key = binding.field !== undefined ? 'field' : 'property';
+  return { key, name: binding[key] };
+};
 
 // Problems with the shape of a concept, before any of it is published: the id,
 // the labels (short plain strings), extends and values-of (strings), and, when
@@ -73,8 +90,13 @@ export function validateConcept(concept, position, { bindings = false } = {}) {
   }
   if (bindings && concept.bindings !== undefined) {
     if (!Array.isArray(concept.bindings)) problems.push(`${at}: bindings must be a list`);
-    else if (concept.bindings.some((binding) => binding === null || typeof binding !== 'object' || Array.isArray(binding))) problems.push(`${at}: every binding must be a mapping with model, role and property`);
-    else for (const binding of concept.bindings) if (!bindingRoles.includes(binding.role)) problems.push(`${at}: binding role ${JSON.stringify(binding.role)} must be one of ${bindingRoles.join(', ')}`);
+    else if (concept.bindings.some((binding) => binding === null || typeof binding !== 'object' || Array.isArray(binding))) problems.push(`${at}: every binding must be a mapping with model, role and property (field in meaning/draft-2)`);
+    else {
+      for (const binding of concept.bindings) {
+        if (!bindingRoles.includes(binding.role)) problems.push(`${at}: binding role ${JSON.stringify(binding.role)} must be one of ${bindingRoles.join(', ')}`);
+        if (bindingField(binding) === null) problems.push(`${at}: binding ${JSON.stringify(binding.model)} names its field with both field and property; write one of them (field in meaning/draft-2, property in meaning/draft-1)`);
+      }
+    }
   }
   return problems;
 }
