@@ -3,6 +3,10 @@
 // pre-check runs, and the two checkers must agree on every case. Each case is run twice, against the model in
 // ModelSpec's current vocabulary and against the same model in the earlier one.
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { after, describe, test } from 'node:test';
 import { cleanup, conformance, directoryVerdict, manifestFor } from './conformance-world.mjs';
 import { manifestProblems } from './lib/directory.mjs';
@@ -89,5 +93,80 @@ test('a value that refers to itself is reported as a problem and does not throw'
       assert.doesNotThrow(() => { problems = manifestProblems(manifestFor({ format, recordsets })); }, `${format}`);
       assert.ok(problems.length > 0, `${format}: the manifest is refused`);
     }
+  }
+});
+
+test('a map that refers to itself under its own key toString is reported as a problem and does not throw', () => {
+  // `record_type: &a {toString: *a}` and `format: &f {toString: *f}` in YAML: turning the value into text finds the map itself where a toString function is expected, and throws.
+  const loop = {};
+  loop.toString = loop;
+  const asRecordType = manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: ['OrderLine', { name: 'Customer', record_type: loop }] });
+  let problems;
+  assert.doesNotThrow(() => { problems = manifestProblems(asRecordType); }, 'record_type');
+  assert.ok(problems.some((problem) => problem.includes('recordsets "Customer": record_type must be a ModelSpec record type name')), problems.join('\n'));
+  assert.ok(problems.some((problem) => problem.includes('got a value that refers to itself')), problems.join('\n'));
+  for (const recordsets of [['Customer', 'OrderLine'], [{ name: 'Customer' }, 'OrderLine']]) {
+    assert.doesNotThrow(() => { problems = manifestProblems(manifestFor({ format: loop, recordsets })); }, 'format');
+    assert.ok(problems.some((problem) => problem.includes('format must be ovdb-manifest/draft-1 or ovdb-manifest/draft-2, got a value that refers to itself')), problems.join('\n'));
+  }
+});
+
+test('an item with a record type but no name is told once that it needs a name, and its record type is reported against its position', () => {
+  const problems = manifestProblems(manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: [{ record_type: '9x' }, 'OrderLine'] }));
+  assert.deepEqual(problems.filter((problem) => problem.includes('recordsets')).map((problem) => problem.replace(/^.*?ovdb\.yaml: /, '')), [
+    'recordsets item 1 needs name: the recordset\'s own name',
+    'recordsets item 1: record_type must be a ModelSpec record type name (letters, digits and _, not starting with a digit), got "9x"',
+  ]);
+  assert.ok(!problems.some((problem) => problem.includes('recordsets undefined')), problems.join('\n'));
+});
+
+test('a name listed twice is reported as that, and not also as two recordsets of one record type', () => {
+  const problems = manifestProblems(manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: ['Customer', { name: 'Customer' }, 'OrderLine'] }));
+  assert.deepEqual(problems.map((problem) => problem.replace(/^.*?ovdb\.yaml: /, '')), ['recordsets lists a name twice: "Customer"']);
+  // Two different names with one record type are still reported.
+  const clash = manifestProblems(manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: ['Customer', { name: 'clients', record_type: 'Customer' }, 'OrderLine'] }));
+  assert.deepEqual(clash.map((problem) => problem.replace(/^.*?ovdb\.yaml: /, '')), ['recordsets "Customer" and "clients" both have the record type Customer; mappings must be one-to-one']);
+});
+
+test('B4: the index entry names the recordsets as the manifest does, and a reference points at the recordset that holds the record type', async () => {
+  const b4 = conformance.cases.find((c) => c.id === 'B4');
+  for (const vocabulary of ['current', 'earlier']) {
+    const { index } = await directoryVerdict(b4.manifest, vocabulary);
+    const byName = new Map(index.recordsets.map((recordset) => [recordset.name, recordset]));
+    assert.deepEqual([...byName.keys()].sort(), ['OrderLine', 'customers'], vocabulary);
+    assert.equal(byName.get('customers').modelRecordType, 'Customer', vocabulary);
+    assert.equal(byName.get('OrderLine').modelRecordType, 'OrderLine', vocabulary);
+    // CustomerId references the record type Customer, which this manifest calls "customers".
+    assert.deepEqual(byName.get('OrderLine').fields.find((field) => field.name === 'CustomerId'), { name: 'CustomerId', type: 'reference', references: 'customers', meanings: [] }, vocabulary);
+  }
+});
+
+// openvaultdb/ovdb copies the refusals it walks out of this file by their text (its directory-stage generator, at the commit
+// it pins), and stops when a text is not found in the source. The refusal for an old-form manifest therefore stays one
+// contiguous piece of text in the source, whatever the message is built from.
+test('the refusal of recordsets that lack ModelSpec entities is written out in the source, and is what an old-form manifest gets', async () => {
+  const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'lib', 'directory.mjs'), 'utf8');
+  assert.ok(source.includes('recordsets lacks ModelSpec entities'), 'the text is in scripts/lib/directory.mjs');
+  const a4 = conformance.cases.find((c) => c.id === 'A4');
+  for (const vocabulary of ['current', 'earlier']) {
+    const { problems } = await directoryVerdict(a4.manifest, vocabulary);
+    assert.ok(problems.some((problem) => problem.endsWith('ovdb.yaml: recordsets lacks ModelSpec entities: OrderLine')), problems.join('\n'));
+  }
+});
+
+// The mapping and the conformance cases are held byte for byte in two repositories: here, and in demo-db/chinook
+// (scripts/lib/manifest-mapping.mjs and scripts/testdata/manifest-conformance.json there). This repository cannot read
+// the other one offline, so this test records the SHA-256 of each file as it stands here, and a test of
+// demo-db/chinook records the same two values for its copies (openvaultdb/directory#49, item m13). A change to either
+// file fails the test of the repository it is made in until that file's value is changed with it, which is the moment
+// to carry the same bytes and the same value to the other repository. To update: shasum -a 256 <file>.
+const sharedWithChinook = {
+  'lib/manifest-mapping.mjs': 'aa27f9fc0d893502c6054594c60fa6c85b1457877cde0bdce1659874daac4bf7',
+  'fixtures/manifest-conformance.json': '5a7b576cf5682c19e0d09f7f59843d78b59f0ae4d3beefc899db5570bb2602af',
+};
+test('the mapping and the conformance cases are the files that demo-db/chinook holds a copy of', () => {
+  for (const [path, digest] of Object.entries(sharedWithChinook)) {
+    const actual = createHash('sha256').update(readFileSync(join(dirname(fileURLToPath(import.meta.url)), path))).digest('hex');
+    assert.equal(actual, digest, `scripts/${path} is not the file recorded as shared with demo-db/chinook: carry the change to the copy there, then record sha256:${actual} in both tests`);
   }
 });
