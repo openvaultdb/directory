@@ -328,3 +328,52 @@ test('every implicit snapshot count preserves signed integer tokens without roun
   for (const token of ['1.5', '1.0', '1e0', '-1e0', '"1"', 'null', 'true', '[]', '{}', '9223372036854775807', '-9223372036854775808', '9223372036854775808', '-9223372036854775809', '9007199254740992', '9007199254740993', '-9007199254740992', '-9007199254740993']) refused(countFixture(token), /implicit snapshot count/, token);
   for (const token of ['2.0', '2e0', '9007199254740993', '-2']) refused(countFixture(token, true), /count/);
 });
+
+test('a contract finds its target among the record types of the recordsets, in either form of the manifest, and a recordset of that record type that lists columns is refused', () => {
+  for (const version of [1, 3]) {
+    // the new form, own name and record type the same
+    const f = full(version);
+    f.manifest.format = 'ovdb-manifest/draft-2';
+    f.manifest.recordsets = [{ name: 'Entities', record_type: 'Entities' }, 'Bridge'];
+    assert.deepEqual(check(f).problems, [], `format ${version}`);
+    // the target is a record type: a recordset of another name whose record type it is, in the new form ...
+    f.manifest.recordsets = [{ name: 'orgs', record_type: 'Entities' }, 'Bridge'];
+    assert.deepEqual(check(f).problems, [], `format ${version}, new form, a recordset named orgs`);
+    f.manifest.recordsets = [{ name: 'Other', record_type: 'Entities' }, 'Bridge'];
+    assert.deepEqual(check(f).problems, [], `format ${version}, new form, a recordset named Other`);
+    // ... and in the old form, through recordset_entities
+    const old = full(version);
+    old.manifest.recordsets = ['orgs', 'Bridge'];
+    old.manifest.recordset_entities = { orgs: 'Entities' };
+    assert.deepEqual(check(old).problems, [], `format ${version}, old form`);
+    // no recordset has the record type: absent, whatever the recordsets are called
+    f.manifest.recordsets = [{ name: 'Entities', record_type: 'Other' }, 'Bridge'];
+    refused(f, /target entity is absent from manifest recordsets/, `format ${version}`);
+    old.manifest.recordset_entities = { Entities: 'Other' };
+    old.manifest.recordsets = ['Entities', 'Bridge'];
+    refused(old, /target entity is absent from manifest recordsets/, `format ${version}, old form`);
+    // names swapped: the recordset called Bridge has the record type Entities, so it is the target ...
+    f.manifest.recordsets = [{ name: 'Entities', record_type: 'Bridge' }, { name: 'Bridge', record_type: 'Entities' }];
+    assert.deepEqual(check(f).problems, [], `format ${version}, swapped names`);
+    // ... and a contract reads its columns by the model's names, so that recordset lists none
+    f.manifest.recordsets = [{ name: 'Entities', record_type: 'Bridge' }, { name: 'Bridge', record_type: 'Entities', columns: { identifier: { field: 'id' } } }];
+    refused(f, /recordset Bridge lists columns, but a representation contract reads its columns by the model's names/, `format ${version}, swapped names with a column`);
+    // a recordset of another record type may list columns, even when it is called like the target
+    f.manifest.recordsets = [{ name: 'Entities', record_type: 'Other', columns: { identifier: { field: 'id' } } }, { name: 'orgs', record_type: 'Entities' }, 'Bridge'];
+    assert.deepEqual(check(f).problems, [], `format ${version}, a recordset called Entities of another record type`);
+    // an empty columns says nothing
+    f.manifest.recordsets = [{ name: 'orgs', record_type: 'Entities', columns: {} }, 'Bridge'];
+    assert.deepEqual(check(f).problems, [], 'an empty columns says nothing');
+    f.manifest.recordsets = [{ name: 'orgs', record_type: 'Entities', columns: { identifier: { field: 'id' } } }, 'Bridge'];
+    refused(f, /recordset orgs lists columns/, `format ${version}`);
+  }
+  // the bridge table keeps its native name, in either form
+  const f = full(1);
+  f.manifest.recordsets = ['Entities', { name: 'Bridge', columns: { label: { field: 'raw_label' } } }];
+  refused(f, /recordset Bridge lists columns/);
+  f.manifest.format = 'ovdb-manifest/draft-2';
+  f.manifest.recordsets = ['Entities', { name: 'Other', record_type: 'Bridge' }];
+  refused(f, /bridge table is absent from manifest recordsets/);
+  delete f.manifest.recordsets;
+  refused(f, /target entity is absent from manifest recordsets/);
+});

@@ -16,12 +16,13 @@ import { createMeaningResolver, entryOf, graphIdProblem, graphsAtAddress, loadMe
 import { addressMatchesRecord, earlierSpellingNotice, identifierPattern, loadModelRegistry, modelsAtAddress, normalisedModelAddress, parseModelSpec, parseModelRef, parseModelAddress } from './modelspec.mjs';
 import { directoryPagePath, encodePathSegment, globalDatabaseIdProblem, hasOvdbMarker, homepageProblem, publicHttpsProblem } from './urls.mjs';
 import { checkRepresentationEnvelope, checkRepresentation, verifySourceData } from './representation.mjs';
+import { columnModelProblems, earlierKeyNotice, formatOf, formatProblem, mapItemUnderOldFormat, nameProblem as nativeRecordsetNameProblem, newFormProblems, normalisedMapping } from './manifest-mapping.mjs';
 
 import { sourceEntries, sourceProblems, sourceRegistryProblems } from './source-discovery.mjs';
 
 export { repositoryHosts };
 export const directoryFormat = 'ovdb-directory/draft-1';
-export const manifestFormat = 'ovdb-manifest/draft-1';
+export { oldFormat as manifestFormat, newFormat as manifestFormatDraft2 } from './manifest-mapping.mjs';
 const statuses = ['draft', 'published', 'deprecated'];
 const lowerKey = (value) => value.toLowerCase();
 // A registry's value in a message: a commit as it is, anything else (an object, a number, odd text) as JSON.
@@ -189,10 +190,6 @@ const dataLicence = (value) => {
   const ids = value.split(' AND ');
   return ids.length >= 2 && ids.length <= 4 && new Set(ids).size === ids.length && ids.every((id) => publisherLicenceIds.has(id));
 };
-const nativeRecordsetNameProblem = (value) => !isText(value) ? 'must be a non-empty name'
-  : value.length > 256 || value === '.' || value === '..' || /[\/\\\u0000-\u001f\u007f]/.test(value)
-    ? 'must be at most 256 characters and contain no slash, backslash or control character, and cannot be a dot path segment'
-    : null;
 
 // A manifest names its model one of two ways. With local files (`model.modelspec`, optionally
 // `model.hcl`) it is an own model: the model and the meaning file are in the publisher's own
@@ -200,12 +197,13 @@ const nativeRecordsetNameProblem = (value) => !isText(value) ? 'must be a non-em
 // with ?ref=, name a model and a meaning graph published in other repositories.
 export const manifestForm = (manifest) => (manifest?.model?.modelspec !== undefined || manifest?.model?.hcl !== undefined ? 'own' : 'shared');
 
-// The manifest's required fields (format ovdb-manifest/draft-1), by form.
+// The manifest's required fields (format ovdb-manifest/draft-1 or ovdb-manifest/draft-2), by form.
 export function manifestProblems(manifest, { databaseManifest = false } = {}) {
   const problems = [];
   if (manifest === null || typeof manifest !== 'object' || Array.isArray(manifest)) return ['is not a mapping'];
   const shared = manifestForm(manifest) === 'shared';
-  if (manifest.format !== manifestFormat) problems.push(`format must be ${manifestFormat}, got ${JSON.stringify(manifest.format)}`);
+  const formatError = formatProblem(manifest);
+  if (formatError) problems.push(formatError);
   for (const field of ['id', 'title', 'description']) if (!isText(manifest[field])) problems.push(`${field} is required`);
   const need = (object, field, label, check = isText) => { if (!check(object?.[field])) problems.push(`${label} is required`); };
   // A URL the manifest publishes: public https only (see publicHttpsProblem).
@@ -264,12 +262,19 @@ export function manifestProblems(manifest, { databaseManifest = false } = {}) {
     try { checkRepresentationEnvelope(manifest.representation_contract); }
     catch (error) { problems.push(error.message); }
   }
-  if (!Array.isArray(manifest.recordsets) || manifest.recordsets.length === 0 || !manifest.recordsets.every(isText)) problems.push('recordsets must be a non-empty list of names');
+  // The identifier decides the form (manifest-mapping.mjs): the new one reads its own shape of recordsets and
+  // refuses recordset_entities; the old one is read exactly as it always was, except that an item that is a map
+  // gets its own message.
+  const newForm = formatOf(manifest) === 'new';
+  const mapItem = mapItemUnderOldFormat(manifest);
+  if (newForm) problems.push(...newFormProblems(manifest));
+  else if (mapItem) problems.push(mapItem);
+  else if (!Array.isArray(manifest.recordsets) || manifest.recordsets.length === 0 || !manifest.recordsets.every(isText)) problems.push('recordsets must be a non-empty list of names');
   else for (const name of manifest.recordsets) {
     const problem = nativeRecordsetNameProblem(name);
     if (problem) problems.push(`recordsets name ${JSON.stringify(name)} ${problem}`);
   }
-  if (manifest.recordset_entities !== undefined) {
+  if (!newForm && !mapItem && manifest.recordset_entities !== undefined) {
     const mapping = manifest.recordset_entities;
     if (mapping === null || typeof mapping !== 'object' || Array.isArray(mapping)) problems.push('recordset_entities must map native recordset names to ModelSpec entity names');
     else {
@@ -419,6 +424,9 @@ export async function analyseDatabase(record, context) {
   const missing = manifestProblems(manifest, { databaseManifest: data.database_manifest !== undefined });
   for (const problem of missing) bad(`${data.manifest}: ${problem}`);
   if (missing.length) return stop();
+  // A manifest in the earlier form that still writes recordset_entities is read as it always was, with a notice.
+  const earlierKey = earlierKeyNotice(manifest);
+  if (earlierKey) warn(`${data.manifest}: ${earlierKey}`);
   if (descriptor !== undefined) {
     for (const problem of databaseDescriptorProblems(descriptor, { url: data.url, manifest })) bad(`${data.database_manifest}: ${problem}`);
   }
@@ -442,9 +450,12 @@ export async function analyseDatabase(record, context) {
   }
 
   const shared = manifestForm(manifest) === 'shared';
-  const modelEntityFor = (recordsetName) => manifest.recordset_entities && Object.hasOwn(manifest.recordset_entities, recordsetName)
-    ? manifest.recordset_entities[recordsetName]
-    : recordsetName;
+  // The mapping, whichever form the manifest is in. The record-type table and the checks of the recordsets against the
+  // model read it; the representation check, further down, reads the manifest's recordsets itself (manifest-mapping.mjs).
+  const mapping = normalisedMapping(manifest);
+  const newForm = formatOf(manifest) === 'new';
+  const recordTypes = new Map(mapping.map(({ name, recordType }) => [name, recordType]));
+  const modelEntityFor = (recordsetName) => recordTypes.get(recordsetName) ?? recordsetName;
   const ownKey = lowerKey(repositoryKey(data.repository));
   // What the two forms resolve, for the checks they share: the registry's record of the graph, the model
   // (module, entities) and where it is, the meaning file (parsed) and the commit of its graph that is read.
@@ -462,7 +473,7 @@ export async function analyseDatabase(record, context) {
   // manifest lists a subset and says so with recordsets_partial: true. A partial list is closed under
   // references, so no listed field points at a recordset that is not there.
   const checkRecordsets = () => {
-    const listed = manifest.recordsets;
+    const listed = mapping.map(({ name }) => name);
     if (new Set(listed).size !== listed.length) bad(`${data.manifest}: recordsets lists a name twice`);
     const entityNames = [...model.entities.keys()];
     const mappedEntities = listed.map(modelEntityFor);
@@ -477,9 +488,16 @@ export async function analyseDatabase(record, context) {
           if (property.references && !mappedEntities.includes(property.references)) bad(`${data.manifest}: recordsets lists ${name}, which references ModelSpec entity ${property.references}, but a partial list must also include its mapped recordset`);
         }
       }
-    } else if (lacking.length) bad(`${data.manifest}: recordsets lacks ModelSpec entities: ${lacking.join(', ')}${shared ? ' (to list a subset of a shared model, list it explicitly and set recordsets_partial: true)' : ''}`);
-    if (extra.length) bad(`${data.manifest}: recordsets names things that do not map to ModelSpec entities: ${extra.join(', ')}`);
+    } else if (lacking.length) bad(`${data.manifest}: recordsets lacks ${newForm ? 'the record types of the model' : 'ModelSpec entities'}: ${lacking.join(', ')}${shared ? ' (to list a subset of a shared model, list it explicitly and set recordsets_partial: true)' : ''}`);
+    if (extra.length) bad(newForm
+      ? `${data.manifest}: recordsets names record types that are not in the model file: ${extra.map((name) => `${name} (record type ${modelEntityFor(name)})`).join(', ')}`
+      : `${data.manifest}: recordsets names things that do not map to ModelSpec entities: ${extra.join(', ')}`);
     if (duplicateMapping) bad(`${data.manifest}: recordset_entities maps more than one native recordset to the same ModelSpec entity; mappings must be one-to-one`);
+    // The columns a recordset lists hold fields of its record type (a record type the model lacks is reported above).
+    for (const entry of mapping) {
+      const record = model.entities.get(entry.recordType);
+      if (record && entry.columns.size > 0) for (const problem of columnModelProblems(entry, new Set(record.properties.map((property) => property.name)))) bad(`${data.manifest}: ${problem}`);
+    }
     if (extra.length || duplicateMapping || new Set(listed).size !== listed.length || (!shared || manifest.recordsets_partial !== true) && lacking.length) return [];
     return shared && manifest.recordsets_partial === true ? [...new Set(listed)].filter((name) => model.entities.has(modelEntityFor(name))) : [...listed];
   };

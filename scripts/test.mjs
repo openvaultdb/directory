@@ -392,6 +392,104 @@ test('recordset_entities is explicit, one-to-one, and resolves only real records
   expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordset_entities['Order Details'] = '../unsafe'; })(files); } })), /must be a ModelSpec entity identifier/);
 });
 
+// ---- the manifest's two forms: recordset_entities (ovdb-manifest/draft-1) and record_type / columns (ovdb-manifest/draft-2) ----
+
+const draft2 = (recordsets, change) => manifestEdit((manifest) => {
+  manifest.format = 'ovdb-manifest/draft-2';
+  manifest.recordsets = recordsets;
+  change?.(manifest);
+});
+const orderDetailsModel = (files) => modelEdit((doc) => { doc.entities.OrderDetails = { properties: { OrderID: { type: 'int' }, UnitPrice: { type: 'decimal' } } }; })(files);
+const orderDetailsMeaning = (files) => meaningEdit((doc) => doc.concepts.push(
+  { id: 'order-detail', kind: 'entity', labels: { en: 'order detail' }, bindings: [{ model: 'modelspec:///chinook.OrderDetails', role: 'entity' }] },
+  { id: 'order-detail-price', kind: 'attribute', labels: { en: 'order detail price' }, bindings: [{ model: 'modelspec:///chinook.OrderDetails', property: 'UnitPrice', role: 'value' }] },
+))(files);
+const chinookNames = () => Object.keys(JSON.parse(fixtureChinook.get('model/chinook.modelspec.json')).entities).sort();
+
+test('manifestProblems: the identifier decides the form, and an input accepted or refused before gives the same message', () => {
+  const base = () => parseYaml(fixtureChinook.get('ovdb.yaml'));
+  assert.deepEqual(manifestProblems(base()), []);
+  const bad = (change) => { const manifest = base(); change(manifest); return manifestProblems(manifest); };
+  // the earlier form keeps every message it had
+  assert.deepEqual(bad((m) => { m.recordsets = []; }), ['recordsets must be a non-empty list of names']);
+  assert.deepEqual(bad((m) => { m.recordsets = ['a/b']; }), ['recordsets name "a/b" must be at most 256 characters and contain no slash, backslash or control character, and cannot be a dot path segment']);
+  assert.deepEqual(bad((m) => { m.recordset_entities = null; }), ['recordset_entities must map native recordset names to ModelSpec entity names']);
+  assert.deepEqual(bad((m) => { m.recordset_entities = { Ghost: 'Album' }; }), ['recordset_entities names "Ghost", which is not in recordsets']);
+  assert.deepEqual(bad((m) => { m.recordset_entities = { Album: 'Album', Artist: 'Album' }; }), ['recordset_entities maps both "Album" and "Artist" to ModelSpec entity Album; mappings must be one-to-one']);
+  assert.deepEqual(bad((m) => { m.recordset_entities = { Album: '../x' }; }), ['recordset_entities value for "Album" must be a ModelSpec entity identifier']);
+  // another identifier is refused, saying which two are read
+  assert.deepEqual(bad((m) => { m.format = 'ovdb-manifest/draft-3'; }), ['format must be ovdb-manifest/draft-1 or ovdb-manifest/draft-2, got "ovdb-manifest/draft-3"']);
+  assert.deepEqual(bad((m) => { delete m.format; }), ['format must be ovdb-manifest/draft-1 or ovdb-manifest/draft-2, got undefined']);
+  // a map item under the earlier identifier says what the new form is; nothing else is said about the key
+  const problems = bad((m) => { m.recordsets = ['Album', { name: 'Artist', record_type: 'Artist' }]; m.recordset_entities = { Artist: 'Artist' }; });
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /recordsets item 2 is a map, but ovdb-manifest\/draft-1 lists recordsets by name only; record_type: and columns: are read under format: ovdb-manifest\/draft-2/);
+  // the new form: a bare name, a map; the key recordset_entities is not read
+  assert.deepEqual(bad((m) => { m.format = 'ovdb-manifest/draft-2'; m.recordsets = ['Album', { name: 'Order Details', record_type: 'OrderDetails', columns: { 'Unit Price': { field: 'UnitPrice' } } }]; }), []);
+  assert.match(bad((m) => { m.format = 'ovdb-manifest/draft-2'; m.recordset_entities = {}; })[0], /recordset_entities is not read under format: ovdb-manifest\/draft-2/);
+  assert.match(bad((m) => { m.format = 'ovdb-manifest/draft-2'; m.recordsets = [{ name: 'Album' }]; m.recordset_entities = { Album: 'Album' }; })[0], /recordset_entities and record_type both state the mapping/);
+  assert.match(bad((m) => { m.format = 'ovdb-manifest/draft-2'; m.recordsets = [{ name: 'a/b' }]; })[0], /^recordsets name "a\/b" must be at most 256/);
+  assert.match(bad((m) => { m.format = 'ovdb-manifest/draft-2'; m.recordsets = []; })[0], /recordsets must be a non-empty list/);
+});
+
+test('a manifest in the new form is read through the same mapping: the index, the bindings and the checks do not see the form', async () => {
+  const earlier = world({ publisher: (files) => { orderDetailsModel(files); orderDetailsMeaning(files); manifestEdit((manifest) => { manifest.recordsets.push('Order Details'); manifest.recordset_entities = { 'Order Details': 'OrderDetails' }; })(files); } });
+  const current = world({ publisher: (files) => { orderDetailsModel(files); orderDetailsMeaning(files); draft2([...chinookNames(), { name: 'Order Details', record_type: 'OrderDetails' }])(files); } });
+  assert.deepEqual(await problemsOf(earlier), []);
+  assert.deepEqual(await problemsOf(current), []);
+  const [before] = (await index(earlier)).databases;
+  const [after] = (await index(current)).databases;
+  // the two worlds are two repositories, so the commit in a meaning's address differs; everything the mapping decides is the same
+  const shape = (database) => database.recordsets.map((recordset) => ({ ...recordset, meanings: recordset.meanings.map((entry) => [entry.concept, entry.role]), fields: recordset.fields.map((entry) => ({ ...entry, meanings: entry.meanings.map((meaning) => [meaning.concept, meaning.role]) })) }));
+  assert.deepEqual(shape(after), shape(before));
+  const details = after.recordsets.find((recordset) => recordset.name === 'Order Details');
+  assert.equal(details.modelRecordType, 'OrderDetails');
+  assert.deepEqual(details.meanings.map((entry) => [entry.concept, entry.role]), [['order-detail', 'entity']]);
+  assert.deepEqual(field(after, 'Order Details', 'UnitPrice').meanings.map((entry) => entry.concept), ['order-detail-price']);
+  // a reference to a record type that a recordset renames points at that recordset's own name
+  const renamed = world({ publisher: draft2(chinookNames().map((name) => (name === 'Employee' ? { name: 'staff', record_type: 'Employee' } : name))) });
+  assert.deepEqual(await problemsOf(renamed), []);
+  assert.equal(field((await index(renamed)).databases[0], 'Customer', 'SupportRepId').references, 'staff');
+});
+
+test('the new form: a record type the model lacks, a record type that no recordset has, and the same record type twice are each refused', async () => {
+  const names = chinookNames();
+  expectProblem(await problemsOf(world({ publisher: draft2(names.map((name) => (name === 'Employee' ? { name: 'staff', record_type: 'Worker' } : name))) })), /recordsets names record types that are not in the model file: staff \(record type Worker\)/);
+  expectProblem(await problemsOf(world({ publisher: draft2(names.map((name) => (name === 'Employee' ? { name: 'staff', record_type: 'Worker' } : name))) })), /recordsets lacks the record types of the model: Employee/);
+  expectProblem(await problemsOf(world({ publisher: draft2(names.filter((name) => name !== 'Genre')) })), /recordsets lacks the record types of the model: Genre/);
+  expectProblem(await problemsOf(world({ publisher: draft2([...names, { name: 'clients', record_type: 'Customer' }]) })), /recordsets "Customer" and "clients" both have the record type Customer/);
+});
+
+test('a column that is listed holds a field of its record type, and the index does not yet carry its name', async () => {
+  const columns = (listed) => draft2(chinookNames().map((name) => (name === 'Customer' ? { name: 'customers', record_type: 'Customer', columns: listed } : name)));
+  const w = world({ publisher: columns({ first_name: { field: 'FirstName' } }) });
+  assert.deepEqual(await problemsOf(w), []);
+  const customers = (await index(w)).databases[0].recordsets.find((recordset) => recordset.name === 'customers');
+  assert.equal(customers.modelRecordType, 'Customer');
+  assert.ok(customers.fields.some((entry) => entry.name === 'FirstName'), 'a later step gives the item the column\'s name and a modelField');
+  expectProblem(await problemsOf(world({ publisher: columns({ first_name: { field: 'GivenName' } }) })), /recordsets "customers": column "first_name" holds "GivenName", but Customer has no field "GivenName"/);
+  expectProblem(await problemsOf(world({ publisher: columns({ LastName: { field: 'FirstName' } }) })), /column "LastName" is also the name of the field LastName of Customer/);
+  assert.deepEqual(await problemsOf(world({ publisher: columns({ LastName: { field: 'FirstName' }, FirstName: { field: 'LastName' } }) })), [], 'two fields may swap their column names');
+  expectProblem(await problemsOf(world({ publisher: columns({ first_name: { field: 'FirstName.Initial' } }) })), /no reader of the model reads a component yet, so "Initial" cannot be read in FirstName/);
+  expectProblem(await problemsOf(world({ publisher: columns({ first_name: 'FirstName' }) })), /column "first_name" must be a map with field/);
+});
+
+test('the notice about recordset_entities is a warning: it names the key, changes no verdict, and is not given when the key is not written', async () => {
+  const capture = () => { const lines = { out: [], err: [] }; return { lines, io: { out: (line) => lines.out.push(line), err: (line) => lines.err.push(line) } }; };
+  const withKey = world({ publisher: (files) => { orderDetailsModel(files); manifestEdit((manifest) => { manifest.recordsets.push('Order Details'); manifest.recordset_entities = { 'Order Details': 'OrderDetails' }; })(files); } });
+  const run = capture();
+  writeFileSync(join(withKey.dir, 'index.json'), await buildIndex(options(withKey)));
+  assert.equal(await runCheck(options(withKey), run.io), 0);
+  const notices = withoutSpellingNotices(run.lines.err);
+  assert.equal(notices.length, 1);
+  assert.match(notices[0], /^warning: databases\/\$records\/chinook\.yaml: ovdb\.yaml: recordset_entities is the earlier form of the mapping and is still read; under format: ovdb-manifest\/draft-2 the same is one record_type: line under each recordset/);
+  // an empty key draws it too; no key, and the new form, do not
+  const empty = world({ publisher: manifestEdit((manifest) => { manifest.recordset_entities = {}; }) });
+  assert.equal(withoutSpellingNotices((await checkDirectory(options(empty))).warnings).length, 1);
+  assert.deepEqual(withoutSpellingNotices((await checkDirectory(options(world()))).warnings), []);
+  assert.deepEqual(withoutSpellingNotices((await checkDirectory(options(world({ publisher: draft2(chinookNames()) })))).warnings), []);
+});
+
 test('ModelSpec names and references remain identifiers; encoded names cannot bypass the format', () => {
   const parsed = parseModelSpec(JSON.stringify({ modelspec: '1.0-draft', module: { name: 'northwind' }, entities: {
     OrderDetails: { properties: { UnitPrice: { type: 'decimal' } } },

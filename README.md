@@ -103,7 +103,8 @@ Keyed by GitHub handle, with a `name`.
 
 A publisher repository opts in with a root `OVDB.md` whose frontmatter is
 `ovdb: 1` and `publish: [./ovdb.yaml]`, an explicit list of manifest paths
-relative to the repository root, never a glob. The manifest (`ovdb-manifest/draft-1`,
+relative to the repository root, never a glob. The manifest (`ovdb-manifest/draft-1` or
+`ovdb-manifest/draft-2`, see [Two forms of the mapping](#two-forms-of-the-mapping-draft-1-and-draft-2),
 for example [`ovdb.yaml` of Chinook](https://github.com/demo-db/chinook/blob/f11b1192ed9f48cdd4f788d1d4ffde0e972ee04b/ovdb.yaml))
 declares the canonical `url`, the `deployment` (`url`, `engine`, `discovery` on
 the canonical origin, and an optional `recordset_page` template with `{name}`),
@@ -113,7 +114,8 @@ characters, held to the rules for every URL below),
 the `model` (its files, or its address when it is published elsewhere; see
 [Two forms](#two-forms-own-model-or-shared-model)), the `meaning` file and its
 graph, the publisher, the `licences` (`data`, `model`, `meaning`), the
-`recordsets` and optional `recordset_entities` mapping. Every path is relative to the repository root and must be a regular file tracked
+`recordsets` (with, in `ovdb-manifest/draft-1`, an optional `recordset_entities` mapping; in
+`ovdb-manifest/draft-2` the mapping is written on each recordset's own item). Every path is relative to the repository root and must be a regular file tracked
 at the pinned commit: no `..`, leading `/`, `.` or empty segment, no glob, and
 symbolic links are refused. The model's source (`model.hcl`) ends in
 `.modelspec.hcl`.
@@ -287,6 +289,61 @@ on the `serverId` origin. The Directory does not fetch the discovery document, s
 it does not see who answers there. A client that relies on the identity must fetch
 the discovery document and check that it lists the `url`.
 
+#### Two forms of the mapping: `draft-1` and `draft-2`
+
+The key `format` decides how `recordsets` is read, and a manifest never mixes
+the two. The Directory reads both, and a manifest of either form is accepted.
+
+`format: ovdb-manifest/draft-1` (the form above): `recordsets` is a list of names. The optional map
+`recordset_entities` pairs a name with a record type; a name it does not list is the record type of the
+same name. A manifest that writes `recordset_entities` (even an empty one) is accepted, and the check
+prints a `warning:` that names the key and describes the new form; the exit status is unchanged. A
+manifest that does not write it, such as Chinook's, is accepted without a warning and needs no edit.
+
+`format: ovdb-manifest/draft-2`: an item of `recordsets` is a name, or a map with `name` (the recordset's
+own name, required), `record_type` (the ModelSpec record type its rows have; the name itself when left
+out) and `columns` (the columns whose name differs from their field):
+
+```yaml
+format: ovdb-manifest/draft-2
+recordsets:
+  - Customers                    # a bare name: the record type of the same name, the same column names
+  - name: Order Details          # a map: the recordset's own name,
+    record_type: OrderDetails    #        the record type its rows have,
+    columns:                     #        and the columns whose names differ
+      "Unit Price":              # a column is a map, keyed by its name
+        field: UnitPrice         #        whose key field names the field it holds
+```
+
+- Under `draft-2`, `record_type:` on a recordset replaces `recordset_entities`, which is not read: a
+  manifest that writes it under `draft-2` is refused, even when the two agree and even when it is empty.
+  Under `draft-1`, an item that is a map is refused.
+- An item has only the keys `name`, `record_type` and `columns`; a `columns` entry has only the key
+  `field`, which is required. A column is written as a map, never as bare text. The value of `field` is
+  a field's name, or names joined by single dots; until the model readers read components, a name with a
+  dot is refused.
+- A recordset's name and a column's name follow the same rule as before: at most 256 characters, no
+  slash, backslash or control character, not `.` or `..`. A `record_type` is a name of letters, digits
+  and `_` that does not start with a digit, and its letters are ASCII. A name is listed once.
+- One recordset has one record type, and no two recordsets of a manifest have the same one; every record
+  type of an own model is the record type of exactly one recordset. A recordset's `record_type` must be
+  in the model. A column's `field` must be a field of the record type; two columns of a recordset may
+  not hold the same field, and a column may not be named like a field that has no column of its own
+  listed.
+- The checks are the same as for `draft-1`, applied to the same mapping: the index and the meaning
+  bindings read the mapping and not the manifest's text, so two manifests that differ only in form
+  give the same verdict and the same index entry. The index does not yet carry a column's name when it
+  differs from its field: the index entry lists the field's name.
+- A representation contract's target names a ModelSpec record type, as `ovdb publisher check` reads it:
+  the target is found among the record types of the recordsets (the `record_type:` of an item, the
+  pair in `recordset_entities`, else the recordset's own name), in either form. Its bridge table is
+  found by the recordset's own name. A recordset whose record type is the target, and a recordset that
+  is the bridge table, may not list `columns` (an empty `columns` says nothing): a contract reads its
+  columns by the model's names.
+- No released `ovdb` reads `draft-2` yet: the latest release of `openvaultdb/ovdb`, v0.43.0, accepts
+  only `ovdb-manifest/draft-1` in `ovdb publisher check`. Until a release reads it, a `draft-2`
+  manifest is accepted by the Directory and refused by that command (finding `manifest-format`).
+
 ### What the index guarantees about every URL it publishes
 
 Every URL a manifest publishes or reads (`url`, `deployment.url`, `deployment.discovery`,
@@ -416,7 +473,8 @@ address at the commit that address pins, resolved through the MeaningGraph regis
   database is `{model.repository}/blob/{model.commit}/{model.path}`.
 - `recordsets` are the native collection names the deployment serves. Each
   recordset has `modelRecordType`, the name of the corresponding ModelSpec record
-  type (the same value by default, or from `recordset_entities` when they
+  type (the same value by default, or from `recordset_entities` or, under
+  `ovdb-manifest/draft-2`, from the recordset's `record_type` when they
   differ); the earlier key `modelEntity` is no longer written. A
   recordset's `url` is the manifest's
   `deployment.recordset_page` template with `{name}` filled in, and is absent
@@ -609,7 +667,8 @@ Two layers run in CI ([`.github/workflows/check.yml`](.github/workflows/check.ym
      own model it is registered for the same repository, with the same address
      (for a shared model, `meaning.address` is registered under that id);
    - `recordsets` map one-to-one to ModelSpec entities, by equal names or the
-     explicit `recordset_entities` mapping (a shared model's manifest may list a
+     explicit `recordset_entities` mapping or, under `ovdb-manifest/draft-2`, the
+     recordset's `record_type` (a shared model's manifest may list a
      subset, explicitly, with `recordsets_partial: true`);
    - an own model that names a registered `model.address` is the registered model
      (compared with the registry's `files.json`, or a warning when the commits
