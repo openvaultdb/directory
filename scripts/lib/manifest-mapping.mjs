@@ -27,8 +27,8 @@ const identifier = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const fieldPath = /^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/;
 const itemKeys = ['name', 'record_type', 'columns'];
 // A value as it is shown in a message. A value that refers to itself (a YAML anchor used inside its own list) cannot
-// be written as JSON; it is shown as words instead of throwing. Turning it into text can throw too (a map that
-// refers to itself under its own key `toString`), so that is guarded as well.
+// be written as JSON; it is shown as text instead of throwing. Turning it into text can throw too (a map that
+// refers to itself under its own key `toString`); it is then shown as the words "a value that refers to itself".
 const quoted = (value) => {
   try { return JSON.stringify(value); } catch {
     try { return String(value); } catch { return 'a value that refers to itself'; }

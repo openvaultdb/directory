@@ -97,7 +97,7 @@ test('a value that refers to itself is reported as a problem and does not throw'
 });
 
 test('a map that refers to itself under its own key toString is reported as a problem and does not throw', () => {
-  // `record_type: &a {toString: *a}` and `format: &f {toString: *f}` in YAML: turning the value into text calls the map's toString, which is the map.
+  // `record_type: &a {toString: *a}` and `format: &f {toString: *f}` in YAML: turning the value into text finds the map itself where a toString function is expected, and throws.
   const loop = {};
   loop.toString = loop;
   const asRecordType = manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: ['OrderLine', { name: 'Customer', record_type: loop }] });
@@ -155,12 +155,13 @@ test('the refusal of recordsets that lack ModelSpec entities is written out in t
 });
 
 // The mapping and the conformance cases are held byte for byte in two repositories: here, and in demo-db/chinook
-// (scripts/lib/manifest-mapping.mjs and scripts/testdata/manifest-conformance.json). This repository cannot read the
-// other one offline, so it records the SHA-256 of each file as it stands in both; the test of demo-db/chinook is to record the
-// same two values (openvaultdb/directory#49, item m13). A change to either file here fails this test until the two values are changed with it, which is the
-// moment to carry the file to demo-db/chinook (and to carry it back, in the other direction). To update: shasum -a 256 <file>.
+// (scripts/lib/manifest-mapping.mjs and scripts/testdata/manifest-conformance.json there). This repository cannot read
+// the other one offline, so this test records the SHA-256 of each file as it stands here, and a test of
+// demo-db/chinook records the same two values for its copies (openvaultdb/directory#49, item m13). A change to either
+// file fails the test of the repository it is made in until that file's value is changed with it, which is the moment
+// to carry the same bytes and the same value to the other repository. To update: shasum -a 256 <file>.
 const sharedWithChinook = {
-  'lib/manifest-mapping.mjs': 'eadd6b8869b72caea8df8ad416e8696781a857dc60b180510aa4c75b3f8b9a8e',
+  'lib/manifest-mapping.mjs': 'aa27f9fc0d893502c6054594c60fa6c85b1457877cde0bdce1659874daac4bf7',
   'fixtures/manifest-conformance.json': '5a7b576cf5682c19e0d09f7f59843d78b59f0ae4d3beefc899db5570bb2602af',
 };
 test('the mapping and the conformance cases are the files that demo-db/chinook holds a copy of', () => {
