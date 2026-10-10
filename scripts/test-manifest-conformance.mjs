@@ -123,3 +123,16 @@ test('a name listed twice is reported as that, and not also as two recordsets of
   const clash = manifestProblems(manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: ['Customer', { name: 'clients', record_type: 'Customer' }, 'OrderLine'] }));
   assert.deepEqual(clash.map((problem) => problem.replace(/^.*?ovdb\.yaml: /, '')), ['recordsets "Customer" and "clients" both have the record type Customer; mappings must be one-to-one']);
 });
+
+test('B4: the index entry names the recordsets as the manifest does, and a reference points at the recordset that holds the record type', async () => {
+  const b4 = conformance.cases.find((c) => c.id === 'B4');
+  for (const vocabulary of ['current', 'earlier']) {
+    const { index } = await directoryVerdict(b4.manifest, vocabulary);
+    const byName = new Map(index.recordsets.map((recordset) => [recordset.name, recordset]));
+    assert.deepEqual([...byName.keys()].sort(), ['OrderLine', 'customers'], vocabulary);
+    assert.equal(byName.get('customers').modelRecordType, 'Customer', vocabulary);
+    assert.equal(byName.get('OrderLine').modelRecordType, 'OrderLine', vocabulary);
+    // CustomerId references the record type Customer, which this manifest calls "customers".
+    assert.deepEqual(byName.get('OrderLine').fields.find((field) => field.name === 'CustomerId'), { name: 'CustomerId', type: 'reference', references: 'customers', meanings: [] }, vocabulary);
+  }
+});
