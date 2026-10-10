@@ -49,10 +49,11 @@ export function parseGraphAddress(address) {
 // already refused labels that are not short plain strings.)
 export const labelOf = (concept) => concept.labels?.en ?? Object.values(concept.labels ?? {})[0] ?? concept.id;
 
-// The roles a binding can have. meaning/draft-1 has entity, identifier, display-name, foreign-key and value;
-// meaning/draft-2 names two of them instances (earlier entity) and reference (earlier foreign-key) and accepts
-// the earlier names. The builder reads a file's roles and keys the same way whatever its `format:` line says
-// (it never reads that line), so both names are accepted in a file of either format.
+// The roles a binding can have: entity, identifier, display-name, foreign-key and value, and the two current names
+// instances (earlier entity) and reference (earlier foreign-key). MeaningGraph's format accepts both names of a role in
+// meaning/draft-1 and in meaning/draft-2. For the bindings the builder reads a file's roles and keys the same way whatever
+// its `format:` line says (only the representation-contract check, representation.mjs, reads that line), so either key
+// and either name is accepted in a file of either format.
 const earlierRole = { instances: 'entity', reference: 'foreign-key' };
 export const bindingRoles = ['entity', 'instances', 'identifier', 'display-name', 'foreign-key', 'reference', 'value'];
 

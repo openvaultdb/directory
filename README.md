@@ -149,20 +149,7 @@ spelling is read as before and reported once per run as a `warning:` line on sta
 error that names `modelspec rewrite --write <folder>`; the warning does not change
 the exit status.
 
-**MeaningGraph spellings.** The builder reads a meaning file's bindings in either
-spelling of the MeaningGraph format (`meaning/draft-1` and `meaning/draft-2`): a
-binding names its field with `property:` (`meaning/draft-1`) or `field:`
-(`meaning/draft-2`), never both, and its role is one of `entity`, `identifier`,
-`display-name`, `foreign-key`, `value` or, in `meaning/draft-2`, `instances` (the earlier
-`entity`) and `reference` (the earlier `foreign-key`). The concept kinds are not read, so
-`attribute`, `property` and `value-set` concepts are all reached by `extends` and
-`values-of`. The builder does not read the file's `format:` line and does not check which
-spelling goes with which identifier: either name is accepted in a file of either
-format. `index.json` is the same for either spelling, and still writes the earlier
-role names (`entity`, `foreign-key`) and no derived entries; a graph written
-in `meaning/draft-2` gives the same bytes as the same graph in `meaning/draft-1`.
-The representation contracts' readers (`scripts/lib/representation.mjs`) still require
-`meaning/draft-1`.
+**MeaningGraph spellings.** The builder reads a meaning file's bindings in either spelling of the MeaningGraph format (`meaning/draft-1` and `meaning/draft-2`): a binding names its field with `property:` (`meaning/draft-1`) or `field:` (`meaning/draft-2`), never both, and its role is one of `entity`, `identifier`, `display-name`, `foreign-key`, `value`, `instances` (the current name of `entity`) and `reference` (the current name of `foreign-key`). The concept kinds are not read, so `attribute`, `property` and `value-set` concepts are all reached by `extends` and `values-of`. For the bindings the builder does not read the file's `format:` line and does not check which spelling goes with which identifier: either key, and either name of a role, is accepted in a file of either format. `index.json` still writes the earlier role names (`entity`, `foreign-key`) and no derived entries; a graph written in `meaning/draft-2` gives the same entries as the same graph in `meaning/draft-1`, and only the commit ids (a converted graph is another commit) and the `checksum` over them differ. One exception: for a database whose manifest has a `representation_contract`, the contract check (`scripts/lib/representation.mjs`) reads the `format:` line of the meaning files the contract names, the database's own meaning file among them, and still requires `meaning/draft-1` and the key `property:`.
 
 A manifest that gives `model.address` makes the check read the ModelSpec registry.
 If the registry has that address, the manifest's `model.modelspec` must be the same
@@ -403,7 +390,7 @@ it does not restrict new canonical database identities.
 Names that reach `index.json` are checked too: ModelSpec entity, property and
 module names are identifiers (`[A-Za-z_][A-Za-z0-9_]*`, since recordset names are
 used in URLs and anchors), property types are type names, concept labels are
-plain strings, binding roles are meaning roles (the `meaning/draft-1` roles and the `meaning/draft-2` names `instances` and `reference`), licences are SPDX-shaped single IDs with the bounded data-only conjunction extension described below.
+plain strings, binding roles are MeaningGraph's binding roles (`entity`, `instances`, `identifier`, `display-name`, `foreign-key`, `reference`, `value`), licences are SPDX-shaped single IDs with the bounded data-only conjunction extension described below.
 
 ## `index.json`
 
@@ -499,9 +486,7 @@ address at the commit that address pins, resolved through the MeaningGraph regis
   another entity has `"type": "reference"` and `"references"` set to that
   entity's native recordset name when it is listed.
 - `M` is a meaning, bound to a recordset (role `entity`) or to a field (any
-  other `meaning/draft-1` binding role). `role` is written in the `meaning/draft-1`
-  spelling: a binding that says `instances` or `reference` in a `meaning/draft-2` file
-  is indexed as `entity` or `foreign-key`:
+  other `meaning/draft-1` binding role). `role` is written with the earlier names of the roles: a binding that says `instances` or `reference`, in a file of either format, is indexed as `entity` or `foreign-key`:
 
   ```json
   {
