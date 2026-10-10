@@ -12,7 +12,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync } from '
 import { isAbsolute, join, posix, relative } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { addressOf, commitPattern, defaultBranch, defaultCacheDir, ensurePlainDirectory, isRepositoryPath, onBranch, openCommit, repositoryKey, repositoryHosts } from './git.mjs';
-import { createMeaningResolver, entryOf, graphIdProblem, graphsAtAddress, loadMeaningRegistry, meaningFilesOf, registryIdPattern, parseConceptRef, parseGraphAddress, labelOf, validateConcept } from './meaning.mjs';
+import { createMeaningResolver, entryOf, graphIdProblem, graphsAtAddress, loadMeaningRegistry, meaningFilesOf, registryIdPattern, parseConceptRef, parseGraphAddress, labelOf, validateConcept, bindingField, indexRole } from './meaning.mjs';
 import { addressMatchesRecord, earlierSpellingNotice, identifierPattern, loadModelRegistry, modelsAtAddress, normalisedModelAddress, parseModelSpec, parseModelRef, parseModelAddress } from './modelspec.mjs';
 import { directoryPagePath, encodePathSegment, globalDatabaseIdProblem, hasOvdbMarker, homepageProblem, publicHttpsProblem } from './urls.mjs';
 import { checkRepresentationEnvelope, checkRepresentation, verifySourceData } from './representation.mjs';
@@ -777,12 +777,16 @@ export async function analyseDatabase(record, context) {
         bad(`${where}: binding ${binding.model} names an entity that is not in the ModelSpec`);
         continue;
       }
+      // The key that names the field is `field` (meaning/draft-2) or `property` (meaning/draft-1); validateConcept has
+      // refused a binding that writes both. A message uses the word the binding wrote, and for a binding that writes
+      // neither, the word of its role: field for the draft-2 role names, property for the rest, as before.
+      const { key: fieldKey, name: fieldName } = bindingField(binding);
       let target;
-      if (binding.property === undefined) {
-        if (binding.role !== 'entity') { bad(`${where}: binding ${binding.model} with role ${binding.role} must name a property`); continue; }
+      if (fieldName === undefined) {
+        if (binding.role !== 'entity' && binding.role !== 'instances') { bad(`${where}: binding ${binding.model} with role ${binding.role} must name a ${binding.role === 'reference' ? 'field' : 'property'}`); continue; }
         target = recordset;
       } else {
-        if (typeof binding.property !== 'string' || !(target = recordset.fields.get(binding.property))) { bad(`${where}: binding ${binding.model} names property ${JSON.stringify(binding.property)}, which ${ref.name} does not have in the ModelSpec`); continue; }
+        if (typeof fieldName !== 'string' || !(target = recordset.fields.get(fieldName))) { bad(`${where}: binding ${binding.model} names ${fieldKey} ${JSON.stringify(fieldName)}, which ${ref.name} does not have in the ModelSpec`); continue; }
       }
       const chains = chainsOf(concept);
       if (chains.problems.length) continue;
@@ -790,7 +794,7 @@ export async function analyseDatabase(record, context) {
         graph: own.id,
         concept: concept.id,
         label: labelOf(concept),
-        role: binding.role,
+        role: indexRole(binding.role),
         address: `meaning://${own.address}/${concept.id}?ref=${own.ref}`,
         extends: chains.extends,
         ...(chains.valuesOf ? { values_of: chains.valuesOf } : {}),

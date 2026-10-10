@@ -951,6 +951,96 @@ test('every binding must name a real ModelSpec entity and property', async () =>
   expectProblem(await problemsOf(world({ publisher: binding('modelspec:///chinook.Customer', undefined, 'value') })), /with role value must name a property/);
 });
 
+// ---- meaning/draft-2: the builder reads field:, instances, reference, property and value-set, and writes what it always wrote ----
+
+// A meaning file the way meaning/draft-2 spells it: the format line, the kind property for attribute, the binding
+// key field for property, the roles instances and reference for entity and foreign-key, and (for the ids named)
+// the kind value-set. Nothing else in the file changes.
+const inDraft2 = (text, { valueSets = [] } = {}) => {
+  const doc = parseYaml(text);
+  doc.format = 'meaning/draft-2';
+  for (const concept of doc.concepts) {
+    if (concept.kind === 'attribute') concept.kind = 'property';
+    if (valueSets.includes(concept.id)) concept.kind = 'value-set';
+    for (const binding of concept.bindings ?? []) {
+      if ('property' in binding) { binding.field = binding.property; delete binding.property; }
+      binding.role = { entity: 'instances', 'foreign-key': 'reference' }[binding.role] ?? binding.role;
+    }
+  }
+  return stringifyYaml(doc);
+};
+const draft2Publisher = edited('model/chinook.meaning.yaml', inDraft2);
+const draft2Core = (files) => {
+  for (const [path, text] of files) files.set(path, inDraft2(text, { valueSets: ['country', 'currency'] }));
+};
+// index.json of a world with the two commits that differ between worlds (the publisher's and core's) replaced, and
+// the checksum line (a hash of the databases with those commits in them) left out.
+const indexBytes = async (w) => (await buildIndex(options(w))).replaceAll(w.publisher.commit, '<publisher commit>').replaceAll(w.corePin, '<core commit>').replace(/^ {2}"checksum": ".*",\n/m, '');
+
+test('a graph in meaning/draft-2 (field:, instances, reference, property, value-set) gives the index.json of the same graph in meaning/draft-1, byte for byte', async () => {
+  const earlier = world();
+  const current = world({ publisher: draft2Publisher, core: draft2Core });
+  // the stand-ins really are in the new spelling
+  const chinookText = readTree(current.publisher.dir).get('model/chinook.meaning.yaml');
+  assert.match(chinookText, /^format: meaning\/draft-2$/m);
+  assert.match(chinookText, /^\s+(- )?field: Country$/m);
+  assert.match(chinookText, /role: instances/);
+  assert.match(chinookText, /role: reference/);
+  assert.match(chinookText, /kind: property/);
+  assert.doesNotMatch(chinookText, /property: |role: entity|role: foreign-key|kind: attribute/);
+  assert.match(readTree(current.core.dir).get('geo.meaning.yaml'), /id: country\n\s+kind: value-set/);
+  assert.deepEqual(await problemsOf(current), []);
+  const before = await indexBytes(earlier);
+  const after = await indexBytes(current);
+  assert.ok(before.includes('"concept": "customer-country"') && before.length > 10000);
+  assert.equal(after, before);
+  // the new role names are not written: index.json says entity and foreign-key as it always has
+  assert.doesNotMatch(after, /"role": "(instances|reference)"/);
+  assert.match(after, /"role": "entity"/);
+  assert.match(after, /"role": "foreign-key"/);
+  // a value set is reached through values-of and extends like an entity: customer-country takes its values from core's country
+  const [database] = JSON.parse(after).databases;
+  assert.equal(field(database, 'Customer', 'Country').meanings[0].values_of.concept, 'country');
+  // and the check, which also compares the committed index.json, is satisfied by an index written from the new spelling
+  const written = await checked(current);
+  assert.deepEqual(written.problems, []);
+});
+
+test('the earlier and the current spelling can stand in one file; one concept bound twice by the two names of a role is one meaning', async () => {
+  const mixed = meaningEdit((doc) => {
+    doc.concepts.push(
+      { id: 'extra', kind: 'property', labels: { en: 'Extra' }, description: 'x', bindings: [
+        { model: 'modelspec:///chinook.Customer', field: 'Country', role: 'value' },
+        { model: 'modelspec:///chinook.Customer', property: 'City', role: 'value' },
+        { model: 'modelspec:///chinook.Customer', field: 'SupportRepId', role: 'reference' },
+        { model: 'modelspec:///chinook.Customer', property: 'SupportRepId', role: 'foreign-key' },
+      ] },
+      { id: 'extra-set', kind: 'value-set', labels: { en: 'Extra set' }, description: 'x', bindings: [
+        { model: 'modelspec:///chinook.Genre', role: 'instances' },
+        { model: 'modelspec:///chinook.Genre', role: 'entity' },
+      ] },
+    );
+  });
+  const w = world({ publisher: mixed });
+  assert.deepEqual(await problemsOf(w), []);
+  const [database] = (await index(w)).databases;
+  assert.deepEqual(field(database, 'Customer', 'Country').meanings.filter((entry) => entry.concept === 'extra').map((entry) => entry.role), ['value']);
+  assert.deepEqual(field(database, 'Customer', 'City').meanings.filter((entry) => entry.concept === 'extra').map((entry) => entry.role), ['value']);
+  assert.deepEqual(field(database, 'Customer', 'SupportRepId').meanings.filter((entry) => entry.concept === 'extra').map((entry) => entry.role), ['foreign-key']);
+  assert.deepEqual(database.recordsets.find((recordset) => recordset.name === 'Genre').meanings.filter((entry) => entry.concept === 'extra-set').map((entry) => entry.role), ['entity']);
+});
+
+test('the checks on a binding hold in the new spelling: a field the record type lacks, a role that needs a field, both keys, an unknown role', async () => {
+  const bound = (binding) => meaningEdit((doc) => { doc.concepts.push({ id: 'extra', kind: 'property', labels: { en: 'Extra' }, description: 'x', bindings: [{ model: 'modelspec:///chinook.Customer', ...binding }] }); });
+  expectProblem(await problemsOf(world({ publisher: bound({ field: 'Nope', role: 'value' }) })), /concept extra: binding modelspec:\/\/\/chinook\.Customer names field "Nope", which Customer does not have in the ModelSpec/);
+  expectProblem(await problemsOf(world({ publisher: bound({ field: ['Country'], role: 'value' }) })), /names field \["Country"\]/);
+  expectProblem(await problemsOf(world({ publisher: bound({ role: 'reference' }) })), /with role reference must name a field/);
+  expectProblem(await problemsOf(world({ publisher: bound({ role: 'value' }) })), /with role value must name a property/);
+  expectProblem(await problemsOf(world({ publisher: bound({ role: 'instances', field: 'Nope' }) })), /names field "Nope"/);
+  expectProblem(await problemsOf(world({ publisher: bound({ field: 'Country', property: 'Country', role: 'value' }) })), /concept extra: binding "modelspec:\/\/\/chinook\.Customer" names its field with both field and property; write one of them/);
+  expectProblem(await problemsOf(world({ publisher: bound({ field: 'Country', role: 'record' }) })), /binding role "record" must be one of entity, instances, identifier, display-name, foreign-key, reference, value/);
+});
+
 test('an address that does not resolve fails: unregistered graph, no ?ref=, unknown or off-branch commit, unknown concept, a cycle', async () => {
   const country = `${coreAddress}/country`;
   // Sets customer-country's values-of to `to`, a string or a function of core's pinned commit.
@@ -1584,7 +1674,7 @@ test('values a publisher writes are checked before they are published: engine, l
   expectProblem(await problemsOf(world({ publisher: concept({ labels: { en: 'a <b>bold</b> label' } }) })), /concept extra: the en label must be a plain string/);
   expectProblem(await problemsOf(world({ publisher: concept({ labels: { en: 'x'.repeat(201) } }) })), /the en label must be a plain string of at most 200/);
   expectProblem(await problemsOf(world({ publisher: concept({ labels: 'Extra' }) })), /concept extra: labels must map language codes to labels/);
-  expectProblem(await problemsOf(world({ publisher: concept({ bindings: [{ model: 'modelspec:///chinook.Customer', property: 'Country', role: 'anything goes <b>' }] }) })), /binding role "anything goes <b>" must be one of entity, identifier, display-name, foreign-key, value/);
+  expectProblem(await problemsOf(world({ publisher: concept({ bindings: [{ model: 'modelspec:///chinook.Customer', property: 'Country', role: 'anything goes <b>' }] }) })), /binding role "anything goes <b>" must be one of entity, instances, identifier, display-name, foreign-key, reference, value/);
   expectProblem(await problemsOf(world({ publisher: concept({ bindings: [{ model: 'modelspec:///chinook.Customer', property: 'Country' }] }) })), /binding role undefined must be one of/);
 });
 
