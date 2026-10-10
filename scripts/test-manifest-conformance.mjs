@@ -3,6 +3,7 @@
 // pre-check runs, and the two checkers must agree on every case. Each case is run twice, against the model in
 // ModelSpec's current vocabulary and against the same model in the earlier one.
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -150,5 +151,21 @@ test('the refusal of recordsets that lack ModelSpec entities is written out in t
   for (const vocabulary of ['current', 'earlier']) {
     const { problems } = await directoryVerdict(a4.manifest, vocabulary);
     assert.ok(problems.some((problem) => problem.endsWith('ovdb.yaml: recordsets lacks ModelSpec entities: OrderLine')), problems.join('\n'));
+  }
+});
+
+// The mapping and the conformance cases are held byte for byte in two repositories: here, and in demo-db/chinook
+// (scripts/lib/manifest-mapping.mjs and scripts/testdata/manifest-conformance.json). This repository cannot read the
+// other one offline, so it records the SHA-256 of each file as it stands in both; the test of demo-db/chinook is to record the
+// same two values (openvaultdb/directory#49, item m13). A change to either file here fails this test until the two values are changed with it, which is the
+// moment to carry the file to demo-db/chinook (and to carry it back, in the other direction). To update: shasum -a 256 <file>.
+const sharedWithChinook = {
+  'lib/manifest-mapping.mjs': 'eadd6b8869b72caea8df8ad416e8696781a857dc60b180510aa4c75b3f8b9a8e',
+  'fixtures/manifest-conformance.json': '5a7b576cf5682c19e0d09f7f59843d78b59f0ae4d3beefc899db5570bb2602af',
+};
+test('the mapping and the conformance cases are the files that demo-db/chinook holds a copy of', () => {
+  for (const [path, digest] of Object.entries(sharedWithChinook)) {
+    const actual = createHash('sha256').update(readFileSync(join(dirname(fileURLToPath(import.meta.url)), path))).digest('hex');
+    assert.equal(actual, digest, `scripts/${path} is not the file recorded as shared with demo-db/chinook: carry the change to the copy there, then record sha256:${actual} in both tests`);
   }
 });
