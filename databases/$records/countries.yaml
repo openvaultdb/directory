@@ -1,0 +1,17 @@
+format: ovdb-directory/draft-1
+title: Countries reference database
+description: >-
+  Countries and territories keyed by ISO 3166-1 alpha-2 code, with the
+  alpha-3 code, English name, currency and the latest World Bank population
+  with its year and source, plus aliases for joining sample databases such as
+  Northwind and Chinook. Derived from GeoNames and World Bank open data under
+  CC BY 4.0; the read-only SQLite build has 3 tables and 1 view.
+status: draft
+url: https://demodb.dev/countries/
+repository: https://github.com/demo-db/countries
+commit: dec4fa9798bc6118328156cd8abaf3803d0cba2f
+manifest: ovdb.yaml
+database_manifest: ovdb-database.json
+meaning_graph: countries
+maintainers:
+  - trakhimenok

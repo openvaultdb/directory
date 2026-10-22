@@ -1,6 +1,6 @@
 {
   "format": "ovdb-directory/draft-1",
-  "checksum": "sha256:0aa909d11a85cb0bdd1fc9349b4b3f00f0a1c26af718c946b50797e83ab94123",
+  "checksum": "sha256:925a04e813cc758acd3d52ee0b59bbbe4512d71228386f6de6c3b931aa3f3bb5",
   "databases": [
     {
       "id": "https://demodb.dev/adventureworks/",
@@ -4292,6 +4292,331 @@
                   ]
                 }
               ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "https://demodb.dev/countries/",
+      "recordId": "countries",
+      "localId": "countries",
+      "directoryPath": "/ovdb/demodb.dev/countries/",
+      "serverId": "https://demodb.dev/ovdb",
+      "serverDbBaseUrl": "https://demodb.dev/ovdb/db/countries/",
+      "apiUrl": "https://demodb.dev/ovdb/v1/databases/countries",
+      "title": "Countries reference database",
+      "description": "Countries and territories keyed by ISO 3166-1 alpha-2 code, with the alpha-3 code, English name, currency and the latest World Bank population with its year and source, plus aliases for joining sample databases such as Northwind and Chinook. Derived from GeoNames and World Bank open data under CC BY 4.0; the read-only SQLite build has 3 tables and 1 view.",
+      "status": "draft",
+      "url": "https://demodb.dev/countries/",
+      "deployment": {
+        "url": "https://cloud.openvaultdb.com/ovdb/dbs/countries",
+        "engine": "sqlite"
+      },
+      "homepage": "https://countries.demodb.dev/",
+      "repository": "https://github.com/demo-db/countries",
+      "commit": "dec4fa9798bc6118328156cd8abaf3803d0cba2f",
+      "manifest": "ovdb.yaml",
+      "licence": "CC-BY-4.0",
+      "model": {
+        "name": "countries",
+        "path": "model/countries.modelspec.hcl",
+        "address": "modelspec://github.com/demo-db/countries/countries"
+      },
+      "meaning_graph": {
+        "id": "countries",
+        "address": "meaning://github.com/demo-db/countries"
+      },
+      "recordsets": [
+        {
+          "name": "countries",
+          "modelRecordType": "countries",
+          "meanings": [
+            {
+              "graph": "countries",
+              "concept": "country",
+              "label": "Country",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/countries/country?ref=dec4fa9798bc6118328156cd8abaf3803d0cba2f",
+              "extends": [
+                {
+                  "graph": "core",
+                  "concept": "country",
+                  "label": "Country",
+                  "address": "meaning://github.com/meaninggraph/core/country?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                }
+              ]
+            }
+          ],
+          "fields": [
+            {
+              "name": "iso2",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "countries",
+                  "concept": "country",
+                  "label": "Country",
+                  "role": "identifier",
+                  "address": "meaning://github.com/demo-db/countries/country?ref=dec4fa9798bc6118328156cd8abaf3803d0cba2f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "country",
+                      "label": "Country",
+                      "address": "meaning://github.com/meaninggraph/core/country?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "iso3",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "countries",
+                  "concept": "country-alpha3",
+                  "label": "ISO alpha-3 code",
+                  "role": "value",
+                  "address": "meaning://github.com/demo-db/countries/country-alpha3?ref=dec4fa9798bc6118328156cd8abaf3803d0cba2f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "country-code",
+                      "label": "Country code",
+                      "address": "meaning://github.com/meaninggraph/core/country-code?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "countries",
+                  "concept": "country",
+                  "label": "Country",
+                  "role": "display-name",
+                  "address": "meaning://github.com/demo-db/countries/country?ref=dec4fa9798bc6118328156cd8abaf3803d0cba2f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "country",
+                      "label": "Country",
+                      "address": "meaning://github.com/meaninggraph/core/country?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "continent",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "capital",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "currency_code",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "countries",
+                  "concept": "country-currency",
+                  "label": "Country currency",
+                  "role": "value",
+                  "address": "meaning://github.com/demo-db/countries/country-currency?ref=dec4fa9798bc6118328156cd8abaf3803d0cba2f",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "currency_name",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "area_km2",
+              "type": "decimal",
+              "meanings": []
+            },
+            {
+              "name": "phone_prefix",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "tld",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "geonameid",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "country_source_id",
+              "type": "reference",
+              "references": "sources",
+              "meanings": []
+            },
+            {
+              "name": "population",
+              "type": "int",
+              "meanings": [
+                {
+                  "graph": "countries",
+                  "concept": "country-population",
+                  "label": "Country population",
+                  "role": "value",
+                  "address": "meaning://github.com/demo-db/countries/country-population?ref=dec4fa9798bc6118328156cd8abaf3803d0cba2f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "population",
+                      "label": "Population",
+                      "address": "meaning://github.com/meaninggraph/core/population?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "population_year",
+              "type": "int",
+              "meanings": []
+            },
+            {
+              "name": "population_source_id",
+              "type": "reference",
+              "references": "sources",
+              "meanings": []
+            },
+            {
+              "name": "population_source_url",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "country_aliases",
+          "modelRecordType": "country_aliases",
+          "meanings": [
+            {
+              "graph": "countries",
+              "concept": "country-alias",
+              "label": "Country alias",
+              "role": "entity",
+              "address": "meaning://github.com/demo-db/countries/country-alias?ref=dec4fa9798bc6118328156cd8abaf3803d0cba2f",
+              "extends": []
+            }
+          ],
+          "fields": [
+            {
+              "name": "alias",
+              "type": "string",
+              "meanings": [
+                {
+                  "graph": "countries",
+                  "concept": "country-alias",
+                  "label": "Country alias",
+                  "role": "identifier",
+                  "address": "meaning://github.com/demo-db/countries/country-alias?ref=dec4fa9798bc6118328156cd8abaf3803d0cba2f",
+                  "extends": []
+                }
+              ]
+            },
+            {
+              "name": "country_iso2",
+              "type": "reference",
+              "references": "countries",
+              "meanings": [
+                {
+                  "graph": "countries",
+                  "concept": "country",
+                  "label": "Country",
+                  "role": "foreign-key",
+                  "address": "meaning://github.com/demo-db/countries/country?ref=dec4fa9798bc6118328156cd8abaf3803d0cba2f",
+                  "extends": [
+                    {
+                      "graph": "core",
+                      "concept": "country",
+                      "label": "Country",
+                      "address": "meaning://github.com/meaninggraph/core/country?ref=982916d73f0a35ff2558b0062f58aa3ac4f24d97"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "meanings": []
+            }
+          ]
+        },
+        {
+          "name": "sources",
+          "modelRecordType": "sources",
+          "meanings": [],
+          "fields": [
+            {
+              "name": "source_id",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "publisher",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "dataset",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "url",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "licence",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "licence_url",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "attribution",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "modifications",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "retrieved_at",
+              "type": "string",
+              "meanings": []
+            },
+            {
+              "name": "source_updated",
+              "type": "string",
+              "meanings": []
             }
           ]
         }
