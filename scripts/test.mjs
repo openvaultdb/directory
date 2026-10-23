@@ -389,7 +389,7 @@ test('recordset_entities is explicit, one-to-one, and resolves only real records
   expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordset_entities.Ghost = 'Missing'; })(files); } })), /recordset_entities names "Ghost", which is not in recordsets/);
   expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordset_entities['Order Details'] = 'Missing'; })(files); } })), /recordsets names things that do not map to ModelSpec entities: Order Details/);
   expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordsets.push('More Details'); manifest.recordset_entities['More Details'] = 'OrderDetails'; })(files); } })), /mappings must be one-to-one/);
-  expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordset_entities['Order Details'] = '../unsafe'; })(files); } })), /must be a ModelSpec entity identifier/);
+  expectProblem(await problemsOf(world({ publisher: (files) => { model(files); mapping((manifest) => { manifest.recordset_entities['Order Details'] = '../unsafe'; })(files); } })), /must be a ModelSpec entity name/);
 });
 
 // ---- the manifest's two forms: recordset_entities (ovdb-manifest/draft-1) and record_type / columns (ovdb-manifest/draft-2) ----
@@ -416,7 +416,7 @@ test('manifestProblems: the identifier decides the form, and an input accepted o
   assert.deepEqual(bad((m) => { m.recordset_entities = null; }), ['recordset_entities must map native recordset names to ModelSpec entity names']);
   assert.deepEqual(bad((m) => { m.recordset_entities = { Ghost: 'Album' }; }), ['recordset_entities names "Ghost", which is not in recordsets']);
   assert.deepEqual(bad((m) => { m.recordset_entities = { Album: 'Album', Artist: 'Album' }; }), ['recordset_entities maps both "Album" and "Artist" to ModelSpec entity Album; mappings must be one-to-one']);
-  assert.deepEqual(bad((m) => { m.recordset_entities = { Album: '../x' }; }), ['recordset_entities value for "Album" must be a ModelSpec entity identifier']);
+  assert.deepEqual(bad((m) => { m.recordset_entities = { Album: '../x' }; }), ['recordset_entities value for "Album" must be a ModelSpec entity name (nonblank, no dot or reserved kind word)']);
   // another identifier is refused, saying which two are read
   assert.deepEqual(bad((m) => { m.format = 'ovdb-manifest/draft-3'; }), ['format must be ovdb-manifest/draft-1 or ovdb-manifest/draft-2, got "ovdb-manifest/draft-3"']);
   assert.deepEqual(bad((m) => { delete m.format; }), ['format must be ovdb-manifest/draft-1 or ovdb-manifest/draft-2, got undefined']);
@@ -490,7 +490,7 @@ test('the notice about recordset_entities is a warning: it names the key, change
   assert.deepEqual(withoutSpellingNotices((await checkDirectory(options(world({ publisher: draft2(chinookNames()) })))).warnings), []);
 });
 
-test('ModelSpec names and references remain identifiers; encoded names cannot bypass the format', () => {
+test('source names retain punctuation while legacy binding references retain their grammar', () => {
   const parsed = parseModelSpec(JSON.stringify({ modelspec: '1.0-draft', module: { name: 'northwind' }, entities: {
     OrderDetails: { properties: { UnitPrice: { type: 'decimal' } } },
   } }));
@@ -503,7 +503,7 @@ test('ModelSpec names and references remain identifiers; encoded names cannot by
     'modelspec:///northwind.Order%2fDetails',
     'modelspec:///northwind.Order%2520Details%20',
   ]) assert.equal(parseModelRef(ref), null, ref);
-  for (const name of ['Order Details', 'Order/Details', 'Order\\Details', 'Order.Details', 'Order\nDetails']) {
+  for (const name of ['', 'Order.Details', '\u0085']) {
     const invalid = parseModelSpec(JSON.stringify({ modelspec: '1.0-draft', module: { name: 'northwind' }, entities: {
       [name]: { properties: { Id: { type: 'int' } } },
     } }));
@@ -752,9 +752,9 @@ test('the meaning licence the manifest states is the one the meaning file declar
   expectProblem(await problemsOf(world({ publisher: manifestEdit((manifest) => { manifest.licences.meaning = 'MIT'; }) })), /licences\.meaning is MIT, but model\/chinook\.meaning\.yaml declares CC0-1\.0/);
 });
 
-test('a ModelSpec that is not JSON, or has no entities, fails', async () => {
+test('invalid JSON fails source parsing; an empty model fails dataset coverage', async () => {
   expectProblem(await problemsOf(world({ publisher: (files) => files.set('model/chinook.modelspec.json', '{') })), /model\/chinook\.modelspec\.json: is not JSON/);
-  expectProblem(await problemsOf(world({ publisher: (files) => files.set('model/chinook.modelspec.json', '{"modelspec":"1","module":{"name":"chinook"},"entities":{}}') })), /model\/chinook\.modelspec\.json: has no entities/);
+  expectProblem(await problemsOf(world({ publisher: (files) => files.set('model/chinook.modelspec.json', '{"modelspec":"1","module":{"name":"chinook"},"entities":{}}') })), /cannot publish dataset field lists: the model has no records/);
   const broken = parseModelSpec(JSON.stringify({ modelspec: '1', module: { name: 'm' }, entities: { A: { key: ['x'], properties: { x: { entity: 'Missing' } } } } }));
   assert.match(broken.problems.join('\n'), /A\.x references entity Missing/);
 });
@@ -788,12 +788,14 @@ test('parseModelSpec reads the current spelling as the earlier one, and says whi
   assert.equal(JSON.parse(JSON.stringify(currentSpellingOf(earlier))).modelspec, '1.0-draft-2');
   assert.equal(readEarlier.earlierSpelling, true);
   assert.equal(readCurrent.earlierSpelling, false);
-  assert.deepEqual({ ...readCurrent, earlierSpelling: true }, readEarlier, 'the same module, record types, members and references, in the same order');
+  const view = (model) => ({ module: model.module, records: [...model.entities].map(([name, record]) => [name, record.properties]) });
+  assert.deepEqual(view(readCurrent), view(readEarlier), 'the same module and field view, with source vocabulary retained separately');
+  assert.notEqual(readCurrent.source.text, readEarlier.source.text);
   assert.deepEqual([...readCurrent.entities.keys()], ['Customer', 'Invoice']);
   assert.deepEqual(readCurrent.entities.get('Customer').properties, [{ name: 'id', type: 'int' }, { name: 'country', type: 'string' }, { name: 'referrer', type: 'reference', references: 'Customer' }]);
   // a version this reader does not know is read as it always was, in the earlier words, and is not reported
   const other = parseModelSpec(JSON.stringify({ ...earlier, modelspec: '1' }));
-  assert.deepEqual({ ...other, earlierSpelling: true }, readEarlier);
+  assert.deepEqual(view(other), view(readEarlier));
   assert.equal(other.earlierSpelling, false);
 });
 
@@ -812,8 +814,8 @@ test('parseModelSpec refuses what the format refuses, in either spelling, and na
   assert.match(problems({ ...earlier(), entities: { A: { properties: { self: { record: 'A' } } } } }), /A\.self: "record" is a key of format 1\.0-draft-2;/);
   assert.match(problems({ ...current(), records: { A: { fields: { self: { record: 'A', entity: 'A' } } } } }), /A\.self: "entity" is a key of format 1\.0-draft;/, 'a member with both reference words');
   // a document with only the other vocabulary's key has no record types in its own
-  assert.match(problems({ modelspec: '1.0-draft-2', module: { name: 'shop' }, entities: earlier().entities }), /has no records/);
-  assert.match(problems({ modelspec: '1.0-draft', module: { name: 'shop' }, records: current().records }), /has no entities/);
+  assert.match(problems({ modelspec: '1.0-draft-2', module: { name: 'shop' }, entities: earlier().entities }), /is a key of format 1\.0-draft;/);
+  assert.match(problems({ modelspec: '1.0-draft', module: { name: 'shop' }, records: current().records }), /is a key of format 1\.0-draft-2;/);
   // removed and reserved constructs, by the word that names them
   for (const [word, pattern] of [['collections', /collections field was removed/], ['recordsets', /recordsets field was removed/], ['projections', /projections field is reserved/], ['migrations', /migrations field is reserved/]]) {
     assert.match(problems(earlier({ [word]: {} })), pattern, word);
@@ -827,9 +829,9 @@ test('parseModelSpec refuses what the format refuses, in either spelling, and na
   // the other checks speak in the words of the document
   assert.match(problems(current({ records: { A: { fields: { self: { record: 'Missing' } } } } })), /A\.self references record Missing, which the ModelSpec does not have/);
   assert.match(problems(current({ records: { A: { fields: { self: {} } } } })), /A\.self has neither a type nor a record/);
-  assert.match(problems(current({ records: { A: {} } })), /record A has no fields/);
-  assert.match(problems(current({ records: { 'a b': { fields: { id: { type: 'int' } } } } })), /record name "a b" must be an identifier/);
-  assert.match(problems(current({ records: { A: { fields: { 'x y': { type: 'int' } } } } })), /field name "A\.x y" must be an identifier/);
+  assert.equal(problems(current({ records: { A: {} } })), '');
+  assert.equal(problems(current({ records: { 'a b': { fields: { id: { type: 'int' } } } } })), '');
+  assert.equal(problems(current({ records: { A: { fields: { 'x y': { type: 'int' } } } } })), '');
   assert.match(problems(earlier({ entities: { A: { properties: { self: {} } } } })), /A\.self has neither a type nor an entity/);
   // a document that is not an object is still a problem, never an exception
   for (const text of ['null', '[]', '"x"', '5']) assert.notDeepEqual(parseModelSpec(text).problems, [], text);
@@ -1632,7 +1634,7 @@ test('a .cache in the checkout is never read as the cache: the default cache is 
 
 const modelEdit = (change) => edited('model/chinook.modelspec.json', (text) => { const doc = JSON.parse(text); change(doc); return JSON.stringify(doc); });
 
-test('a recordset url is built from names that cannot change what it points at: {name} only in the path, names are identifiers, every generated url is checked again', async () => {
+test('recordset URLs retain path-only templates and native-name rules while source field names remain literal', async () => {
   // The three ways a name used to change the host or path of the url.
   const cases = [
     ['https://169.254.169.{name}/latest/meta-data', '254', /\{name\} in the path only/],
@@ -1650,15 +1652,23 @@ test('a recordset url is built from names that cannot change what it points at: 
     expectProblem(problems, pattern);
     await assert.rejects(() => buildIndex(options(w)), /cannot build index\.json/);
   }
-  // Names that are not identifiers never reach the index, whatever the template says.
-  for (const name of ['<img src=x onerror=alert(1)>', 'a b', 'a/b', 'a.b', '1abc', '', 'caf\u00e9']) {
+  // Source names and native URL path names have different contracts.
+  for (const name of ['a.b', '', '\u0085']) {
     const w = world({ publisher: modelEdit((doc) => { doc.entities[name] = doc.entities.Genre; }) });
-    expectProblem(await problemsOf(w), /entity name .* must be an identifier/);
-    const property = world({ publisher: modelEdit((doc) => { doc.entities.Genre.properties[name] = { type: 'string' }; }) });
-    expectProblem(await problemsOf(property), /property name .* must be an identifier/);
+    expectProblem(await problemsOf(w), /entity name .* must be nonblank and contain no dot/);
   }
+  for (const name of ['', '\u0085']) {
+    const property = world({ publisher: modelEdit((doc) => { doc.entities.Genre.properties[name] = { type: 'string' }; }) });
+    expectProblem(await problemsOf(property), /property name .* must be nonblank/);
+  }
+  const literalNames = ['<img src=x onerror=alert(1)>', 'a b', 'a/b', 'a.b', '1abc', 'caf\u00e9'];
+  const literalFields = world({ publisher: modelEdit((doc) => {
+    for (const name of literalNames) doc.entities.Genre.properties[name] = { type: 'string' };
+  }) });
+  const [literal] = (await index(literalFields)).databases;
+  for (const name of literalNames) assert.equal(field(literal, 'Genre', name).name, name);
   expectProblem(await problemsOf(world({ publisher: modelEdit((doc) => { doc.entities.Genre.properties.Name.type = '<b>string</b>'; }) })), /has type "<b>string<\/b>", which is not a type name/);
-  expectProblem(await problemsOf(world({ publisher: modelEdit((doc) => { doc.module.name = 'a-b'; }) })), /has no module\.name that is an identifier/);
+  assert.deepEqual(parseModelSpec(JSON.stringify({ modelspec: '1.0-draft-2', module: { name: 'a-b' }, records: {} })).problems, []);
   // The generated urls of the real template are exactly the ones the manifest's template gives.
   const [chinook] = (await index(world())).databases;
   assert.equal(chinook.recordsets.find((recordset) => recordset.name === 'Genre').url, 'https://cloud.openvaultdb.com/ovdb/dbs/chinook/collections/Genre');
@@ -3200,7 +3210,7 @@ test('data conjunction grammar refuses normalization/operators/unknown/duplicate
   }
 });
 
-function representationWorld({ contractEdit, sourceData = '[{"grain":"1","id":"US"}]' } = {}) {
+function representationWorld({ contractEdit, sourceData = '[{"grain":"1","id":"US"}]', withoutMeaning = false } = {}) {
   const hash = (v) => createHash('sha256').update(v).digest('hex');
   const sourceBytes = Buffer.from(sourceData);
   const sourceModel = JSON.stringify({ modelspec:'1.0-draft', module:{id:'test-input',name:'input'}, entities:{Rows:{key:['grain'],properties:{grain:{type:'string',required:true},id:{type:'string',required:false}}}} });
@@ -3223,9 +3233,11 @@ function representationWorld({ contractEdit, sourceData = '[{"grain":"1","id":"U
     const contract={execution:'native-identifier',source:{schema:external('input.modelspec.json'),data:external('input.json'),module:'input',entity:'Rows',property:'id',datatype:'string',namespace:'TEST:ID'},target:{model:modelRef,snapshot:ref('snapshot.json'),module:'chinook',entity:'TestNative',property:'native_id',datatype:'string',namespace:'TEST:ID',binding:{document:bindingRef,concept:'test-native',role:'identifier',meaning:{document:{repository:coreUrl,revision:coreCommit,path:'geo.meaning.yaml',sha256:hash(fixtureCore.get('geo.meaning.yaml'))},concept:'country'}}},native:{dataset,provenance,serving_identity_column:'serving_id'},policy:{transform:'identity',equality:'utf8-byte-exact',cardinality:'zero-or-one',unmatched:'exception',collision:'ineligible'},decision:{document:external('decision.md'),scope:'synthetic-only'}};
     contractEdit?.(contract);
     files.set('representation.json',JSON.stringify({format:'ovdb-representation-contract/3',contracts:[contract]})); attachment=ref('representation.json');
-    const manifest=parseYaml(files.get('ovdb.yaml')); manifest.recordsets.push('TestNative'); manifest.representation_contract=attachment; files.set('ovdb.yaml',stringifyYaml(manifest));
-  }});
-  w.dependencies = new Map([[`https://github.com/example/input@${source.commit}`,openDependency(source.dir,source.commit)],[`${coreUrl}@${w.core.commit}`,openDependency(w.core.dir,w.core.commit)]]);
+    const manifest=parseYaml(files.get('ovdb.yaml')); manifest.recordsets.push('TestNative'); manifest.representation_contract=attachment;
+    if (withoutMeaning) { delete manifest.meaning; delete manifest.licences.meaning; files.delete('model/chinook.meaning.yaml'); }
+    files.set('ovdb.yaml',stringifyYaml(manifest));
+  }, record: withoutMeaning ? (record) => { delete record.meaning_graph; } : undefined });
+  w.dependencies = withoutMeaning ? new Map() : new Map([[`https://github.com/example/input@${source.commit}`,openDependency(source.dir,source.commit)],[`${coreUrl}@${w.core.commit}`,openDependency(w.core.dir,w.core.commit)]]);
   return {...w,attachment};
 }
 
@@ -3238,4 +3250,338 @@ test('Directory emits only the completely checked attachment envelope at its pro
   expectProblem(await problemsOf(w), /explicit immutable dependency/);
   const changed = representationWorld({contractEdit:(c)=>{c.source.data.sha256='0'.repeat(64);}});
   expectProblem(await problemsOf(changed,{representationDependencies:changed.dependencies}),/source.data raw-byte size\/SHA-256 mismatch/);
+});
+
+
+// Model-only fixtures exercise the model path without allowing either registry loader to stand in for local data.
+const modelOnlyOwn = (format) => world({
+  publisher: (files) => {
+    files.delete('model/chinook.meaning.yaml');
+    manifestEdit((manifest) => {
+      delete manifest.meaning;
+      delete manifest.licences.meaning;
+      if (format === 'draft-2') { manifest.format = 'ovdb-manifest/draft-2'; manifest.recordsets = chinookNames(); }
+    })(files);
+  },
+  record: (record) => { delete record.meaning_graph; },
+});
+const modelOnlyShared = (format, changeManifest, changeRecord) => {
+  const w=sharedWorld({
+  chinook: { publisher: (files) => files.delete('model/chinook.meaning.yaml') },
+  manifest: (manifest) => {
+    delete manifest.meaning;
+    if (format === 'draft-2') { manifest.format = 'ovdb-manifest/draft-2'; manifest.recordsets = chinookNames(); }
+    changeManifest?.(manifest);
+  },
+  record: (record) => { delete record.meaning_graph; changeRecord?.(record); },
+});
+  rmSync(join(w.dir,'databases/$records/chinook.yaml'));
+  return w;
+};
+const modelOnlyOptions = (w, {shared = false, ...extra} = {}) => options(w, {
+  meaningRegistry: undefined,
+  loadRegistry: async () => { throw new Error('unexpected MeaningGraph registry load for a model-only database'); },
+  modelRegistry: shared ? w.modelRegistry : undefined,
+  loadModelRegistry: async () => { throw new Error('unexpected ModelSpec registry network load for a local test'); },
+  ...extra,
+});
+
+test('own and shared model-only databases pass both manifest drafts without semantic registry loads', async () => {
+  let meaningLoads = 0;
+  let modelLoads = 0;
+  const guardOptions = (w, shared = false) => modelOnlyOptions(w, {
+    shared,
+    loadRegistry: async () => { meaningLoads += 1; throw new Error('unexpected MeaningGraph registry load'); },
+    loadModelRegistry: async () => { modelLoads += 1; throw new Error('unexpected ModelSpec registry network load'); },
+  });
+  for (const format of ['draft-1', 'draft-2']) {
+    for (const [kind, w, shared] of [
+      ['own', modelOnlyOwn(format), false],
+      ['shared', modelOnlyShared(format), true],
+    ]) {
+      const result = JSON.parse(await buildIndex(guardOptions(w, shared))).databases[0];
+      assert.equal(result.model.name, 'chinook', `${kind}/${format}`);
+      assert.ok(!Object.hasOwn(result, 'meaning_graph'), `${kind}/${format} has no graph projection`);
+      assert.deepEqual(result.recordsets.map((recordset) => recordset.name).sort(), chinookNames());
+      assert.equal(result.recordsets.find((recordset) => recordset.name === 'Customer').fields.find((field) => field.name === 'Country').type, 'string');
+      for (const recordset of result.recordsets) {
+        assert.deepEqual(recordset.meanings, [], `${kind}/${format}/${recordset.name}`);
+        for (const field of recordset.fields) assert.deepEqual(field.meanings, [], `${kind}/${format}/${recordset.name}.${field.name}`);
+      }
+    }
+  }
+  assert.equal(meaningLoads, 0, 'no MeaningGraph registry request is made');
+  assert.equal(modelLoads, 0, 'the shared ModelSpec registry is supplied from the local pinned test fixture');
+});
+
+test('model-only checks still reject an invalid shared model pin and incomplete recordset coverage', async () => {
+  const pinned = modelOnlyShared('draft-1', (manifest) => { manifest.model.address = `${modelAddr}?ref=${'0'.repeat(40)}`; });
+  await assert.rejects(buildIndex(modelOnlyOptions(pinned, {shared: true})), /model\.address pins commit 0{40}, which is not in the history of main/);
+  // Make a new world so this edit is present at its pinned provider commit.
+  const broken = world({publisher: (files) => {
+    files.delete('model/chinook.meaning.yaml');
+    const value = parseYaml(files.get('ovdb.yaml'));
+    delete value.meaning; delete value.licences.meaning;
+    value.format = 'ovdb-manifest/draft-2'; value.recordsets = chinookNames().filter((name) => name !== 'Genre');
+    files.set('ovdb.yaml', stringifyYaml(value));
+  }, record: (record) => { delete record.meaning_graph; }});
+  await assert.rejects(buildIndex(modelOnlyOptions(broken)), /recordsets lacks .*Genre/);
+});
+
+test('a malformed supplied meaning is still refused, and a model-only representation contract still needs its semantic dependency', async () => {
+  const malformed = world({publisher: (files) => {
+    files.delete('model/chinook.meaning.yaml');
+    manifestEdit((manifest) => { manifest.meaning.file = 'model/missing.meaning.yaml'; })(files);
+  }});
+  expectProblem(await problemsOf(malformed), /meaning\.file model\/missing\.meaning\.yaml does not exist at commit/);
+  const contract = representationWorld({withoutMeaning: true});
+  expectProblem(await problemsOf(contract, {representationDependencies: contract.dependencies}), /representation_contract/);
+});
+
+test('meaning_graph is optional on the Directory record but, when supplied, agrees with manifest meaning', async () => {
+  const optional = world({record: (record) => { delete record.meaning_graph; }});
+  const [database] = (await index(optional)).databases;
+  assert.deepEqual(database.meaning_graph, {id: 'chinook', address: chinookAddress});
+  const mismatch = world({record: (record) => { record.meaning_graph = 'core'; }});
+  expectProblem(await problemsOf(mismatch), /meaning\.graph\.id is chinook, but the record's meaning_graph is core/);
+  const legacy = world();
+  const unchanged = (await index(legacy)).databases[0];
+  assert.deepEqual(unchanged.meaning_graph, {id: 'chinook', address: chinookAddress});
+  assert.deepEqual(field(unchanged, 'Customer', 'Country').meanings[0].values_of, {graph: 'core', concept: 'country', label: 'Country', address: `${coreAddress}/country?ref=${legacy.corePin}`, extends: []});
+});
+
+
+test('JSON-only own DataModels retain their validated source path in both manifest drafts',async()=>{
+  for(const format of ['draft-1','draft-2']) {
+    const w=world({publisher:files=>{
+      files.delete('model/chinook.meaning.yaml');files.delete('model/chinook.modelspec.hcl');
+      const manifest=parseYaml(files.get('ovdb.yaml'));delete manifest.meaning;delete manifest.licences.meaning;delete manifest.model.hcl;
+      if(format==='draft-2'){manifest.format='ovdb-manifest/draft-2';manifest.recordsets=chinookNames();}
+      files.set('ovdb.yaml',stringifyYaml(manifest));
+    },record:r=>{delete r.meaning_graph;}});
+    const result=JSON.parse(await buildIndex(modelOnlyOptions(w))).databases[0];
+    assert.equal(result.model.path,'model/chinook.modelspec.json');
+    assert.ok(!Object.hasOwn(result,'meaning_graph'));
+  }
+});
+
+// These are source-language cases, separate from the immutable publisher binding
+// and column path grammars. Every model-only case goes through buildIndex.
+const sourceModel = (records = {}, components = {}, enums = {}) => ({ modelspec: '1.0-draft-2', module: { id: 'test/source', name: 'chinook', version: '1' }, records, components, enums });
+const sourceWorld = (model, recordsets, { shared = false, partial = false, legacy = false } = {}) => {
+  const publisher = (files) => {
+    files.set('model/chinook.modelspec.json', JSON.stringify(model));
+    files.delete('model/chinook.meaning.yaml');
+    manifestEdit((manifest) => { delete manifest.meaning; delete manifest.licences.meaning; manifest.format = legacy ? 'ovdb-manifest/draft-1' : 'ovdb-manifest/draft-2'; manifest.recordsets = legacy ? recordsets.map((entry) => typeof entry === 'string' ? entry : entry.name) : recordsets;
+      if (legacy) manifest.recordset_entities = Object.fromEntries(recordsets.filter((entry) => typeof entry !== 'string').map((entry) => [entry.name, entry.record_type]));
+    })(files);
+  };
+  if (!shared) return world({ publisher, record: (record) => { delete record.meaning_graph; } });
+  const w = sharedWorld({ chinook: { publisher }, manifest: (manifest) => {
+    delete manifest.meaning; manifest.format = 'ovdb-manifest/draft-2'; manifest.recordsets = recordsets;
+    if (partial) manifest.recordsets_partial = true;
+  }, record: (record) => { delete record.meaning_graph; } });
+  rmSync(join(w.dir, 'databases/$records/chinook.yaml'));
+  return w;
+};
+const sourceIndex = async (model, recordsets, mode) => {
+  const w = sourceWorld(model, recordsets, mode);
+  return JSON.parse(await buildIndex(modelOnlyOptions(w, mode))).databases[0];
+};
+
+test('source-faithful parsing retains exact source, declarations, repeated uses and typed raw/local references', () => {
+  const model = sourceModel({ 'Order-Line': { use: ['Common', 'chinook.Common', 'Common'], fields: { target: { record: 'chinook.Target' }, nested: { component: 'Node' }, 'a.b': { type: 'int' } } }, Target: {}, '\uFEFF': {} },
+    { Common: { fields: { 'field-name': { type: 'string', enum: 'State' } } }, Node: { fields: { self: { component: 'chinook.Node' } } } }, { State: { values: ['open', 'closed'] } });
+  const text = JSON.stringify(model, null, 2) + '\n';
+  const parsed = parseModelSpec(text);
+  assert.deepEqual(parsed.problems, []);
+  assert.equal(parsed.source.text, text);
+  assert.deepEqual(parsed.source.document, model);
+  assert.deepEqual(parsed.source.declarations.records.get('Order-Line').use, ['Common', 'chinook.Common', 'Common']);
+  const target = parsed.source.declarations.records.get('Order-Line').fields.get('target').references[0];
+  assert.equal(target.reference, 'chinook.Target');
+  assert.equal(target.localTarget, 'Target');
+  assert.equal(parsed.entities.get('Order-Line').fieldSetComplete, true);
+  assert.deepEqual(parsed.entities.get('Order-Line').properties.map((field) => field.name), ['target', 'nested', 'a.b', 'field-name']);
+  assert.deepEqual(parseModelSpec(JSON.stringify(sourceModel({}, { Only: { fields: {} } }, { State: { values: [1, 'one'] } }))).problems, []);
+  assert.deepEqual(parseModelSpec(JSON.stringify({ ...sourceModel(), module: { id: 'x', version: '1' } })).problems, []);
+  for (const name of ['', '\u0085', 'bad.name']) assert.notDeepEqual(parseModelSpec(JSON.stringify(sourceModel({ [name]: {} }))).problems, [], name);
+  assert.notDeepEqual(parseModelSpec(JSON.stringify(sourceModel({ A: { fields: { '\u0085': { type: 'int' } } } }))).problems, []);
+  for (const reference of ['Missing', 'chinook.Missing', '.A', 'chinook.', 'a.b.c']) {
+    const parsed = parseModelSpec(JSON.stringify(sourceModel({}, { Unused: { fields: { bad: { component: reference } } } })));
+    assert.notDeepEqual(parsed.problems, [], reference);
+  }
+});
+
+test('source-faithful model-only publication accepts punctuation, local uses, repeats, own overrides, nested and empty fields', async () => {
+  const model = sourceModel({ 'Order-Line': { use: ['Left', 'chinook.Left', 'Right'], fields: { shared: { type: 'bool' }, nested: { component: 'Node' }, 'a.b': { type: 'int' } } }, Empty: {}, Target: {} }, {
+    Left: { fields: { shared: { record: 'Target' }, inherited: { type: 'string' } } },
+    Right: { fields: { shared: { type: 'int' } } }, Node: { fields: { self: { component: 'Node' } } },
+  });
+  const result = await sourceIndex(model, [{ name: 'orders', record_type: 'Order-Line', columns: { Shared: { field: 'shared' }, Inherited: { field: 'inherited' } } }, 'Empty', 'Target']);
+  const fields = result.recordsets.find((record) => record.name === 'orders').fields;
+  assert.deepEqual(fields, [
+    { name: 'shared', type: 'bool', meanings: [] }, { name: 'nested', type: 'component Node', meanings: [] },
+    { name: 'a.b', type: 'int', meanings: [] }, { name: 'inherited', type: 'string', meanings: [] },
+  ]);
+  assert.deepEqual(result.recordsets.find((record) => record.name === 'Empty').fields, []);
+  assert.ok(!JSON.stringify(result).includes('fieldSetComplete'));
+  // A source-valid literal dotted field retains its spelling. The established
+  // column path grammar explicitly refuses a physical mapping to that spelling.
+  await assert.rejects(sourceIndex(model, [{ name: 'orders', record_type: 'Order-Line', columns: { Dotted: { field: 'a.b' } } }, 'Empty', 'Target']), /holds "a.b"/);
+  // Old-form structured mapping also preserves Go concept names.
+  const old = await sourceIndex(model, [{ name: 'orders', record_type: 'Order-Line' }, 'Empty', 'Target'], { legacy: true });
+  assert.equal(old.recordsets.find((record) => record.name === 'orders').modelRecordType, 'Order-Line');
+});
+
+test('source-faithful publication refuses unavailable or ambiguous effective field sets as capability failures', async () => {
+  for (const model of [
+    sourceModel({ A: { use: ['Foreign.Common'] } }),
+    sourceModel({ A: { use: ['Left', 'Right'] } }, { Left: { fields: { shared: { type: 'int' } } }, Right: { fields: { shared: { type: 'string' } } } }),
+  ]) {
+    const parsed = parseModelSpec(JSON.stringify(model));
+    assert.deepEqual(parsed.problems, []);
+    assert.equal(parsed.entities.get('A').fieldSetComplete, false);
+    assert.ok(parsed.diagnostics.length > 0);
+    await assert.rejects(sourceIndex(model, ['A']), /cannot publish dataset field list for A: field set is incomplete or ambiguous/);
+  }
+});
+
+test('source-faithful partial closure follows nested component edges, self aliases, cycles and effective overrides', async () => {
+  const model = sourceModel({ A: { fields: { nested: { component: 'Node' } } }, Target: {}, Other: {} }, {
+    Node: { fields: { self: { component: 'chinook.Node' }, target: { record: 'chinook.Target' } } },
+  });
+  await assert.rejects(sourceIndex(model, ['A'], { shared: true, partial: true }), /references ModelSpec entity Target, but a partial list must also include its mapped recordset/);
+  const result = await sourceIndex(model, ['A', { name: 'targets', record_type: 'Target' }], { shared: true, partial: true });
+  assert.equal(result.recordsets.find((record) => record.name === 'A').fields.length, 1);
+  const override = sourceModel({ A: { use: ['Common'], fields: { target: { type: 'int' } } }, Target: {} }, { Common: { fields: { target: { record: 'Target' } } } });
+  await sourceIndex(override, ['A'], { shared: true, partial: true });
+  const foreign = sourceModel({ A: { fields: { target: { record: 'Foreign.Target' } } }, Other: {} });
+  assert.equal((await sourceIndex(foreign, ['A', 'Other'])).recordsets.find((record) => record.name === 'A').fields[0].references, 'Foreign.Target');
+  await assert.rejects(sourceIndex(foreign, ['A'], { shared: true, partial: true }), /cannot prove partial recordset reference closure.*Foreign.Target/);
+  const nestedForeign = sourceModel({ A: { fields: { nested: { component: 'Node' } } }, Other: {} }, { Node: { fields: { nested: { component: 'Foreign.Node' } } } });
+  await assert.rejects(sourceIndex(nestedForeign, ['A'], { shared: true, partial: true }), /cannot prove partial recordset reference closure.*Foreign.Node/);
+});
+
+test('source-faithful Go-approved fixture reaches the dataset caller with exact references and names', async () => {
+  const text = readFileSync(join(root, 'scripts/fixtures/modelspec-source-reader.modelspec.json'), 'utf8');
+  const model = JSON.parse(text);
+  const parsed = parseModelSpec(text);
+  assert.deepEqual(parsed.problems, []);
+  assert.equal(parsed.source.text, text);
+  const result = await sourceIndex(model, [{ name: 'orders', record_type: 'Order-Line' }, 'Empty', { name: 'targets', record_type: 'Target' }, { name: 'nonblank', record_type: '\uFEFF' }]);
+  const fields = result.recordsets.find((record) => record.name === 'orders').fields;
+  assert.equal(fields.find((field) => field.name === 'target').references, 'targets');
+  assert.equal(parsed.entities.get('Order-Line').properties.find((field) => field.name === 'target').references, 'chinook.Target', 'raw source reference is separate from the mapped dataset target');
+  assert.equal(fields.find((field) => field.name === 'field-name').type, 'string');
+  assert.equal(fields.filter((field) => field.name === 'nested').length, 1);
+  for (const reference of ['Missing', 'chinook.Missing', 'a.b.c']) for (const kind of ['record', 'component', 'enum']) {
+    const field = kind === 'enum' ? { type: 'string', enum: reference } : { [kind]: reference };
+    assert.notDeepEqual(parseModelSpec(JSON.stringify(sourceModel({}, { Unused: { fields: { invalid: field } } }))).problems, [], `${kind}/${reference}`);
+  }
+  const componentOnly = sourceModel({}, { Only: { fields: {} } });
+  assert.deepEqual(parseModelSpec(JSON.stringify(componentOnly)).problems, []);
+  await assert.rejects(sourceIndex(componentOnly, ['Only']), /cannot publish dataset field lists: the model has no records/);
+  const unnamed = sourceModel({ A: {} }); delete unnamed.module.name;
+  assert.deepEqual(parseModelSpec(JSON.stringify(unnamed)).problems, []);
+  await assert.rejects(sourceIndex(unnamed, ['A']), /dataset projection requires module.name/);
+});
+
+
+test('source-faithful capability refusal never claims an unknown inherited binding field is absent', async () => {
+  const w = world({ publisher: (files) => {
+    modelEdit((model) => { model.entities.Customer.use = ['Foreign.Common']; })(files);
+    meaningEdit((doc) => { doc.concepts.push({ id: 'remote-field', kind: 'attribute', labels: { en: 'remote' }, bindings: [{ model: 'modelspec:///chinook.Customer', property: 'Remote', role: 'value' }] }); })(files);
+  } });
+  const problems = await problemsOf(w);
+  expectProblem(problems, /cannot publish dataset field list for Customer/);
+  assert.ok(!problems.some((problem) => /names property "Remote", which Customer does not have/.test(problem)), problems.join('\n'));
+});
+
+test('source-faithful earlier components always use fields for top-level composition and nested values', async () => {
+  const model = JSON.parse(readFileSync(join(root, 'scripts/fixtures/modelspec-source-reader-earlier.modelspec.json'), 'utf8'));
+  const parsed = parseModelSpec(JSON.stringify(model));
+  assert.deepEqual(parsed.problems, []);
+  assert.equal(parsed.earlierSpelling, true);
+  assert.deepEqual([...parsed.source.declarations.components.get('Left').fields.keys()], ['shared', 'field-name']);
+  assert.equal(parsed.source.declarations.components.get('Node').fields.get('target').references[0].reference, 'Target');
+  const mappings = [{ name: 'orders', record_type: 'Order-Line' }, 'Empty', { name: 'targets', record_type: 'Target' }, { name: 'nonblank', record_type: '\uFEFF' }];
+  const result = await sourceIndex(model, mappings);
+  const fields = result.recordsets.find((record) => record.name === 'orders').fields;
+  assert.equal(fields.find((field) => field.name === 'field-name').type, 'string');
+  assert.equal(fields.find((field) => field.name === 'shared').type, 'bool', 'own override still precedes inherited ambiguity');
+  assert.equal(fields.find((field) => field.name === 'target').references, 'targets');
+  assert.equal(fields.filter((field) => field.name === 'nested').length, 1);
+  const partial = { modelspec: '1.0-draft', module: model.module, components: { Node: model.components.Node }, entities: { A: { properties: { nested: { component: 'Node' } } }, Target: { properties: {} }, Other: { properties: {} } } };
+  await assert.rejects(sourceIndex(partial, ['A'], { shared: true, partial: true }), /references ModelSpec entity Target/);
+  await sourceIndex(partial, ['A', 'Target'], { shared: true, partial: true });
+  const wrongWord = structuredClone(model); wrongWord.components.Node.fields.target = { record: 'Target' };
+  assert.ok(parseModelSpec(JSON.stringify(wrongWord)).problems.some((problem) => problem.includes('"record" is a key of format')));
+  const wrongFields = structuredClone(model); wrongFields.components.Left.properties = wrongFields.components.Left.fields; delete wrongFields.components.Left.fields;
+  assert.ok(parseModelSpec(JSON.stringify(wrongFields)).problems.some((problem) => problem.includes('members are always spelled "fields"')));
+});
+
+
+test('source-faithful dataset projection refuses unavailable record scopes that collide with native names', async () => {
+  for (const inherited of [false, true]) {
+    const field = { customer: { record: 'Foreign.Customer' } };
+    const model = sourceModel({ Order: inherited ? { use: ['Common'] } : { fields: field }, Customer: {} }, inherited ? { Common: { fields: field } } : {});
+    const parsed = parseModelSpec(JSON.stringify(model));
+    assert.deepEqual(parsed.problems, []);
+    assert.equal(parsed.entities.get('Order').effectiveFields.get('customer').references[0].localTarget, undefined);
+    await assert.rejects(sourceIndex(model, [{ name: 'orders', record_type: 'Order' }, { name: 'Foreign.Customer', record_type: 'Customer' }]), /cannot publish dataset reference for orders.customer: qualified reference Foreign.Customer has unavailable scope and collides with a native recordset name/);
+    const result = await sourceIndex(model, [{ name: 'orders', record_type: 'Order' }, { name: 'customers', record_type: 'Customer' }]);
+    assert.equal(result.recordsets.find((record) => record.name === 'orders').fields[0].references, 'Foreign.Customer', 'unavailable references remain literal when their scope cannot be mistaken for a native edge');
+  }
+});
+
+test('source-faithful genuine local record references retain dotted native recordset targets', async () => {
+  const model = sourceModel({ Order: { fields: { bare: { record: 'Customer' }, qualified: { record: 'chinook.Customer' } } }, Customer: {} });
+  const result = await sourceIndex(model, [{ name: 'orders', record_type: 'Order' }, { name: 'Foreign.Customer', record_type: 'Customer' }]);
+  assert.deepEqual(result.recordsets.find((record) => record.name === 'orders').fields, [
+    { name: 'bare', type: 'reference', references: 'Foreign.Customer', meanings: [] },
+    { name: 'qualified', type: 'reference', references: 'Foreign.Customer', meanings: [] },
+  ]);
+});
+
+test('source-faithful component values use type labels without fabricating native recordset edges', async () => {
+  const model = sourceModel({ Order: { use: ['Shared'], fields: { local: { component: 'A' }, qualified: { component: 'chinook.A' }, foreign: { component: 'Foreign.A' } } }, Other: {} }, {
+    A: { fields: { self: { component: 'A' } } }, Shared: { fields: { inherited: { component: 'A' } } },
+  });
+  const parsed = parseModelSpec(JSON.stringify(model));
+  assert.deepEqual(parsed.problems, []);
+  assert.equal(parsed.entities.get('Order').effectiveFields.get('local').references[0].reference, 'A');
+  const result = await sourceIndex(model, [{ name: 'orders', record_type: 'Order' }, { name: 'A', record_type: 'Other' }]);
+  const fields = result.recordsets.find((record) => record.name === 'orders').fields;
+  assert.deepEqual(fields, [
+    { name: 'local', type: 'component A', meanings: [] },
+    { name: 'qualified', type: 'component chinook.A', meanings: [] },
+    { name: 'foreign', type: 'component Foreign.A', meanings: [] },
+    { name: 'inherited', type: 'component A', meanings: [] },
+  ]);
+  assert.ok(fields.every((field) => !Object.hasOwn(field, 'references')));
+});
+
+test('source-faithful producer accepts literal logical field paths without changing authored segments', async () => {
+  const names = ['a/b', 'field-name', '\uFEFF', 'колонка', '9field', ' field '];
+  const fields = Object.fromEntries(names.map((name) => [name, { type: 'string' }]));
+  const columns = Object.fromEntries(names.map((name, position) => [`physical_${position}`, { field: name }]));
+  for (const inherited of [false, true]) {
+    const model = sourceModel({ A: inherited ? { use: ['Common'] } : { fields } }, inherited ? { Common: { fields } } : {});
+    const result = await sourceIndex(model, [{ name: 'records', record_type: 'A', columns }]);
+    assert.deepEqual(result.recordsets[0].fields.map((field) => field.name), names);
+    assert.deepEqual(result.recordsets[0].fields.map((field) => field.type), names.map(() => 'string'));
+    await assert.rejects(sourceIndex(model, [{ name: 'records', record_type: 'A', columns: { physical: { field: 'unknown/literal' } } }]), /has no field "unknown\/literal"/);
+    for (const path of ['.field-name', 'field-name.', 'field-name..tail', '\u0085']) {
+      await assert.rejects(sourceIndex(model, [{ name: 'records', record_type: 'A', columns: { physical: { field: path } } }]), /each name must be nonblank under Unicode White_Space/);
+    }
+  }
+});
+
+test('source-faithful logical field paths retain dot delimiters without escapes or nested traversal', async () => {
+  const model = sourceModel({ A: { fields: { 'a.b': { type: 'string' }, 'a/b': { component: 'Nested' } } } }, { Nested: { fields: { 'field-name': { type: 'string' } } } });
+  await assert.rejects(sourceIndex(model, [{ name: 'records', record_type: 'A', columns: { physical: { field: 'a.b' } } }]), /has no field "a"/);
+  await assert.rejects(sourceIndex(model, [{ name: 'records', record_type: 'A', columns: { physical: { field: 'a%2Eb' } } }]), /has no field "a%2Eb"/);
+  await assert.rejects(sourceIndex(model, [{ name: 'records', record_type: 'A', columns: { physical: { field: 'a\\.b' } } }]), /has no field "a\\\\"/);
+  await assert.rejects(sourceIndex(model, [{ name: 'records', record_type: 'A', columns: { physical: { field: 'a/b.field-name' } } }]), /"field-name" cannot be read in a\/b/);
 });

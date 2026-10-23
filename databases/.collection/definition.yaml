@@ -54,7 +54,6 @@ columns:
     min_length: 1
   meaning_graph:
     type: string
-    required: true
     min_length: 1
   maintainers:
     type: '[]string'

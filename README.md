@@ -3,8 +3,9 @@
 The public data of the OpenVaultDB Directory: for each database, the canonical
 URL people write to refer to it, the publisher repository it is published from,
 the commit that is its current reviewed version, and its recordsets and fields
-with the [MeaningGraph](https://github.com/meaninggraph/registry) concepts they
-carry. The Directory website is a separate repository; it reads
+with optional [MeaningGraph](https://github.com/meaninggraph/registry) semantic
+annotations. MeaningGraph owns logical DataModels and semantic definitions; this
+Directory discovers physical implementations and deployments of those models. The Directory website is a separate repository; it reads
 [`index.json`](index.json) from here and holds no list of its own.
 
 | Record ID | Canonical database identity | Repository at commit | Status |
@@ -92,7 +93,7 @@ example, `https://demodb.dev/northwind/` is listed at
 | `commit` | yes | Full 40-character commit id of the current reviewed version, in the history of the repository's default branch. |
 | `manifest` | yes | The manifest's path in the repository, relative to the repository root. The publisher's `OVDB.md` must list it. |
 | `database_manifest` | no | Path to the publisher's `ovdb-database/draft-1` JSON descriptor. `OVDB.md` must list it; when present it supplies `localId`, `serverId`, `serverDbBaseUrl` and `apiUrl`. Legacy YAML-only publishers remain supported. |
-| `meaning_graph` | yes | The record key of the database's meaning graph in the MeaningGraph registry (`meaninggraph/registry`). |
+| `meaning_graph` | no | Optional meaning graph key. When a manifest supplies `meaning`, its graph ID is validated against MeaningGraph; this column, when supplied too, must agree. Omit both for a DataModel-only deployment. |
 | `maintainers` | yes | GitHub handles; each one has a `maintainers` record. |
 
 ### `maintainers`: one record per maintainer
@@ -112,8 +113,8 @@ an optional `homepage` (the publisher's own web page for the database, which a s
 may show as a link to its website; a public https URL on any origin, at most 200
 characters, held to the rules for every URL below),
 the `model` (its files, or its address when it is published elsewhere; see
-[Two forms](#two-forms-own-model-or-shared-model)), the `meaning` file and its
-graph, the publisher, the `licences` (`data`, `model`, `meaning`), the
+[Two forms](#two-forms-own-model-or-shared-model)), an optional `meaning` file and
+graph, the publisher, the `licences` (`data`, `model`, and `meaning` when annotated), the
 `recordsets` (with, in `ovdb-manifest/draft-1`, an optional `recordset_entities` mapping; in
 `ovdb-manifest/draft-2` the mapping is written on each recordset's own item). Every path is relative to the repository root and must be a regular file tracked
 at the pinned commit: no `..`, leading `/`, `.` or empty segment, no glob, and
@@ -126,10 +127,11 @@ A manifest names its model one of two ways, and the Directory tells them apart b
 whether the manifest has local model files (`model.modelspec` or `model.hcl`).
 The forms do not mix.
 
-**Own model.** The model and the meaning file are in the publisher's repository:
-`model.modelspec` (the ModelSpec JSON), optionally `model.hcl` (its source),
-`meaning.file`, `meaning.graph.id` and `meaning.graph.address`, and the three
-`licences`. `model.address` is optional; when given it is the ModelSpec registry's
+**Own model.** The logical DataModel is in the publisher's repository:
+`model.modelspec` (ModelSpec JSON), optionally `model.hcl` (its source), and
+`licences.data`/`licences.model`. Semantic annotation is optional. When included,
+supply `meaning.file`, `meaning.graph.id`, `meaning.graph.address` and
+`licences.meaning`; these keep their existing validation. `model.address` is optional; when given it is the ModelSpec registry's
 address of the model, `modelspec://github.com/{org}/{repo}/{module}`, which for a
 manifest with its own model files is its own repository and the ModelSpec's
 module name, without `?ref=`. The host, organisation and repository are written
@@ -177,10 +179,11 @@ recordset_entities:
 
 `recordset_entities` maps native collection names to ModelSpec entity names. Names not listed in the mapping keep the existing same-name behavior. Each ModelSpec entity maps to exactly one recordset, and every entity of an own model must appear. Meaning bindings use the ModelSpec name (`modelspec:///northwind.OrderDetails`); Directory pages, API links and recordset URLs keep the native collection name (`Order Details`). The `{name}` in `deployment.recordset_page` is URL-encoded as one path component.
 
-**Shared model.** The model and the meaning graph are published in other
-repositories, and this manifest points at them instead of copying them, so that
-every hoster of the same model is a database of that model. There are no local
-model files and no local meaning file, and both pins are required:
+**Shared model.** The logical DataModel is published in another repository. The
+manifest points at its exact source revision rather than copying it. There are no
+local model files. `model.address` must carry its full commit pin. An optional
+semantic annotation can point at a separately pinned meaning graph, as in this
+annotated example; omitting the entire `meaning` block is valid:
 
 ```yaml
 model:
@@ -195,6 +198,23 @@ licences:
 recordsets: [Album, Artist, …]        # every entity of the model
 ```
 
+For a model-only deployment, omit the complete `meaning` block and the Directory
+record's `meaning_graph`. The index omits `meaning_graph` and keeps recordset/field
+`meanings: []`. It does not create an empty graph. MeaningGraph is not fetched for
+a directory containing only unannotated deployments and sources with no semantic
+links. Adding a valid annotation later preserves the deployment and model IDs.
+A partial or malformed `meaning` block is an error. Representation-contract
+eligibility still requires its checked semantic evidence; ordinary model browsing
+does not grant that eligibility.
+
+The model address and version remain independent of deployment engine and
+environment. SQLite dev and PostgreSQL QA may pin the same logical Chinook source;
+a production deployment can explicitly pin an older source. Different source pins
+are checked exactly. With the legacy index reader, moved historical source paths
+still fail clearly; the native retained-revision adapter is separate migration
+work and is not implicitly supplied by this optional-meaning change.
+
+The checks below for meaning files and graph pins apply when `meaning` is supplied.
 Resolution, in order; each step that fails is a problem and the database is not
 listed:
 

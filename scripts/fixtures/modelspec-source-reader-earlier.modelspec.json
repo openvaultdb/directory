@@ -1,0 +1,78 @@
+{
+  "modelspec": "1.0-draft",
+  "module": {
+    "id": "test/source",
+    "name": "chinook",
+    "version": "1"
+  },
+  "components": {
+    "Left": {
+      "fields": {
+        "shared": {
+          "entity": "Target"
+        },
+        "field-name": {
+          "type": "string",
+          "enum": "State"
+        }
+      }
+    },
+    "Right": {
+      "fields": {
+        "shared": {
+          "type": "int"
+        }
+      }
+    },
+    "Node": {
+      "fields": {
+        "self": {
+          "component": "chinook.Node"
+        },
+        "target": {
+          "entity": "Target"
+        }
+      }
+    }
+  },
+  "enums": {
+    "State": {
+      "values": [
+        "open",
+        "closed"
+      ]
+    }
+  },
+  "entities": {
+    "Order-Line": {
+      "use": [
+        "Left",
+        "chinook.Left",
+        "Right"
+      ],
+      "properties": {
+        "shared": {
+          "type": "bool"
+        },
+        "nested": {
+          "component": "Node"
+        },
+        "a.b": {
+          "type": "int"
+        },
+        "target": {
+          "entity": "chinook.Target"
+        }
+      }
+    },
+    "Empty": {
+      "properties": {}
+    },
+    "Target": {
+      "properties": {}
+    },
+    "﻿": {
+      "properties": {}
+    }
+  }
+}

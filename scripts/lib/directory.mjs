@@ -13,7 +13,7 @@ import { isAbsolute, join, posix, relative } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { addressOf, commitPattern, defaultBranch, defaultCacheDir, ensurePlainDirectory, isRepositoryPath, onBranch, openCommit, repositoryKey, repositoryHosts } from './git.mjs';
 import { createMeaningResolver, entryOf, graphIdProblem, graphsAtAddress, loadMeaningRegistry, meaningFilesOf, registryIdPattern, parseConceptRef, parseGraphAddress, labelOf, validateConcept, bindingField, indexRole } from './meaning.mjs';
-import { addressMatchesRecord, earlierSpellingNotice, identifierPattern, loadModelRegistry, modelsAtAddress, normalisedModelAddress, parseModelSpec, parseModelRef, parseModelAddress } from './modelspec.mjs';
+import { addressMatchesRecord, earlierSpellingNotice, conceptName, recordReferenceClosure, loadModelRegistry, modelsAtAddress, normalisedModelAddress, parseModelSpec, parseModelRef, parseModelAddress } from './modelspec.mjs';
 import { directoryPagePath, encodePathSegment, globalDatabaseIdProblem, hasOvdbMarker, homepageProblem, publicHttpsProblem } from './urls.mjs';
 import { checkRepresentationEnvelope, checkRepresentation, verifySourceData } from './representation.mjs';
 import { columnModelProblems, earlierKeyNotice, formatOf, formatProblem, mapItemUnderOldFormat, nameProblem as nativeRecordsetNameProblem, newFormProblems, normalisedMapping } from './manifest-mapping.mjs';
@@ -91,7 +91,7 @@ export function recordProblems({ databases, maintainers }) {
     paths.set(directoryPath.toLowerCase(), [...(paths.get(directoryPath.toLowerCase()) ?? []), { key, file }]);
     if (!isRepositoryPath(data.manifest)) problems.push(`${file}: manifest must be a relative path inside the repository (no "..", no glob)`);
     if (data.database_manifest !== undefined && !isRepositoryPath(data.database_manifest)) problems.push(`${file}: database_manifest must be a relative path inside the repository (no "..", no glob)`);
-    if (typeof data.meaning_graph !== 'string' || !registryIdPattern.test(data.meaning_graph)) problems.push(`${file}: meaning_graph must be a MeaningGraph registry id`);
+    if (data.meaning_graph !== undefined && (typeof data.meaning_graph !== 'string' || !registryIdPattern.test(data.meaning_graph))) problems.push(`${file}: meaning_graph must be a MeaningGraph registry id`);
     for (const handle of data.maintainers ?? []) {
       if (!handles.has(handle)) problems.push(`${file}: maintainer ${handle} has no record in maintainers/`);
     }
@@ -202,6 +202,8 @@ export function manifestProblems(manifest, { databaseManifest = false } = {}) {
   const problems = [];
   if (manifest === null || typeof manifest !== 'object' || Array.isArray(manifest)) return ['is not a mapping'];
   const shared = manifestForm(manifest) === 'shared';
+  const hasMeaning = manifest.meaning !== undefined;
+  if(hasMeaning&&(manifest.meaning===null||typeof manifest.meaning!=='object'||Array.isArray(manifest.meaning)))problems.push('meaning must be a mapping when supplied');
   const formatError = formatProblem(manifest);
   if (formatError) problems.push(formatError);
   for (const field of ['id', 'title', 'description']) if (!isText(manifest[field])) problems.push(`${field} is required`);
@@ -228,6 +230,7 @@ export function manifestProblems(manifest, { databaseManifest = false } = {}) {
     if (manifest.model?.address === undefined) problems.push('model must name the model by local files (model.modelspec) or, for a model published in another repository, by model.address with ?ref=<40 hex>');
     else if (!model) problems.push('model.address must be modelspec://{host}/{org}/{repo}/{module}?ref=<40 hex> for a model in another repository');
     else if (model.ref === undefined) problems.push('model.address must carry ?ref=<40 hex> when the model is in another repository (the pin says which commit is read)');
+    if(hasMeaning) {
     const graph = parseGraphAddress(manifest.meaning?.address);
     if (manifest.meaning?.address === undefined) problems.push('meaning.address is required when model.address names a model in another repository (the meaning graph is then shared too): meaning://{host}/{org}/{repo}?ref=<40 hex>');
     else if (!graph) problems.push('meaning.address must be meaning://{host}/{org}/{repo}?ref=<40 hex>');
@@ -235,6 +238,7 @@ export function manifestProblems(manifest, { databaseManifest = false } = {}) {
     need(manifest.meaning, 'file', 'meaning.file (the file of the graph, in the graph\'s repository, that binds the model)', isRepositoryPath);
     need(manifest.meaning?.graph, 'id', 'meaning.graph.id');
     if (manifest.meaning?.graph?.address !== undefined && !(isText(manifest.meaning.graph.address) && manifest.meaning.graph.address.startsWith('meaning://'))) problems.push('meaning.graph.address, when given, must be the graph\'s meaning:// address without a pin');
+    }
     // The registries say what the model and the meaning are licensed under; a manifest that repeats them must agree (checked against the records).
     for (const field of ['model', 'meaning']) if (manifest.licences?.[field] !== undefined && !spdxLike(manifest.licences[field])) problems.push(`licences.${field}, when given, must be an SPDX-shaped licence id`);
     if (manifest.recordsets_partial !== undefined && typeof manifest.recordsets_partial !== 'boolean') problems.push('recordsets_partial must be true or false');
@@ -243,11 +247,13 @@ export function manifestProblems(manifest, { databaseManifest = false } = {}) {
     if (manifest.model?.address !== undefined && !parseModelAddress(manifest.model.address)) problems.push('model.address must be modelspec://{host}/{org}/{repo}/{module}, this repository and the module name, without ?ref= (a model in another repository is named by model.address alone, with ?ref= and no local model files)');
     if (manifest.meaning?.address !== undefined) problems.push('meaning.address is only for a shared model (model.address with ?ref= and no local model files); a manifest with its own model files has its own meaning file and names its graph by meaning.graph.address');
     if (manifest.recordsets_partial !== undefined) problems.push('recordsets_partial is only for a shared model; a manifest with its own model files lists every ModelSpec entity');
+    if(hasMeaning) {
     need(manifest.meaning, 'file', 'meaning.file', isRepositoryPath);
     need(manifest.meaning?.graph, 'id', 'meaning.graph.id');
     need(manifest.meaning?.graph, 'address', 'meaning.graph.address', (value) => isText(value) && value.startsWith('meaning://'));
+    }
     need(manifest.licences, 'model', 'licences.model', spdxLike);
-    need(manifest.licences, 'meaning', 'licences.meaning', spdxLike);
+    if(hasMeaning)need(manifest.licences, 'meaning', 'licences.meaning', spdxLike);
   }
   need(manifest.publisher, 'name', 'publisher.name');
   needUrl(manifest.publisher?.url, 'publisher.url');
@@ -259,6 +265,7 @@ export function manifestProblems(manifest, { databaseManifest = false } = {}) {
   }
   need(manifest.licences, 'data', 'licences.data', dataLicence);
   if (manifest.representation_contract !== undefined) {
+    if(!hasMeaning)problems.push('representation_contract requires its supplied meaning and checked semantic dependencies');
     try { checkRepresentationEnvelope(manifest.representation_contract); }
     catch (error) { problems.push(error.message); }
   }
@@ -283,7 +290,7 @@ export function manifestProblems(manifest, { databaseManifest = false } = {}) {
         if (!Array.isArray(manifest.recordsets) || !manifest.recordsets.includes(recordset)) problems.push(`recordset_entities names ${JSON.stringify(recordset)}, which is not in recordsets`);
         const nameProblem = nativeRecordsetNameProblem(recordset);
         if (nameProblem) problems.push(`recordset_entities key ${JSON.stringify(recordset)} ${nameProblem}`);
-        if (typeof entity !== 'string' || !identifierPattern.test(entity)) problems.push(`recordset_entities value for ${JSON.stringify(recordset)} must be a ModelSpec entity identifier`);
+        if (!conceptName(entity)) problems.push(`recordset_entities value for ${JSON.stringify(recordset)} must be a ModelSpec entity name (nonblank, no dot or reserved kind word)`);
         else if (usedEntities.has(entity)) problems.push(`recordset_entities maps both ${JSON.stringify(usedEntities.get(entity))} and ${JSON.stringify(recordset)} to ModelSpec entity ${entity}; mappings must be one-to-one`);
         else usedEntities.set(entity, recordset);
       }
@@ -444,7 +451,15 @@ export async function analyseDatabase(record, context) {
   if (manifest.url !== data.url) bad(`${data.manifest}: url is ${manifest.url}, but the record's url is ${data.url}; the manifest and the record name one canonical identity`);
   const expectedManifestId = descriptor?.localId ?? key;
   if (manifest.id !== expectedManifestId) bad(`${data.manifest}: id is ${manifest.id}, but the ${descriptor ? 'descriptor localId' : 'record id'} is ${expectedManifestId}`);
-  if (manifest.meaning.graph.id !== data.meaning_graph) bad(`${data.manifest}: meaning.graph.id is ${manifest.meaning.graph.id}, but the record's meaning_graph is ${data.meaning_graph}`);
+  const hasMeaning=manifest.meaning!==undefined;
+  if(hasMeaning&&data.meaning_graph!==undefined&&manifest.meaning.graph.id!==data.meaning_graph)bad(`${data.manifest}: meaning.graph.id is ${manifest.meaning.graph.id}, but the record's meaning_graph is ${data.meaning_graph}`);
+  if(!hasMeaning&&data.meaning_graph!==undefined)bad(`${data.manifest}: meaning_graph is supplied but the manifest has no meaning`);
+  if(problems.length)return stop();
+  const graphRegistryId=data.meaning_graph??manifest.meaning?.graph?.id;
+  let meaningRegistry=context.meaningRegistry;
+  if(hasMeaning&&context.getMeaningRegistry) {
+    try {meaningRegistry=await context.getMeaningRegistry();}catch(error){bad(`MeaningGraph registry: ${error.message}`);return stop();}
+  }
   if (manifest.publisher.repository !== undefined && lowerKey(repositoryKey(manifest.publisher.repository) ?? '') !== lowerKey(repositoryKey(data.repository))) {
     bad(`${data.manifest}: publisher.repository is ${manifest.publisher.repository}, but the record's repository is ${data.repository}`);
   }
@@ -474,6 +489,8 @@ export async function analyseDatabase(record, context) {
   // references, so no listed field points at a recordset that is not there.
   const checkRecordsets = () => {
     const listed = mapping.map(({ name }) => name);
+    if (model.module === undefined) bad(`${data.manifest}: dataset projection requires module.name; source parsing does not infer it from an address or filename`);
+    if (model.entities.size === 0) bad(`${data.manifest}: cannot publish dataset field lists: the model has no records`);
     if (new Set(listed).size !== listed.length) bad(`${data.manifest}: recordsets lists a name twice`);
     const entityNames = [...model.entities.keys()];
     const mappedEntities = listed.map(modelEntityFor);
@@ -484,8 +501,10 @@ export async function analyseDatabase(record, context) {
       if (lacking.length === 0 && extra.length === 0) bad(`${data.manifest}: recordsets_partial is true, but recordsets lists every ModelSpec entity; remove recordsets_partial`);
       for (const name of listed) {
         const entityName = modelEntityFor(name);
-        for (const property of model.entities.get(entityName)?.properties ?? []) {
-          if (property.references && !mappedEntities.includes(property.references)) bad(`${data.manifest}: recordsets lists ${name}, which references ModelSpec entity ${property.references}, but a partial list must also include its mapped recordset`);
+        const closure = recordReferenceClosure(model, entityName);
+        if (!closure.complete) bad(`${data.manifest}: cannot prove partial recordset reference closure for ${name}: exact declarations unavailable for ${[...closure.unavailable].join(', ')}`);
+        for (const target of closure.targets) {
+          if (!mappedEntities.includes(target)) bad(`${data.manifest}: recordsets lists ${name}, which references ModelSpec entity ${target}, but a partial list must also include its mapped recordset`);
         }
       }
     } else if (lacking.length) bad(`${data.manifest}: ${newForm ? 'recordsets lacks the record types of the model' : 'recordsets lacks ModelSpec entities'}: ${lacking.join(', ')}${shared ? ' (to list a subset of a shared model, list it explicitly and set recordsets_partial: true)' : ''}`);
@@ -494,11 +513,17 @@ export async function analyseDatabase(record, context) {
       : `${data.manifest}: recordsets names things that do not map to ModelSpec entities: ${extra.join(', ')}`);
     if (duplicateMapping) bad(`${data.manifest}: recordset_entities maps more than one native recordset to the same ModelSpec entity; mappings must be one-to-one`);
     // The columns a recordset lists hold fields of its record type (a record type the model lacks is reported above).
+    let unavailableFieldSet = false;
     for (const entry of mapping) {
       const record = model.entities.get(entry.recordType);
-      if (record && entry.columns.size > 0) for (const problem of columnModelProblems(entry, new Set(record.properties.map((property) => property.name)))) bad(`${data.manifest}: ${problem}`);
+      if (record && !record.fieldSetComplete) {
+        unavailableFieldSet = true;
+        bad(`${data.manifest}: cannot publish dataset field list for ${entry.name}: field set is incomplete or ambiguous (${record.diagnostics.map((diagnostic) => diagnostic.code + ': ' + (diagnostic.reference ?? diagnostic.field)).join('; ')})`);
+      }
+      if (record?.fieldSetComplete && entry.columns.size > 0) for (const problem of columnModelProblems(entry, new Set(record.properties.map((property) => property.name)))) bad(`${data.manifest}: ${problem}`);
     }
-    if (extra.length || duplicateMapping || new Set(listed).size !== listed.length || (!shared || manifest.recordsets_partial !== true) && lacking.length) return [];
+    // Do not feed a partial field view to semantic binding absence checks.
+    if (unavailableFieldSet || extra.length || duplicateMapping || new Set(listed).size !== listed.length || (!shared || manifest.recordsets_partial !== true) && lacking.length) return [];
     return shared && manifest.recordsets_partial === true ? [...new Set(listed)].filter((name) => model.entities.has(modelEntityFor(name))) : [...listed];
   };
   let publishedNames;
@@ -518,17 +543,86 @@ export async function analyseDatabase(record, context) {
     return true;
   };
 
-  if (!shared) {
+  const compareOwnRegisteredModel=async(modelText)=>{
+    if (modelAddress !== undefined) {
+      let modelRegistry;
+      try { modelRegistry = await context.modelRegistry(); } catch (registryError) { bad(`ModelSpec registry: ${registryError.message}`); return; }
+      const records = modelsAtAddress(modelRegistry, modelAddress);
+      const registered = records[0];
+      if (records.length > 1) bad(`${data.manifest}: model.address ${modelAddress} matches ${records.length} records of the ModelSpec registry (${records.map((record) => record.address).join(', ')}), which differ only in case; the registry must list a model once`);
+      else if (registered) {
+        if (!addressMatchesRecord(registered)) bad(`the ModelSpec registry's record for ${registered.address} is not well formed (its repository and module must give that address)`);
+        else if (!isRepositoryPath(registered.files?.json)) bad(`the ModelSpec registry's record for ${registered.address} is not well formed (files.json must be a path inside the repository)`);
+        else if (registered.commit !== data.commit) warn(`model.address ${modelAddress} is registered in the ModelSpec registry at ${shown(registered.commit)}, but this record pins ${data.commit}; ${manifest.model.modelspec} was not compared with the registry's ${registered.files.json}`);
+        else {
+          const registeredText = text(registered.files.json, 'the model the ModelSpec registry registers as', files, data.commit, ` (its files.json for ${registered.address})`);
+          if (registeredText !== null) {
+            let theirs;
+            try { theirs = JSON.parse(registeredText); } catch (parseError) { bad(`${registered.files.json}, the files.json of ${registered.address} in the ModelSpec registry, is not JSON: ${parseError.message}`); }
+            // Equal means the same parsed JSON with the same order of object keys and array items (white space aside):
+            // the order of an entity's properties is the order of a recordset's fields in index.json, so equal models
+            // always give the same index entries.
+            if (theirs !== undefined && JSON.stringify(theirs) !== JSON.stringify(JSON.parse(modelText))) bad(`${data.manifest}: ${manifest.model.modelspec} is not the model the ModelSpec registry registers as ${registered.address}: it differs from ${registered.files.json}, the registry's files.json, at ${data.commit} (the order of entities, properties and other keys counts); databases that share a model.address are databases of the same model`);
+          }
+        }
+      }
+    }
+  };
+  if(!hasMeaning) {
+    // No synthetic semantic graph is created. Model identity, explicit pins,
+    // source safety and recordset validation remain required in either form.
+    doc={concepts:[]};
+    let sourceFiles=files,sourceCommit=data.commit,registered;
+    if(shared) {
+      const pin=parseModelAddress(manifest.model.address);
+      if(pin.repository!==pin.repository.toLowerCase()||pin.repository===ownKey||repositoryKey(`https://${pin.repository}`)===null){bad(`${data.manifest}: shared model.address must name a different allowed repository in lower case`);return stop();}
+      modelAddress=normalisedModelAddress(pin);
+      let registry;
+      try {registry=await context.modelRegistry();}catch(error){bad(`ModelSpec registry: ${error.message}`);return stop();}
+      const matches=modelsAtAddress(registry,modelAddress);registered=matches[0];
+      if(matches.length!==1||!addressMatchesRecord(registered)){bad(`${data.manifest}: model.address must identify exactly one well-formed registered DataModel`);return stop();}
+      if(!isRepositoryPath(registered.files?.json)||!isRepositoryPath(registered.files?.source)||!modelSourcePattern.test(registered.files.source)){bad('registered DataModel has invalid source paths');return stop();}
+      if(manifest.licences.model!==undefined&&manifest.licences.model!==registered.licence)bad('licences.model differs from the registered DataModel licence');
+      const repositoryUrl=urlFor(registered.repository);
+      try {
+        if(!branches.has(repositoryUrl))branches.set(repositoryUrl,defaultBranch(repositoryUrl));
+        if(!onBranch(repositoryUrl,branches.get(repositoryUrl),pin.ref,historyDir,fetched))throw new Error(`model.address pins commit ${pin.ref}, which is not in the history of ${branches.get(repositoryUrl)}`);
+        sourceFiles=openCommit(repositoryUrl,pin.ref,cacheDir);sourceCommit=pin.ref;
+      }catch(error){bad(`model.address: ${error.message}`);return stop();}
+      modelLabel=registered.files.json;modelPath=registered.files.source;
+      modelHome={repository:registered.repository,commit:pin.ref};
+      if(registered.commit!==pin.ref)warn(`model.address pins ${pin.ref}, but registry selection is ${shown(registered.commit)}; the exact pin is read`);
+    }else {
+      modelLabel=manifest.model.modelspec;modelPath=manifest.model.hcl??manifest.model.modelspec;
+    }
+    const modelText=text(modelLabel,'model.modelspec',sourceFiles,sourceCommit);
+    if(modelText===null)return stop();
+    model=parseModelSpec(modelText);
+    for(const problem of model.problems)bad(`${modelLabel}: ${problem}`);
+    if(model.problems.length)return stop();
+    if(model.earlierSpelling)noticeEarlierSpelling(modelLabel,sourceCommit);
+    if(registered&&model.module!==registered.module)bad('model module differs from registry registration');
+    if(manifest.model.name!==undefined&&manifest.model.name!==model.module)bad('model.name differs from the ModelSpec module');
+    if(modelPath!==undefined&&text(modelPath,'model.hcl',sourceFiles,sourceCommit)===null)return stop();
+    if(!shared&&manifest.model.address!==undefined) {
+      const pin=parseModelAddress(manifest.model.address);
+      if(pin.repository!==ownKey||pin.repository!==pin.repository.toLowerCase()||pin.module!==model.module||pin.ref!==undefined)bad('own model.address must name this repository and module without a pin');
+      else modelAddress=manifest.model.address;
+    }
+    if(!shared)await compareOwnRegisteredModel(modelText);
+    if(problems.length)return stop();
+    publishedNames=checkRecordsets();
+  }else if (!shared) {
     // ---- own model: the model and the meaning file are in this repository ----
     meaningFile = manifest.meaning.file;
     meaningRef = data.commit;
     // The MeaningGraph registry: the graph is registered, and it is this repository's.
-    graph = context.meaningRegistry.byId.get(data.meaning_graph);
-    if (!graph) bad(`meaning_graph ${data.meaning_graph} is not registered in the MeaningGraph registry (${context.meaningRegistry.source})`);
+    graph = meaningRegistry.byId.get(graphRegistryId);
+    if (!graph) bad(`meaning_graph ${graphRegistryId} is not registered in the MeaningGraph registry (${meaningRegistry.source})`);
     else {
       if (graphIdProblem(graph)) bad(graphIdProblem(graph));
       if (repositoryKey(graph.repository) === null || lowerKey(repositoryKey(graph.repository)) !== ownKey) {
-        bad(`meaning_graph ${data.meaning_graph} is registered for ${graph.repository}, not for ${data.repository}`);
+        bad(`meaning_graph ${graphRegistryId} is registered for ${graph.repository}, not for ${data.repository}`);
       }
       if (addressOf(graph.repository) !== graph.address) bad(`the MeaningGraph registry's record for ${graph.id} is not well formed (its repository ${graph.repository} must be the https URL whose meaning:// form is its address ${graph.address})`);
       if (manifest.meaning.graph.address !== graph.address) bad(`${data.manifest}: meaning.graph.address is ${manifest.meaning.graph.address}, but the MeaningGraph registry registers ${graph.id} as ${graph.address}`);
@@ -581,29 +675,7 @@ export async function analyseDatabase(record, context) {
     // An own model whose address the ModelSpec registry knows is the same model as the registry's: databases that
     // share a model.address are databases of the same model. The registry's files.json is read at the registry's pin,
     // which is this record's commit when the two are equal; when they are not, the model is not compared.
-    if (modelAddress !== undefined) {
-      let modelRegistry;
-      try { modelRegistry = await context.modelRegistry(); } catch (registryError) { bad(`ModelSpec registry: ${registryError.message}`); return stop(); }
-      const records = modelsAtAddress(modelRegistry, modelAddress);
-      const registered = records[0];
-      if (records.length > 1) bad(`${data.manifest}: model.address ${modelAddress} matches ${records.length} records of the ModelSpec registry (${records.map((record) => record.address).join(', ')}), which differ only in case; the registry must list a model once`);
-      else if (registered) {
-        if (!addressMatchesRecord(registered)) bad(`the ModelSpec registry's record for ${registered.address} is not well formed (its repository and module must give that address)`);
-        else if (!isRepositoryPath(registered.files?.json)) bad(`the ModelSpec registry's record for ${registered.address} is not well formed (files.json must be a path inside the repository)`);
-        else if (registered.commit !== data.commit) warn(`model.address ${modelAddress} is registered in the ModelSpec registry at ${shown(registered.commit)}, but this record pins ${data.commit}; ${manifest.model.modelspec} was not compared with the registry's ${registered.files.json}`);
-        else {
-          const registeredText = text(registered.files.json, 'the model the ModelSpec registry registers as', files, data.commit, ` (its files.json for ${registered.address})`);
-          if (registeredText !== null) {
-            let theirs;
-            try { theirs = JSON.parse(registeredText); } catch (parseError) { bad(`${registered.files.json}, the files.json of ${registered.address} in the ModelSpec registry, is not JSON: ${parseError.message}`); }
-            // Equal means the same parsed JSON with the same order of object keys and array items (white space aside):
-            // the order of an entity's properties is the order of a recordset's fields in index.json, so equal models
-            // always give the same index entries.
-            if (theirs !== undefined && JSON.stringify(theirs) !== JSON.stringify(JSON.parse(modelText))) bad(`${data.manifest}: ${manifest.model.modelspec} is not the model the ModelSpec registry registers as ${registered.address}: it differs from ${registered.files.json}, the registry's files.json, at ${data.commit} (the order of entities, properties and other keys counts); databases that share a model.address are databases of the same model`);
-          }
-        }
-      }
-    }
+    await compareOwnRegisteredModel(modelText);
     if (!graph) return stop();
   } else {
     // ---- shared model: the model and the meaning graph are published in other repositories ----
@@ -643,13 +715,13 @@ export async function analyseDatabase(record, context) {
     }
 
     // The MeaningGraph registry: the graph's address (without its pin) is registered, under the record's graph id.
-    const graphMatches = graphsAtAddress(context.meaningRegistry, `meaning://${graphPin.repository}`);
+    const graphMatches = graphsAtAddress(meaningRegistry, `meaning://${graphPin.repository}`);
     graph = graphMatches[0];
     if (graphMatches.length > 1) bad(`${data.manifest}: meaning.address meaning://${graphPin.repository} matches ${graphMatches.length} records of the MeaningGraph registry (${graphMatches.map((match) => match.id).join(', ')}), which differ only in case; the registry must list a repository once`);
-    else if (!graph) bad(`${data.manifest}: meaning.address meaning://${graphPin.repository} is not registered in the MeaningGraph registry (${context.meaningRegistry.source}); register the graph there first`);
+    else if (!graph) bad(`${data.manifest}: meaning.address meaning://${graphPin.repository} is not registered in the MeaningGraph registry (${meaningRegistry.source}); register the graph there first`);
     else {
       if (graphIdProblem(graph)) bad(graphIdProblem(graph));
-      if (graph.id !== data.meaning_graph) bad(`${data.manifest}: meaning.address names ${graph.address}, which the MeaningGraph registry registers as ${graph.id}, but the record's meaning_graph is ${data.meaning_graph}`);
+      if (graph.id !== graphRegistryId) bad(`${data.manifest}: meaning.address names ${graph.address}, which the MeaningGraph registry registers as ${graph.id}, but the record's meaning_graph is ${graphRegistryId}`);
       if (addressOf(graph.repository) !== graph.address) bad(`the MeaningGraph registry's record for ${graph.id} is not well formed (its repository ${graph.repository} must be the https URL whose meaning:// form is its address ${graph.address})`);
       if (manifest.meaning.graph.address !== undefined && manifest.meaning.graph.address !== graph.address) bad(`${data.manifest}: meaning.graph.address is ${manifest.meaning.graph.address}, but meaning.address names ${graph.address}; leave meaning.graph.address out or make it the unpinned address as the registry spells it`);
       if (manifest.licences.meaning !== undefined && manifest.licences.meaning !== graph.meaning_licence) bad(`${data.manifest}: licences.meaning is ${manifest.licences.meaning}, but the MeaningGraph registry records ${JSON.stringify(graph.meaning_licence)} for ${graph.id}; the meaning's licence comes from the registry, so leave licences.meaning out`);
@@ -736,14 +808,14 @@ export async function analyseDatabase(record, context) {
 
   // Addresses are spelled the way the MeaningGraph registry registers the graph (checked above
   // to be the canonical form of the same repository), whatever case the record uses.
-  const own = { id: graph.id, address: graph.address.slice('meaning://'.length), ref: meaningRef, concepts: new Map() };
+  const own = { id: graph?.id, address: graph?graph.address.slice('meaning://'.length):'', ref: meaningRef, concepts: new Map() };
   for (const [position, concept] of doc.concepts.entries()) {
     const shape = validateConcept(concept, position, { bindings: true });
     if (shape.length) for (const problem of shape) bad(`${meaningFile}: ${problem}`);
     else if (own.concepts.has(concept.id)) bad(`${meaningFile}: concept ${concept.id} is declared twice`);
     else own.concepts.set(concept.id, concept);
   }
-  const resolver = createMeaningResolver({ own, registry: context.meaningRegistry, urlFor, cacheDir, historyDir, fetched, branches });
+  const resolver = createMeaningResolver({ own, registry: meaningRegistry, urlFor, cacheDir, historyDir, fetched, branches });
 
   // Bindings tie concepts to recordsets and fields; each must name a real entity and property.
   const recordsets = new Map(publishedNames.map((name) => {
@@ -751,6 +823,20 @@ export async function analyseDatabase(record, context) {
     return [name, { name, modelEntity, meanings: [], fields: new Map(model.entities.get(modelEntity).properties.map((property) => [property.name, { ...property, meanings: [] }])) }];
   }));
   const recordsetByModelEntity = new Map([...recordsets.values()].map((recordset) => [recordset.modelEntity, recordset.name]));
+  // The public references slot is a recordset edge when its spelling matches a
+  // native recordset name. Never let an unavailable logical scope impersonate it.
+  const publishedNativeNames = new Set(recordsets.keys());
+  let ambiguousReferenceScope = false;
+  for (const recordset of recordsets.values()) {
+    for (const member of model.entities.get(recordset.modelEntity).effectiveFields.values()) {
+      const reference = member.references.find((ref) => ref.kind === 'records');
+      if (reference && reference.localTarget === undefined && publishedNativeNames.has(reference.reference)) {
+        ambiguousReferenceScope = true;
+        bad(`${data.manifest}: cannot publish dataset reference for ${recordset.name}.${member.name}: qualified reference ${reference.reference} has unavailable scope and collides with a native recordset name`);
+      }
+    }
+  }
+  if (ambiguousReferenceScope) return stop();
   const modelHomeKey = modelHome && lowerKey(repositoryKey(modelHome.repository));
   const resolved = new Map();
   const chainsOf = (concept) => {
@@ -823,7 +909,7 @@ export async function analyseDatabase(record, context) {
   if (manifest.representation_contract !== undefined) {
     try {
       const canonicalMeaning = (ref) => {
-        const registered = graphsAtAddress(context.meaningRegistry, addressOf(ref.repository));
+        const registered = graphsAtAddress(meaningRegistry, addressOf(ref.repository));
         return registered.length === 1 && registered[0].commit === ref.revision
           && registered[0].repository === ref.repository && addressOf(registered[0].repository) === registered[0].address
           && meaningFilesOf(registered[0])?.some((pattern) => typeof pattern === 'string' && new RegExp('^' + pattern.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('[^/]*') + '$').test(ref.path));
@@ -852,13 +938,25 @@ export async function analyseDatabase(record, context) {
     ...(manifest.representation_contract !== undefined ? { representation_contract: { ...manifest.representation_contract } } : {}),
     licence: manifest.licences.data,
     model: { name: model.module, path: modelPath, ...(modelAddress ? { address: modelAddress } : {}), ...(modelHome ? { repository: modelHome.repository, commit: modelHome.commit } : {}) },
-    meaning_graph: { id: graph.id, address: graph.address },
+    ...(graph?{meaning_graph: { id: graph.id, address: graph.address }}:{}),
     recordsets: [...recordsets.values()].sort(byName).map((recordset) => ({
       name: recordset.name,
       modelRecordType: recordset.modelEntity,
       ...(manifest.deployment.recordset_page ? { url: recordsetUrl(recordset.name) } : {}),
       meanings: sorted(recordset.meanings),
-      fields: [...recordset.fields.values()].map(({ name, type, references, meanings }) => ({ name, type, ...(references ? { references: recordsetByModelEntity.get(references) ?? references } : {}), meanings: sorted(meanings) })),
+      fields: [...recordset.fields.values()].map(({ name, type, meanings }) => {
+        const member = model.entities.get(recordset.modelEntity).effectiveFields.get(name);
+        const recordReference = member?.references.find((ref) => ref.kind === 'records');
+        const componentReference = member?.references.find((ref) => ref.kind === 'components');
+        // Components are values, so their type label retains the raw source
+        // reference without using the public recordset-edge slot.
+        return {
+          name,
+          type: componentReference ? `component ${componentReference.reference}` : type,
+          ...(recordReference ? { references: recordReference.localTarget !== undefined ? recordsetByModelEntity.get(recordReference.localTarget) ?? recordReference.reference : recordReference.reference } : {}),
+          meanings: sorted(meanings),
+        };
+      }),
     })),
   };
   return { problems, warnings, entry, claims };
@@ -879,13 +977,13 @@ export function indexText(entries, sources = []) {
   return `${JSON.stringify({ format: directoryFormat, checksum, databases, ...(sources.length ? { sourcesChecksum: `sha256:${createHash('sha256').update(JSON.stringify(sources)).digest('hex')}`, sources } : {}) }, null, 2)}\n`;
 }
 
-function sharedContext({ urlFor, cacheDir, meaningRegistry, modelRegistry, representationDependencies = new Map(), fetched = new Set(), branches = new Map() }) {
+function sharedContext({ urlFor, cacheDir, meaningRegistry, getMeaningRegistry, modelRegistry, representationDependencies = new Map(), fetched = new Set(), branches = new Map() }) {
   const repositories = join(cacheDir, 'repositories');
   const history = join(cacheDir, 'history');
   // The two directories are plain directories, never links to somewhere else.
   ensurePlainDirectory(repositories);
   ensurePlainDirectory(history);
-  return { urlFor, cacheDir: repositories, historyDir: history, meaningRegistry, modelRegistry, representationDependencies, fetched, branches, noticed: new Set() };
+  return { urlFor, cacheDir: repositories, historyDir: history, meaningRegistry, getMeaningRegistry, modelRegistry, representationDependencies, fetched, branches, noticed: new Set() };
 }
 
 // Reads the MeaningGraph registry (a fetched index, or `meaningRegistry` as given) and
@@ -906,21 +1004,22 @@ export async function analyseDirectory({ root, urlFor, cacheDir, meaningRegistry
     return { problems, warnings, entries, directory };
   }
   let registryIndex = meaningRegistry;
-  try { registryIndex ??= await loadRegistry(); } catch (error) {
-    problems.push(`MeaningGraph registry: ${error.message}`);
-    return { problems, warnings, entries, directory };
-  }
+  let loadingMeaning,meaningFailure;
+  const getMeaningRegistry=()=>registryIndex?Promise.resolve(registryIndex):(loadingMeaning??=Promise.resolve().then(()=>loadRegistry()).then(value=>(registryIndex=value)).catch(error=>{meaningFailure=error;throw error;}));
+  const registryUnavailable=()=>({problems:[...problems,`MeaningGraph registry: ${meaningFailure.message}`],warnings,entries:[],directory});
+  const emptyMeaningRegistry={source:'no semantic registry required',byId:new Map(),byAddress:new Map()};
   // One read of the ModelSpec registry for the run, shared by every database that needs it.
   let loading;
   const modelIndex = () => (modelRegistry ? Promise.resolve(modelRegistry) : (loading ??= loadModels()));
   if (directory.sources.some(({ data }) => data.modelspec_url || data.meaninggraph_url)) {
-    try { problems.push(...sourceRegistryProblems(directory.sources, registryIndex, await modelIndex())); }
-    catch (error) { problems.push(`Source metadata registries: ${error.message}`); }
+    try { problems.push(...sourceRegistryProblems(directory.sources, directory.sources.some(({data})=>data.meaninggraph_url)?await getMeaningRegistry():registryIndex??emptyMeaningRegistry, await modelIndex())); }
+    catch (error) { if(meaningFailure)return registryUnavailable();problems.push(`Source metadata registries: ${error.message}`); }
   }
-  const context = sharedContext({ urlFor, cacheDir, meaningRegistry: registryIndex, modelRegistry: modelIndex, ...rest });
+  const context = sharedContext({ urlFor, cacheDir, meaningRegistry: registryIndex??emptyMeaningRegistry, getMeaningRegistry, modelRegistry: modelIndex, ...rest });
   const claimed = [];
   for (const record of directory.databases) {
     const result = await analyseDatabase(record, context);
+    if(meaningFailure)return registryUnavailable();
     problems.push(...result.problems);
     warnings.push(...result.warnings);
     if (result.entry) entries.push(result.entry);

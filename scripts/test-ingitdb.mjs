@@ -72,7 +72,6 @@ const cases = {
   'databases: repository missing (required)': edit('databases', 'chinook', (x) => { delete x.repository; }),
   'databases: manifest missing (required)': edit('databases', 'chinook', (x) => { delete x.manifest; }),
   'databases: empty manifest (min_length)': edit('databases', 'chinook', (x) => { x.manifest = ''; }),
-  'databases: meaning_graph missing (required)': edit('databases', 'chinook', (x) => { delete x.meaning_graph; }),
   'databases: unknown maintainer (foreign_key)': edit('databases', 'chinook', (x) => { x.maintainers = ['nobody']; }),
   'databases: unknown second maintainer (foreign_key on a list)': edit('databases', 'chinook', (x) => { x.maintainers = ['trakhimenok', 'nobody']; }),
   'databases: empty maintainers (min_length)': edit('databases', 'chinook', (x) => { x.maintainers = []; }),
@@ -87,3 +86,8 @@ for (const [name, change] of Object.entries(cases)) {
     assert.equal(validate(change), 2, 'ingitdb validate exits 2 on invalid data');
   });
 }
+
+// A DataModel-only deployment needs no semantic registry entry.
+test('meaning_graph may be absent',()=>{
+  assert.equal(validate(edit('databases','chinook',x=>{delete x.meaning_graph;})),0);
+});

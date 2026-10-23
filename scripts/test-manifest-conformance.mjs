@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { after, describe, test } from 'node:test';
 import { cleanup, conformance, directoryVerdict, manifestFor } from './conformance-world.mjs';
 import { manifestProblems } from './lib/directory.mjs';
-import { columnModelProblems } from './lib/manifest-mapping.mjs';
+import { conceptName } from './lib/modelspec.mjs';
+import { columnModelProblems, normalisedMapping } from './lib/manifest-mapping.mjs';
 
 after(cleanup);
 
@@ -22,15 +23,48 @@ const mentions = (lines, texts) => {
   for (const text of texts) assert.ok(joined.includes(text), `expected the problems to contain ${JSON.stringify(text)}, got:\n${joined || '(none)'}`);
 };
 
+// Frozen A7 and B14a used to fail the narrower literal-name policy. Their
+// literals now pass source-name validation and fail against the actual model.
+// Derive the exact extension from source spelling, not from a case-ID exemption.
+const literalNameDelta = (c) => {
+  const oldName = /^[A-Za-z_][A-Za-z0-9_]*$/;
+  const literals = c.manifest.format === 'ovdb-manifest/draft-1'
+    ? Object.values(c.manifest.recordset_entities ?? {})
+    : (c.manifest.recordsets ?? []).filter((item) => item && typeof item === 'object' && Object.hasOwn(item, 'record_type')).map((item) => item.record_type);
+  return c.stage === 'manifest' && c.verdict === 'refuse' && literals.length === 1
+    && literals[0] === 'Order-Line' && conceptName(literals[0]) && !oldName.test(literals[0]);
+};
+// The field delimiter remains a dot. Only segment spellings widen; the frozen
+// literal 'Created At' is absent from Customer and still fails at the file stage.
+const literalFieldPathDelta = (c) => {
+  const fields = (c.manifest.recordsets ?? []).flatMap((item) => item && typeof item === 'object' && !Array.isArray(item)
+    ? Object.values(item.columns ?? {}).map((column) => column?.field) : []);
+  return c.manifest.format === 'ovdb-manifest/draft-2' && c.stage === 'manifest' && c.verdict === 'refuse'
+    && fields.length === 1 && fields[0] === 'Created At'
+    && fields[0].split('.').every((part) => !/^\p{White_Space}*$/u.test(part))
+    && !/^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/.test(fields[0]);
+};
+const sourceSpellingDelta = (c) => literalNameDelta(c) || literalFieldPathDelta(c);
+test('the frozen corpus has exactly two literal-name and one field-segment stage deltas', () => {
+  assert.deepEqual(conformance.cases.filter(literalNameDelta).map((c) => c.id), ['A7', 'B14a']);
+  assert.deepEqual(conformance.cases.filter(literalFieldPathDelta).map((c) => c.id), ['B23a']);
+  assert.deepEqual(conformance.cases.filter(sourceSpellingDelta).map((c) => c.id), ['A7', 'B14a', 'B23a']);
+});
+
 for (const vocabulary of ['current', 'earlier']) {
   describe(`manifest conformance cases, model in the ${vocabulary} vocabulary`, () => {
     for (const c of conformance.cases) {
-      test(`${c.id}: ${c.verdict}${c.stage ? ` at the ${c.stage} stage` : c.notice ? ' with a notice' : ''}`, async () => {
+      test(`${c.id}: ${c.verdict}${c.stage ? ` at the ${sourceSpellingDelta(c) ? 'file (reviewed source-spelling delta)' : c.stage} stage` : c.notice ? ' with a notice' : ''}`, async () => {
         const result = await directoryVerdict(c.manifest, vocabulary);
         if (c.verdict === 'refuse') {
           assert.notDeepEqual(result.problems, [], 'the whole check refuses');
-          mentions(result.problems, c.messageHas);
-          if (c.stage === 'manifest') {
+          const delta = sourceSpellingDelta(c);
+          mentions(result.problems, delta ? [literalFieldPathDelta(c)
+            ? 'recordsets "Customer": column "created" holds "Created At", but Customer has no field "Created At"'
+            : c.manifest.format === 'ovdb-manifest/draft-1'
+            ? 'recordsets names things that do not map to ModelSpec entities: Order Lines'
+            : 'recordsets names record types that are not in the model file: Order Lines (record type Order-Line)'] : c.messageHas);
+          if (c.stage === 'manifest' && !delta) {
             // Refused from the manifest's text alone: the model is not read.
             assert.notDeepEqual(result.manifest, [], 'the manifest stage refuses');
             mentions(result.manifest, c.messageHas);
@@ -112,10 +146,10 @@ test('a map that refers to itself under its own key toString is reported as a pr
 });
 
 test('an item with a record type but no name is told once that it needs a name, and its record type is reported against its position', () => {
-  const problems = manifestProblems(manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: [{ record_type: '9x' }, 'OrderLine'] }));
+  const problems = manifestProblems(manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: [{ record_type: 'bad.name' }, 'OrderLine'] }));
   assert.deepEqual(problems.filter((problem) => problem.includes('recordsets')).map((problem) => problem.replace(/^.*?ovdb\.yaml: /, '')), [
     'recordsets item 1 needs name: the recordset\'s own name',
-    'recordsets item 1: record_type must be a ModelSpec record type name (letters, digits and _, not starting with a digit), got "9x"',
+    'recordsets item 1: record_type must be a ModelSpec record type name (nonblank, no dot or reserved kind word), got "bad.name"',
   ]);
   assert.ok(!problems.some((problem) => problem.includes('recordsets undefined')), problems.join('\n'));
 });
@@ -164,9 +198,60 @@ const sharedWithChinook = {
   'lib/manifest-mapping.mjs': 'aa27f9fc0d893502c6054594c60fa6c85b1457877cde0bdce1659874daac4bf7',
   'fixtures/manifest-conformance.json': '5a7b576cf5682c19e0d09f7f59843d78b59f0ae4d3beefc899db5570bb2602af',
 };
-test('the mapping and the conformance cases are the files that demo-db/chinook holds a copy of', () => {
+// Preparatory reader fork: reverse only these six exact reviewed source edits.
+// Any unrelated source drift still fails the original pinned digest below.
+const reverseLiteralNamePolicyDelta = (source) => {
+  for (const [current, original] of [
+    ["// The source concept spelling; columns below retain their separate dotted-path grammar.\nconst conceptName = (name) => typeof name === 'string' && !/^\\p{White_Space}*$/u.test(name) && !name.includes('.') && !['records', 'entities', 'components', 'enums', 'collections', 'recordsets'].includes(name);", "const identifier = /^[A-Za-z_][A-Za-z0-9_]*$/;"],
+    ['if (conceptName(item.record_type))', "if (typeof item.record_type === 'string' && identifier.test(item.record_type))"],
+    ['ModelSpec record type name (nonblank, no dot or reserved kind word)', 'ModelSpec record type name (letters, digits and _, not starting with a digit)'],
+    ["const fieldPath = (path) => typeof path === 'string' && path.split('.').every((part) => !/^\\p{White_Space}*$/u.test(part));", "const fieldPath = /^[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*$/;"],
+    ['if (!fieldPath(value.field))', 'if (!fieldPath.test(value.field))'],
+    ['must be a field name, or names joined by single dots (each name must be nonblank under Unicode White_Space)', 'must be a field name, or names joined by single dots (letters, digits and _, each not starting with a digit)'],
+  ]) {
+    assert.equal(source.split(current).length, 2, `exactly one reviewed delta: ${current}`);
+    source = source.replace(current, original);
+  }
+  return source;
+};
+test('shared source except the reviewed literal-name and field-segment extensions matches the frozen publisher source', () => {
   for (const [path, digest] of Object.entries(sharedWithChinook)) {
-    const actual = createHash('sha256').update(readFileSync(join(dirname(fileURLToPath(import.meta.url)), path))).digest('hex');
+    const bytes = readFileSync(join(dirname(fileURLToPath(import.meta.url)), path));
+    const baseline = path === 'lib/manifest-mapping.mjs' ? reverseLiteralNamePolicyDelta(bytes.toString('utf8')) : bytes;
+    const actual = createHash('sha256').update(baseline).digest('hex');
     assert.equal(actual, digest, `scripts/${path} is not the file recorded as shared with demo-db/chinook: carry the change to the copy there, then record sha256:${actual} in both tests`);
   }
+});
+
+
+test('the literal-name extension accepts Go concept names and keeps reserved names strict', () => {
+  for (const name of ['Order-Line', 'Order Line', '9x', 'a/b', '%', '\uFEFF']) {
+    for (const format of ['ovdb-manifest/draft-1', 'ovdb-manifest/draft-2']) {
+      const part = format.endsWith('draft-1')
+        ? { format, recordsets: ['orders'], recordset_entities: { orders: name } }
+        : { format, recordsets: [{ name: 'orders', record_type: name }] };
+      assert.deepEqual(manifestProblems(manifestFor(part)), [], `${format}/${JSON.stringify(name)}`);
+    }
+  }
+  for (const name of ['', '\u0085', 'a.b', 'records', 'components', 9]) {
+    const problems = manifestProblems(manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: [{ name: 'orders', record_type: name }] }));
+    assert.ok(problems.some((problem) => problem.includes('record_type must be')), JSON.stringify(name));
+  }
+  assert.deepEqual(manifestProblems(manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: [{ name: 'orders', record_type: 'Order-Line', columns: { x: { field: 'field-name' } } }] })), []);
+});
+
+
+test('logical field paths preserve Go nonblank segments and the existing dot delimiter', () => {
+  const base = (field) => manifestFor({ format: 'ovdb-manifest/draft-2', recordsets: [{ name: 'orders', record_type: 'OrderLine', columns: { physical: { field } } }] });
+  for (const field of ['a/b', 'field-name', '\uFEFF', 'колонка', '9field', ' field ', 'a/b.\uFEFF', '9field.部分']) {
+    const manifest = base(field);
+    assert.deepEqual(manifestProblems(manifest), [], JSON.stringify(field));
+    assert.equal(normalisedMapping(manifest)[0].columns.get('physical'), field, 'authored code points remain unchanged');
+  }
+  for (const field of ['', '\u0085', ' ', '.field', 'field.', 'a..b', 'a.\u0085', 'a. ', 'a.\n']) {
+    const problems = manifestProblems(base(field));
+    assert.ok(problems.some((problem) => problem.includes('each name must be nonblank under Unicode White_Space')), JSON.stringify(field));
+  }
+  for (const field of [12, null, ['name']]) assert.ok(manifestProblems(base(field)).some((problem) => problem.includes('needs field:')));
+  assert.deepEqual(columnModelProblems({ name: 'orders', recordType: 'OrderLine', columns: new Map([['physical', 'a/b.部分']]) }, new Set(['a/b'])), ['recordsets "orders": column "physical" holds "a/b.部分": no reader of the model reads a component yet, so "部分" cannot be read in a/b']);
 });

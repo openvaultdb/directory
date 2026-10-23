@@ -26,8 +26,7 @@ export function parseModelRef(ref) {
   return { repo: match[1] || undefined, module: match[2], name: match[3], ref: match[4] };
 }
 
-// A name that is safe to publish and to put in a URL path and an HTML anchor:
-// an identifier. ModelSpec entity and property names, and module names, are these.
+// The legacy address/binding identifier grammar. Source declaration names are broader.
 export const identifierPattern = /^[A-Za-z_][A-Za-z0-9_]*$/;
 // The two vocabularies, the whole of what differs between them. The JSON identifier decides which one a
 // document is in. `record` is the key of a member that names a record type; `records` and `fields` are the
@@ -46,6 +45,9 @@ const readingVocabulary = (doc) => vocabularyOf(doc) ?? earlier;
 
 // Names that no concept may have (the kind words of the format; `records` joined them with the rename).
 export const reservedNames = ['records', 'entities', 'components', 'enums', 'collections', 'recordsets'];
+// Go strings.TrimSpace uses Unicode White_Space (NEL is blank; FEFF is not).
+export const sourceName = (name) => typeof name === 'string' && !/^\p{White_Space}*$/u.test(name);
+export const conceptName = (name) => sourceName(name) && !name.includes('.') && !reservedNames.includes(name);
 // Constructs of earlier drafts that a reader refuses, by the top-level JSON field that holds them: removed
 // ones were part of the language, reserved ones are kept free for a later version (decision 0019).
 const refusedFields = [
@@ -69,11 +71,14 @@ export function modelWordProblems(doc, vocabulary) {
   const foreign = otherThan(vocabulary);
   const wrong = (where, key, own) => `${where}"${key}" is a key of format ${foreign.identifier}; this document says "${vocabulary.identifier}", where it is "${own}"`;
   if (Object.hasOwn(doc, foreign.records)) problems.push(wrong('', foreign.records, vocabulary.records));
-  for (const [name, record] of Object.entries(isObject(doc[vocabulary.records]) ? doc[vocabulary.records] : {})) {
-    if (!isObject(record)) continue;
-    if (Object.hasOwn(record, foreign.fields)) problems.push(wrong(`${vocabulary.record} ${name}: `, foreign.fields, vocabulary.fields));
-    for (const [memberName, member] of Object.entries(isObject(record[vocabulary.fields]) ? record[vocabulary.fields] : {})) {
-      if (isObject(member) && Object.hasOwn(member, foreign.record)) problems.push(wrong(`${name}.${memberName}: `, foreign.record, vocabulary.record));
+  for (const [group, fieldsKey] of [[vocabulary.records, vocabulary.fields], ['components', 'fields']]) {
+    for (const [name, declaration] of Object.entries(isObject(doc[group]) ? doc[group] : {})) {
+      if (!isObject(declaration)) continue;
+      if (group === vocabulary.records && Object.hasOwn(declaration, foreign.fields)) problems.push(wrong(`${vocabulary.record} ${name}: `, foreign.fields, vocabulary.fields));
+      if (group === 'components' && Object.hasOwn(declaration, 'properties')) problems.push(`component ${name}: members are always spelled "fields", not "properties"`);
+      for (const [memberName, member] of Object.entries(isObject(declaration[fieldsKey]) ? declaration[fieldsKey] : {})) {
+        if (isObject(member) && Object.hasOwn(member, foreign.record)) problems.push(wrong(`${name}.${memberName}: `, foreign.record, vocabulary.record));
+      }
     }
   }
   return problems;
@@ -143,44 +148,143 @@ export const addressMatchesRecord = (record) => registeredModelAddress(record) =
 // The address a registry record must have: its repository and module.
 export const registeredModelAddress = (record) => (repositoryKey(record?.repository) && typeof record.module === 'string' ? normalisedModelAddress({ repository: repositoryKey(record.repository), module: record.module }) : null);
 
-// { module, entities: Map(name -> { properties: [{ name, type, references? }] }), problems, earlierSpelling }.
-// A property is either a scalar (`type`) or a reference to another entity (`entity` in the earlier spelling,
-// `record` in the current one, no `type`). A reference has type "reference" and `references` names the entity
-// it points at. The result keeps the earlier words whichever spelling was read; `earlierSpelling` is true when
-// the document is in format 1.0-draft, so that the caller can say so.
+// A finite dataset field view beside the source, not a replacement AST. Keep the
+// original JSON text and declarations: JSON.parse alone cannot preserve source bytes.
+// Only top-level record uses contribute fields; a component-valued field stays one
+// field. Own fields override inherited fields before conflicts are considered.
 export function parseModelSpec(text) {
   const problems = [];
+  const diagnostics = [];
   let doc;
   try { doc = JSON.parse(text); } catch (error) { return { problems: [`is not JSON: ${error.message}`] }; }
+  if (!isObject(doc)) return { problems: ['a ModelSpec JSON document must be an object'] };
   const vocabulary = readingVocabulary(doc);
-  const entitiesDoc = doc?.[vocabulary.records];
-  if (isObject(doc)) problems.push(...modelWordProblems(doc, vocabulary));
-  if (typeof doc?.modelspec !== 'string') problems.push('has no "modelspec" version');
-  const module = doc?.module?.name;
-  if (typeof module !== 'string' || !identifierPattern.test(module)) problems.push('has no module.name that is an identifier');
-  if (entitiesDoc === null || typeof entitiesDoc !== 'object' || Array.isArray(entitiesDoc) || Object.keys(entitiesDoc).length === 0) {
-    problems.push(`has no ${vocabulary.records}`);
-    return { problems };
+  problems.push(...modelWordProblems(doc, vocabulary));
+  if (typeof doc.modelspec !== 'string') problems.push('has no "modelspec" version');
+  const module = doc.module?.name;
+  if (module !== undefined && !sourceName(module)) problems.push('module.name must be a nonblank string');
+  const declarations = { records: new Map(), components: new Map(), enums: new Map() };
+  const allNames = new Set();
+  for (const [group, key, kind] of [['records', vocabulary.records, vocabulary.record], ['components', 'components', 'component'], ['enums', 'enums', 'enum']]) {
+    if (doc[key] !== undefined && !isObject(doc[key])) { problems.push(`${key} must be an object`); continue; }
+    for (const [name, declaration] of Object.entries(doc[key] ?? {})) {
+      if (!conceptName(name)) problems.push(reservedNames.includes(name)
+        ? `${kind} name ${JSON.stringify(name)} is a reserved word and cannot name a concept`
+        : `${kind} name ${JSON.stringify(name)} must be nonblank and contain no dot`);
+      if (allNames.has(name)) problems.push(`concept name ${JSON.stringify(name)} is declared more than once`);
+      allNames.add(name);
+      if (!isObject(declaration)) { problems.push(`${kind} ${name} must be an object`); continue; }
+      const fields = new Map();
+      const references = [];
+      const use = declaration.use ?? [];
+      if (group === 'records' && (!Array.isArray(use) || use.some((ref) => typeof ref !== 'string'))) problems.push(`${kind} ${name} use must be a list of strings`);
+      const entry = { name, kind: group, source: declaration, fields, use: Array.isArray(use) ? use : [], references };
+      declarations[group].set(name, entry);
+      if (group === 'enums') continue;
+      const fieldsKey = group === 'records' ? vocabulary.fields : 'fields';
+      const fieldDocs = declaration[fieldsKey];
+      if (fieldDocs !== undefined && !isObject(fieldDocs)) { problems.push(`${kind} ${name} ${fieldsKey} must be an object`); continue; }
+      for (const [fieldName, field] of Object.entries(fieldDocs ?? {})) {
+        const where = `${name}.${fieldName}`;
+        if (!sourceName(fieldName)) problems.push(`${vocabulary.field} name ${JSON.stringify(where)} must be nonblank`);
+        if (!isObject(field)) { problems.push(`${where} must be an object`); continue; }
+        const kinds = ['type', vocabulary.record, 'component'].filter((key) => Object.hasOwn(field, key));
+        if (kinds.length !== 1) { problems.push(`${where} has neither a type nor ${/^[aeiou]/.test(vocabulary.record) ? 'an' : 'a'} ${vocabulary.record}, or does not have exactly one of type, ${vocabulary.record} and component`); continue; }
+        const key = kinds[0];
+        if (typeof field[key] !== 'string') { problems.push(`${where} ${key} must be a string`); continue; }
+        if (key === 'type' && !typePattern.test(field.type)) problems.push(`${where} has type ${JSON.stringify(field.type)}, which is not a type name`);
+        const property = key === 'type' ? { name: fieldName, type: field.type }
+          : { name: fieldName, type: key === 'component' ? 'component' : 'reference', references: field[key] };
+        const member = { name: fieldName, source: field, property, references: [] };
+        fields.set(fieldName, member);
+        for (const [refKey, targetKind] of [[vocabulary.record, 'records'], ['component', 'components'], ['enum', 'enums']]) {
+          if (typeof field[refKey] === 'string') {
+            const ref = { reference: field[refKey], kind: targetKind, where, member: fieldName };
+            member.references.push(ref); references.push(ref);
+          }
+        }
+      }
+      if (group === 'records') for (const reference of entry.use) if (typeof reference === 'string') references.push({ reference, kind: 'components', where: `${kind} ${name} use`, use: true });
+    }
+  }
+  // Validate every reference independently of dataset traversal, including unused
+  // components. A known self qualifier never downgrades a missing local target.
+  for (const declarationsOfKind of Object.values(declarations)) for (const declaration of declarationsOfKind.values()) {
+    for (const ref of declaration.references) {
+      const parts = ref.reference.split('.');
+      if (parts.length > 2 || parts.some((part) => part === '')) {
+        problems.push(`${ref.where} reference ${JSON.stringify(ref.reference)} is not a bare name or a <module>.<Name> reference`);
+        continue;
+      }
+      const local = parts.length === 1 || module !== undefined && parts[0] === module;
+      if (local) {
+        ref.localTarget = parts.at(-1);
+        if (!declarations[ref.kind].has(ref.localTarget)) problems.push(`${ref.where} references ${ref.kind === 'records' ? vocabulary.record : ref.kind.slice(0, -1)} ${ref.reference}, which the ModelSpec does not have`);
+      } else {
+        diagnostics.push({ code: 'qualified-reference-unavailable', declaration: declaration.name, reference: ref.reference, kind: ref.kind });
+      }
+    }
   }
   const entities = new Map();
-  for (const [name, entity] of Object.entries(entitiesDoc)) {
-    if (!identifierPattern.test(name)) { problems.push(`${vocabulary.record} name ${JSON.stringify(name)} must be an identifier (letters, digits and _, not starting with a digit)`); continue; }
-    if (reservedNames.includes(name)) { problems.push(`${vocabulary.record} name ${JSON.stringify(name)} is a reserved word and cannot name a concept`); continue; }
-    const propertiesDoc = entity?.[vocabulary.fields];
-    if (propertiesDoc === null || typeof propertiesDoc !== 'object' || Array.isArray(propertiesDoc) || Object.keys(propertiesDoc).length === 0) { problems.push(`${vocabulary.record} ${name} has no ${vocabulary.fields}`); continue; }
-    const properties = [];
-    for (const [propertyName, property] of Object.entries(propertiesDoc)) {
-      if (!identifierPattern.test(propertyName)) { problems.push(`${vocabulary.field} name ${JSON.stringify(`${name}.${propertyName}`)} must be an identifier (letters, digits and _, not starting with a digit)`); continue; }
-      if (typeof property?.type === 'string' && !typePattern.test(property.type)) { problems.push(`${name}.${propertyName} has type ${JSON.stringify(property.type)}, which is not a type name`); continue; }
-      const reference = property?.[vocabulary.record];
-      if (typeof property?.type !== 'string' && typeof reference !== 'string') { problems.push(`${name}.${propertyName} has neither a type nor ${/^[aeiou]/.test(vocabulary.record) ? 'an' : 'a'} ${vocabulary.record}`); continue; }
-      if (typeof property.type !== 'string' && !Object.hasOwn(entitiesDoc, reference)) { problems.push(`${name}.${propertyName} references ${vocabulary.record} ${reference}, which the ModelSpec does not have`); continue; }
-      properties.push(typeof property.type === 'string' ? { name: propertyName, type: property.type } : { name: propertyName, type: 'reference', references: reference });
+  for (const record of declarations.records.values()) {
+    const inherited = new Map();
+    const own = new Set(record.fields.keys());
+    const usedComponents = new Set();
+    const recordDiagnostics = [];
+    let fieldSetComplete = true;
+    for (const ref of record.references.filter((ref) => ref.use)) {
+      const component = declarations.components.get(ref.localTarget);
+      if (!component) {
+        fieldSetComplete = false;
+        recordDiagnostics.push({ code: 'field-set-unavailable', record: record.name, reference: ref.reference });
+        continue;
+      }
+      if (usedComponents.has(component)) continue;
+      usedComponents.add(component);
+      for (const [name, field] of component.fields) {
+        if (own.has(name)) continue;
+        if (!inherited.has(name)) inherited.set(name, new Map());
+        inherited.get(name).set(component.name, field);
+      }
     }
-    entities.set(name, { properties });
+    const effectiveFields = new Map(record.fields);
+    for (const [name, origins] of inherited) {
+      if (origins.size > 1) {
+        fieldSetComplete = false;
+        recordDiagnostics.push({ code: 'ambiguous-inherited-field', record: record.name, field: name, origins: [...origins.keys()] });
+      } else effectiveFields.set(name, origins.values().next().value);
+    }
+    diagnostics.push(...recordDiagnostics);
+    entities.set(record.name, { properties: [...effectiveFields.values()].map((field) => field.property), effectiveFields, fieldSetComplete, diagnostics: recordDiagnostics });
   }
-  return { module, entities, problems, earlierSpelling: vocabularyOf(doc) === earlier };
+  return { module, entities, problems, diagnostics, source: { text, document: doc, declarations }, earlierSpelling: vocabularyOf(doc) === earlier };
 }
 
-// The line a notice about a model file in the earlier spelling says (a warning, never an error).
+// Reference closure for a dataset proof. Walk component values and top-level uses
+// by local declaration identity; nested cycles terminate. Record edges are returned
+// to the caller, which requires a mapped recordset for every known local target.
+export function recordReferenceClosure(model, name) {
+  const targets = new Set();
+  const unavailable = new Set();
+  const seen = new Set();
+  const record = model.entities.get(name);
+  for (const diagnostic of record?.diagnostics ?? []) if (diagnostic.code === 'field-set-unavailable') unavailable.add(diagnostic.reference);
+  const pending = record ? [{ references: [...record.effectiveFields.values()].flatMap((field) => field.references) }] : [];
+  while (pending.length) {
+    const declaration = pending.pop();
+    if (seen.has(declaration)) continue;
+    seen.add(declaration);
+    for (const ref of declaration.references) {
+      if (ref.kind === 'enums') continue;
+      if (ref.localTarget === undefined) { unavailable.add(ref.reference); continue; }
+      if (ref.kind === 'records') targets.add(ref.localTarget);
+      else {
+        const component = model.source.declarations.components.get(ref.localTarget);
+        if (component) pending.push(component);
+      }
+    }
+  }
+  return { targets, unavailable, complete: unavailable.size === 0 };
+}
+
 export const earlierSpellingNotice = (label) => `${label} is in the earlier ModelSpec spelling (format ${earlier.identifier}: entities, properties); it is still read. Run modelspec rewrite --write <folder> on the folder that holds it to move it to ${current.identifier}`;

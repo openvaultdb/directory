@@ -23,8 +23,9 @@ export const newFormat = 'ovdb-manifest/draft-2';
 
 const isMap = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const isText = (value) => typeof value === 'string' && value.trim() !== '';
-const identifier = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const fieldPath = /^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/;
+// The source concept spelling; columns below retain their separate dotted-path grammar.
+const conceptName = (name) => typeof name === 'string' && !/^\p{White_Space}*$/u.test(name) && !name.includes('.') && !['records', 'entities', 'components', 'enums', 'collections', 'recordsets'].includes(name);
+const fieldPath = (path) => typeof path === 'string' && path.split('.').every((part) => !/^\p{White_Space}*$/u.test(part));
 const itemKeys = ['name', 'record_type', 'columns'];
 // A value as it is shown in a message. A value that refers to itself (a YAML anchor used inside its own list) cannot
 // be written as JSON; it is shown as text instead of throwing. Turning it into text can throw too (a map that
@@ -92,8 +93,8 @@ export function newFormProblems(manifest) {
       if (!isText(item.name)) problems.push(`recordsets item ${position} needs name: the recordset's own name`);
       else name = item.name;
       if (Object.hasOwn(item, 'record_type')) {
-        if (typeof item.record_type === 'string' && identifier.test(item.record_type)) recordType = item.record_type;
-        else problems.push(`recordsets ${name === undefined ? `item ${position}` : quoted(name)}: record_type must be a ModelSpec record type name (letters, digits and _, not starting with a digit), got ${quoted(item.record_type)}`);
+        if (conceptName(item.record_type)) recordType = item.record_type;
+        else problems.push(`recordsets ${name === undefined ? `item ${position}` : quoted(name)}: record_type must be a ModelSpec record type name (nonblank, no dot or reserved kind word), got ${quoted(item.record_type)}`);
       } else recordType = name;
       if (Object.hasOwn(item, 'columns')) columns = item.columns;
     } else {
@@ -129,7 +130,7 @@ function columnProblems(recordset, columns) {
     if (!isMap(value)) { problems.push(`${where}: column ${quoted(column)} must be a map with field: (a column is written as a map, "${column}: { field: ... }", not as text or a list), got ${quoted(value)}`); continue; }
     for (const key of Object.keys(value)) if (key !== 'field') problems.push(`${where}: column ${quoted(column)} has the key ${quoted(key)}; a column reads only field`);
     if (typeof value.field !== 'string') { problems.push(`${where}: column ${quoted(column)} needs field: the name of the field it holds`); continue; }
-    if (!fieldPath.test(value.field)) { problems.push(`${where}: column ${quoted(column)}: field ${quoted(value.field)} must be a field name, or names joined by single dots (letters, digits and _, each not starting with a digit)`); continue; }
+    if (!fieldPath(value.field)) { problems.push(`${where}: column ${quoted(column)}: field ${quoted(value.field)} must be a field name, or names joined by single dots (each name must be nonblank under Unicode White_Space)`); continue; }
     if (holders.has(value.field)) problems.push(`${where}: columns ${quoted(holders.get(value.field))} and ${quoted(column)} both hold the field ${value.field}`);
     else holders.set(value.field, column);
   }
