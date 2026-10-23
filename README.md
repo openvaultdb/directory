@@ -15,7 +15,6 @@ carry. The Directory website is a separate repository; it reads
 | `sakila` | `https://demodb.dev/sakila/` | [demo-db/sakila@113e54a](https://github.com/demo-db/sakila/tree/113e54ad83c3e003a4fd195c893f2b19a921435c) | draft |
 | `adventureworks` | `https://demodb.dev/adventureworks/` | [demo-db/adventureworks@c91e06e](https://github.com/demo-db/adventureworks/tree/c91e06e9c12380e7709f66ab1e69cf7f858f67c1) | draft |
 | `employees` | `https://demodb.dev/employees/` | [demo-db/employees@add7744](https://github.com/demo-db/employees/tree/add7744ddc5cefc535a7cbb09b3dffee41811ade) | draft |
-| `countries` | `https://demodb.dev/countries/` | [demo-db/countries@dec4fa9](https://github.com/demo-db/countries/tree/dec4fa9798bc6118328156cd8abaf3803d0cba2f) | draft |
 
 ## This repository is the source of truth
 
