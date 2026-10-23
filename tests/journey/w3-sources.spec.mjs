@@ -51,7 +51,7 @@ test('W3 browse search, details, reload and sitemap request zero provider bytes'
       await expect(section).toContainText(rs.description);
       for (const field of rs.fields) await expect(section.locator(`#field-${rs.name}-${field.name}`)).toContainText(field.description);
     }
-    await expect(page.locator('main a[href*="modelspec.org"], main a[href*="meaninggraph.io"], main a[href*="dtql"], main a[href*="/ovdb/dbs/"], main button')).toHaveCount(0);
+    await expect(page.locator('main a[href*="modelspec.org"], main a[href*="meaninggraph.io"], main a[href*="tugql"], main a[href*="/ovdb/dbs/"], main button')).toHaveCount(0);
     await page.reload();
     await expect(page.getByRole('heading', { level: 1, name: source.title, exact: true })).toBeVisible();
   }
