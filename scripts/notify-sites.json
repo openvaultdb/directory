@@ -5,8 +5,8 @@
       "secret": "SITES_TRIGGER_TOKEN_OPENVAULTDB"
     },
     {
-      "repo": "sneat-co/meaninggraph",
-      "secret": "SITES_TRIGGER_TOKEN_SNEAT_CO"
+      "repo": "meaninggraph/meaninggraph",
+      "secret": "SITES_TRIGGER_TOKEN_MEANINGGRAPH"
     },
     {
       "repo": "specscore/modelspec",
